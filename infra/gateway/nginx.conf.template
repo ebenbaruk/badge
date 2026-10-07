@@ -1,0 +1,47 @@
+# Single egress gateway: the only container attached both to the sealed network (Honcho, Postgres) and to the
+# outside. Rendered at container start by the nginx image (envsubst over /etc/nginx/templates).
+#  - :8080 (sealed network only) -> the selected LLM profile upstream, over verified TLS. The gateway injects the
+#    upstream API key itself, so Honcho only ever holds a dummy key and cannot call anything else.
+#  - :8000 (published on 127.0.0.1 only) -> Honcho API, for the enclave and the seed script.
+# Request bodies are never logged: they carry employees' personal notes.
+
+log_format badge_llm '$time_iso8601 llm $request_method $request_uri status=$status req_bytes=$request_length '
+                     'resp_bytes=$bytes_sent upstream_s=$upstream_response_time';
+log_format badge_api '$time_iso8601 api $request_method $uri status=$status upstream_s=$upstream_response_time';
+
+client_max_body_size 8m;
+
+server {
+  listen 8080;
+  access_log /dev/stdout badge_llm;
+
+  # Only the two OpenAI-compatible routes Honcho needs; everything else is refused. Exact locations keep
+  # proxy_pass static (resolved once at start, no runtime resolver needed).
+  location = /v1/chat/completions {
+    proxy_pass ${BADGE_UPSTREAM_BASE_URL}/chat/completions;
+    proxy_set_header Host ${BADGE_UPSTREAM_HOST};
+    proxy_set_header Authorization "Bearer ${BADGE_UPSTREAM_API_KEY}";
+    include /etc/nginx/badge-upstream-tls.conf;
+  }
+
+  location = /v1/embeddings {
+    proxy_pass ${BADGE_UPSTREAM_BASE_URL}/embeddings;
+    proxy_set_header Host ${BADGE_UPSTREAM_HOST};
+    proxy_set_header Authorization "Bearer ${BADGE_UPSTREAM_API_KEY}";
+    include /etc/nginx/badge-upstream-tls.conf;
+  }
+
+  location / {
+    return 403;
+  }
+}
+
+server {
+  listen 8000;
+  access_log /dev/stdout badge_api;
+
+  location / {
+    proxy_pass http://api:8000;
+    proxy_read_timeout 300s;
+  }
+}
