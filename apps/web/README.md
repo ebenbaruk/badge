@@ -6,7 +6,7 @@ sombre, interface en français. Le serveur Next joue deux rôles :
 - **pont vers les Ledger** de chaque employé (Speculos Flex) : miroir d'écran, gestes, signatures réelles
   (`@badge/ledger`) vérifiées avec `@badge/consent` avant tout envoi ;
 - **runtime d'agent** : transforme la tâche tapée par l'employé en requête à l'enclave, détient la clé de session
-  déléguée par `AgentSession` et l'identité anonyme de desk (en mémoire uniquement).
+  déléguée par `AgentSession` (conservée sur disque, voir plus bas) et l'identité anonyme de desk (en mémoire).
 
 ## Écrans (`/[employé]/…`)
 
@@ -38,9 +38,16 @@ pour les répétitions).
   l'interface uniquement** (sans enclave, mémoire ni LLM). Signatures Ledger et preuves ZK y restent réelles.
 
 Le serveur Next est le **runtime d'agent** de chaque employé : une clé de session par employé (déléguée par
-`AgentSession`, en mémoire seulement), et la mémoire de ses propres demandes (identifiants de tâches et de demandes
-entre desks), car l'enclave répond par identifiant. Un redémarrage du serveur oblige donc à rouvrir les sessions
-(Configuration) ; l'inscription est idempotente côté enclave.
+`AgentSession`) et la mémoire de ses propres demandes (identifiants de tâches et de demandes entre desks), car
+l'enclave répond par identifiant. Les deux sont conservés dans `BADGE_WEB_DATA_DIR/agent-runtime.json`
+(`src/server/agent-store.ts`) : fichier `600` dans un dossier `700`, écrit de façon atomique, ignoré par git. Un
+redémarrage du serveur ne demande donc aucune nouvelle signature tant que la session n'a pas expiré (8 h). Un
+fichier lisible par d'autres utilisateurs ou mal formé est ignoré (avertissement dans le journal) : il faut alors
+déléguer à nouveau, ce qui est sûr, plutôt que de faire confiance à une clé peut-être divulguée. L'identité de desk
+n'est pas conservée : c'est un secret Semaphore, re-dérivé d'une signature Ledger quand il le faut.
+
+La clé de conformité est lue dans l'enclave (`GET /v1/compliance/key`) : après un redémarrage, l'écran
+Configuration de Chloé la montre déjà enregistrée et ne redemande pas de signature.
 
 Levée d'anonymat : le Ledger de Chloé signe le message de dérivation (`complianceKeyDeriveMessage`), la clé X25519
 est dérivée **dans le pont**, ouvre l'identité scellée du journal (`openSealed`), est vérifiée contre l'annuaire puis
@@ -64,6 +71,7 @@ effacée ; seul l'avis de levée (`POST /v1/audit/reveal-notice`) part vers l'en
 | `BADGE_SPECULOS_ALICE` / `_BOB` / `_CHLOE` | `http://localhost:5001..5003` | Speculos de chaque employé                                                                     |
 | `BADGE_CAL_TEST_KEY`                       | —                             | Clé CAL de test (PEM), **requise** : le bundle Next ne peut pas retrouver le chemin par défaut |
 | `BADGE_ZK_ARTIFACTS_DIR`                   | `<dépôt>/infra/zk-artifacts`  | Artefacts Semaphore profondeur 16                                                              |
+| `BADGE_WEB_DATA_DIR`                       | `.data` (dans `apps/web`)     | État conservé du runtime d'agent (clés de session, identifiants de tâches), droits `600`       |
 | `BADGE_MOCK_MEASUREMENT`                   | empreinte fixe                | Mesure (bytes32) de l'enclave simulée                                                          |
 
 ## Scripts

@@ -1,7 +1,8 @@
 /**
  * The real enclave, through @badge/client over the attested channel. This server is each employee's agent runtime
- * and device bridge: it holds one agent session key per employee (delegated on their Ledger, memory only) and the
- * agent's own memory of what it asked (task and desk request ids), because the enclave answers per id, not per list.
+ * and device bridge: it holds one agent session key per employee (delegated on their Ledger) and the agent's own
+ * memory of what it asked (task and desk request ids), because the enclave answers per id, not per list. Both are
+ * persisted owner-only (agent-store.ts), so a restart of this server does not cost a new Ledger signature.
  *
  * Attestation: the quote is verified before any key is derived (`simulated` locally against the dstack simulator,
  * `tdx` in production with the compose hash pinned). Every message the Ledgers sign is pinned to the measurement of
@@ -17,11 +18,13 @@ import {
   type DeskProofWire,
 } from "@badge/zk";
 import { isAddressEqual, type Hex, type LocalAccount } from "viem";
-import { EMPLOYEES, type DeskId, type EmployeeId } from "@/lib/directory";
+import { privateKeyToAccount } from "viem/accounts";
+import { EMPLOYEE_IDS, EMPLOYEES, type DeskId, type EmployeeId } from "@/lib/directory";
 import type { LiveEnclaveConfig } from "../config";
 import { DESK_DIRECTORY, EXCHANGE_RULES } from "../desk-directory";
+import { AgentStore, type PersistedRuntime } from "../agent-store";
 import { AgentSessionMissingError, EnclaveError } from "../errors";
-import { agentSessionAccount, cachedDeskIdentity } from "../keys";
+import { agentSessionKey, cachedDeskIdentity } from "../keys";
 import {
   attestationView,
   auditView,
@@ -66,10 +69,13 @@ interface DeskRequestRecord {
   task: string;
 }
 
-/** Everything the agent runtime holds for one employee. Memory only: a restart means a new AgentSession. */
+/**
+ * Everything the agent runtime holds for one employee. Enrollment, agent session and the task / desk request ids are
+ * persisted; the rest is a cache of this process (consent history, revealed identities, proof checks).
+ */
 interface EmployeeRuntime {
   enrolledAt?: Date;
-  agent?: { client: BadgeClient; session: Session };
+  agent?: { client: BadgeClient; session: Session; privateKey: Hex };
   tasks: TaskRecord[];
   deskRequests: DeskRequestRecord[];
   consentHistory: ConsentRequestView[];
@@ -88,23 +94,25 @@ const newRuntime = (): EmployeeRuntime => ({
   verifiedDeliveries: new Map(),
 });
 
-// The agent runtime's memory lives on globalThis so that dev hot reloads swap the code without dropping the agent
-// sessions (re-delegating means a new Ledger signature per employee). Production runs a single module instance.
+// The agent runtime's memory lives on globalThis so that dev hot reloads swap the code without reloading it from
+// disk (and without two copies diverging). Production runs a single module instance.
 const RUNTIMES_KEY = Symbol.for("badge.web.live-runtimes");
 const globalRuntimes = globalThis as typeof globalThis & {
   [RUNTIMES_KEY]?: Map<EmployeeId, EmployeeRuntime>;
 };
-const liveRuntimes = (globalRuntimes[RUNTIMES_KEY] ??= new Map());
 
 export class LiveEnclave implements EnclaveApi {
   readonly mode = "live" as const;
   /** Channel without a session key: attestation, enrollment and session opening (Ledger-signed bodies). */
   private readonly bootstrap: BadgeClient;
-  private readonly runtimes = liveRuntimes;
+  private readonly store: AgentStore;
+  private readonly runtimes: Map<EmployeeId, EmployeeRuntime>;
   private attested: Promise<AttestationView> | undefined;
 
   constructor(private readonly config: LiveEnclaveConfig) {
     this.bootstrap = this.newClient();
+    this.store = new AgentStore(config.dataDir);
+    this.runtimes = globalRuntimes[RUNTIMES_KEY] ??= this.restore(this.store.load());
   }
 
   // ---- Attestation, enrollment, sessions ----
@@ -124,6 +132,14 @@ export class LiveEnclave implements EnclaveApi {
 
   async enrollment(employee: EmployeeId): Promise<EnrollmentView> {
     const runtime = this.runtime(employee);
+    if (this.activeAgent(employee) !== undefined) {
+      try {
+        await this.syncComplianceKey(employee, runtime);
+      } catch (error) {
+        // The enclave forgot the session (reset, revoked): the view below then asks for a new delegation.
+        if (!(error instanceof AgentSessionMissingError)) throw error;
+      }
+    }
     const agent = this.activeAgent(employee);
     const view: EnrollmentView = { enrolled: runtime.enrolledAt !== undefined || agent !== undefined };
     if (runtime.enrolledAt !== undefined) view.enrolledAt = runtime.enrolledAt.toISOString();
@@ -147,19 +163,21 @@ export class LiveEnclave implements EnclaveApi {
     const { employee } = await this.bootstrap.enroll(signed);
     const id = employeeIdOf(employee.id);
     this.runtime(id).enrolledAt = new Date();
+    this.persist();
     return this.enrollment(id);
   }
 
   async openSession(employee: EmployeeId, signed: SignedMessage<"AgentSession">): Promise<EnrollmentView> {
-    const sessionKey = agentSessionAccount(employee);
+    const key = agentSessionKey(employee);
     // The bridge only registers the key it holds: a session for any other key would be unusable here.
-    if (sessionKey === undefined || !isAddressEqual(sessionKey.address, signed.message.sessionKey)) {
+    if (key === undefined || !isAddressEqual(key.account.address, signed.message.sessionKey)) {
       throw new EnclaveError("INVALID_REQUEST", "the signed session key is not this agent's key");
     }
     const session = await this.bootstrap.openSession(signed);
     const runtime = this.runtime(employee);
-    runtime.agent = { client: this.newClient(sessionKey), session };
+    runtime.agent = { client: this.newClient(key.account), session, privateKey: key.privateKey };
     runtime.enrolledAt ??= new Date();
+    this.persist();
     return this.enrollment(employee);
   }
 
@@ -176,6 +194,7 @@ export class LiveEnclave implements EnclaveApi {
     );
     const record: TaskRecord = { id: task.id, requester, task: input.task, trapped };
     this.runtime(requester).tasks.unshift(record);
+    this.persist();
     return taskView(task, record);
   }
 
@@ -197,6 +216,7 @@ export class LiveEnclave implements EnclaveApi {
         // A task the enclave no longer knows (its data was reset) is forgotten instead of breaking the thread.
         if (!(error instanceof BadgeApiError && error.code === "NOT_FOUND")) throw error;
         runtime.tasks = runtime.tasks.filter((t) => t.id !== record.id);
+        this.persist();
       }
     }
     return views;
@@ -289,6 +309,7 @@ export class LiveEnclave implements EnclaveApi {
     );
     const record: DeskRequestRecord = { id: request.id, task: input.task };
     this.runtime(requester).deskRequests.unshift(record);
+    this.persist();
     return this.deskRequestView(requester, record);
   }
 
@@ -364,6 +385,70 @@ export class LiveEnclave implements EnclaveApi {
     });
   }
 
+  /** Rebuilds the runtimes from the persisted state; expired sessions are dropped (the enclave refuses them). */
+  private restore(persisted: PersistedRuntime): Map<EmployeeId, EmployeeRuntime> {
+    const runtimes = new Map<EmployeeId, EmployeeRuntime>();
+    const nowSeconds = Date.now() / MS_PER_SECOND;
+    for (const employee of EMPLOYEE_IDS) {
+      const saved = persisted[employee];
+      if (saved === undefined) continue;
+      const runtime = newRuntime();
+      if (saved.enrolledAt !== undefined) runtime.enrolledAt = new Date(saved.enrolledAt);
+      if (saved.agent !== undefined && saved.agent.session.expiresAt > nowSeconds) {
+        const account = privateKeyToAccount(saved.agent.privateKey);
+        // A key that does not match its session would sign requests the enclave attributes to nobody.
+        if (isAddressEqual(account.address, saved.agent.session.sessionKey)) {
+          runtime.agent = { client: this.newClient(account), ...saved.agent };
+        }
+      }
+      runtime.tasks = saved.tasks.map((task) => ({ ...task, requester: employee }));
+      runtime.deskRequests = saved.deskRequests;
+      runtimes.set(employee, runtime);
+    }
+    return runtimes;
+  }
+
+  /**
+   * Writes what must survive a restart. A failed write only costs a new delegation after the next restart, so it is
+   * reported in the server log rather than failing the employee's action.
+   */
+  private persist(): void {
+    const employees: PersistedRuntime = {};
+    for (const [employee, runtime] of this.runtimes) {
+      employees[employee] = {
+        ...(runtime.enrolledAt === undefined ? {} : { enrolledAt: runtime.enrolledAt.toISOString() }),
+        ...(runtime.agent === undefined
+          ? {}
+          : { agent: { privateKey: runtime.agent.privateKey, session: runtime.agent.session } }),
+        tasks: runtime.tasks.map(({ id, task, trapped }) => ({ id, task, trapped })),
+        deskRequests: runtime.deskRequests,
+      };
+    }
+    try {
+      this.store.save(employees);
+    } catch (error) {
+      console.error(
+        `[badge/web] could not persist the agent runtime to ${this.store.path}: ` +
+          (error instanceof Error ? error.message : String(error)),
+      );
+    }
+  }
+
+  /**
+   * The compliance key lives in the enclave; it is re-read there (once found, cached) so an officer whose key is
+   * already registered is not asked to sign it again, e.g. after this server restarted.
+   */
+  private async syncComplianceKey(employee: EmployeeId, runtime: EmployeeRuntime): Promise<void> {
+    if (EMPLOYEES[employee].role !== "compliance" || runtime.complianceKey !== undefined) return;
+    const key = await this.call(employee, (client) => client.getComplianceKey());
+    if (key !== null) {
+      runtime.complianceKey = {
+        publicKey: key.publicKey,
+        registeredAt: new Date(key.registeredAt * MS_PER_SECOND),
+      };
+    }
+  }
+
   private runtime(employee: EmployeeId): EmployeeRuntime {
     let runtime = this.runtimes.get(employee);
     if (runtime === undefined) {
@@ -391,6 +476,7 @@ export class LiveEnclave implements EnclaveApi {
     } catch (error) {
       if (error instanceof BadgeApiError && error.code === "session_unknown") {
         this.runtime(employee).agent = undefined;
+        this.persist();
         throw new AgentSessionMissingError(employee);
       }
       throw error;

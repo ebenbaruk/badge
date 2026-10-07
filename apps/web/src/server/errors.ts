@@ -38,8 +38,8 @@ export class EnclaveError extends Error {
 }
 
 /**
- * The employee's agent has no usable session key in this bridge (never delegated, expired, or forgotten when the
- * server restarted: session keys live in memory only). Fixed by a new AgentSession signed on the Ledger.
+ * The employee's agent has no usable session key in this bridge (never delegated, expired, or no longer known to the
+ * enclave, e.g. after its data was reset). Fixed by a new AgentSession signed on the Ledger.
  */
 export class AgentSessionMissingError extends Error {
   override readonly name = "AgentSessionMissingError";

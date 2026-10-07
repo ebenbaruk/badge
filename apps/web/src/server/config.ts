@@ -1,6 +1,7 @@
 /**
  * Server configuration, read once from the environment and validated (fail fast on a typo, not mid-demo).
  */
+import { resolve } from "node:path";
 import { z } from "zod";
 import type { EmployeeId } from "@/lib/directory";
 import { ConfigError } from "./errors";
@@ -8,6 +9,7 @@ import { ConfigError } from "./errors";
 const BYTES32_HEX = /^0x[0-9a-fA-F]{64}$/;
 const COMPOSE_HASH_HEX = /^(0x)?[0-9a-fA-F]{64}$/;
 const DEFAULT_ENCLAVE_URL = "http://127.0.0.1:8787";
+const DEFAULT_DATA_DIR = ".data";
 
 const envSchema = z
   .object({
@@ -25,6 +27,11 @@ const envSchema = z
     BADGE_SPECULOS_CHLOE: z.url().default("http://localhost:5003"),
     /** Test CAL key (PEM) used to sign the clear-signing filters; bundled code cannot rely on the package default. */
     BADGE_CAL_TEST_KEY: z.string().min(1).optional(),
+    /**
+     * Where the agent runtime keeps its owner-only state (session keys, task ids) across restarts. Defaults to
+     * `.data` in the working directory (apps/web under `pnpm --filter @badge/web dev`), which git ignores.
+     */
+    BADGE_WEB_DATA_DIR: z.string().min(1).default(DEFAULT_DATA_DIR),
     /** Overrides the measurement the mock enclave pins messages to (e.g. the dstack simulator's compose hash). */
     BADGE_MOCK_MEASUREMENT: z.string().regex(BYTES32_HEX).optional(),
   })
@@ -39,6 +46,8 @@ export interface LiveEnclaveConfig {
   attestationMode: "simulated" | "tdx";
   /** Compose hash (hex, no prefix) the TDX quote must match; undefined in simulated mode. */
   expectedComposeHash: string | undefined;
+  /** Absolute directory of the agent runtime's persisted state. */
+  dataDir: string;
 }
 
 export interface ServerConfig {
@@ -63,6 +72,7 @@ export function serverConfig(): ServerConfig {
       baseUrl: env.BADGE_ENCLAVE_URL,
       attestationMode: env.BADGE_ATTESTATION_MODE,
       expectedComposeHash: env.BADGE_ENCLAVE_COMPOSE_HASH?.replace(/^0x/, "").toLowerCase(),
+      dataDir: resolve(env.BADGE_WEB_DATA_DIR),
     },
     speculosUrls: {
       alice: env.BADGE_SPECULOS_ALICE,

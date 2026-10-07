@@ -1,17 +1,24 @@
 /**
- * Per-employee secrets held by the agent runtime (process memory only, never persisted or logged):
- * - the agent session key (software secp256k1), delegated by the employee's Ledger with an AgentSession;
+ * Per-employee secrets held by the agent runtime in process memory (never logged):
+ * - the key of the agent session being delegated (software secp256k1), until the AgentSession signed on the
+ *   employee's Ledger is registered; the live enclave then persists it with the session (agent-store.ts);
  * - the desk identity, re-derived from a Ledger signature (deterministic, RFC 6979), cached so that an anonymous
  *   share needs one device review (the DeskShare) instead of two.
  */
 import { deskIdentityDeriveMessage } from "@badge/consent";
 import { deriveDeskIdentity, type Identity } from "@badge/zk";
-import type { LocalAccount } from "viem";
+import type { Hex, LocalAccount } from "viem";
 import { COMPANY_NAME, type EmployeeId } from "@/lib/directory";
 import { signPersonalOnDevice } from "./signing";
 
+/** A session key and its account (the private key is what the runtime persists once the session is open). */
+export interface AgentSessionKey {
+  readonly privateKey: Hex;
+  readonly account: LocalAccount;
+}
+
 interface KeyStore {
-  agentKeys: Map<EmployeeId, LocalAccount>;
+  agentKeys: Map<EmployeeId, AgentSessionKey>;
   deskIdentities: Map<EmployeeId, Identity>;
 }
 
@@ -21,7 +28,7 @@ const globalStore = globalThis as typeof globalThis & { [STORE_KEY]?: KeyStore }
 const store: KeyStore = (globalStore[STORE_KEY] ??= { agentKeys: new Map(), deskIdentities: new Map() });
 
 /** The key of the employee's latest delegation, if any. */
-export function agentSessionAccount(employee: EmployeeId): LocalAccount | undefined {
+export function agentSessionKey(employee: EmployeeId): AgentSessionKey | undefined {
   return store.agentKeys.get(employee);
 }
 
@@ -29,8 +36,8 @@ export function agentSessionAccount(employee: EmployeeId): LocalAccount | undefi
  * Adopts the key of a new delegation, just before its AgentSession is signed: a new signature never revalidates an
  * old key. The previous session stays usable by the enclave client until the new one is registered.
  */
-export function adoptAgentSessionAccount(employee: EmployeeId, account: LocalAccount): void {
-  store.agentKeys.set(employee, account);
+export function adoptAgentSessionKey(employee: EmployeeId, key: AgentSessionKey): void {
+  store.agentKeys.set(employee, key);
 }
 
 /**
