@@ -118,6 +118,15 @@ function describeTask(narrator: Narrator, task: Task): void {
 
 const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "[::1]"]);
 
+/**
+ * A loopback enclave runs on the dstack simulator (the local stack, or the CVM rehearsal of infra/cvm/rehearse.sh);
+ * any other one (a Phala CVM) must present a real TDX quote matching the pins of BADGE_ENCLAVE_OS_MEASUREMENTS_FILE,
+ * or the channel is refused.
+ */
+function attestationModeOf(url: string): AttestationMode {
+  return LOOPBACK_HOSTS.has(new URL(url).hostname) ? "simulated" : "tdx";
+}
+
 async function main(): Promise<void> {
   const narrator = new Narrator();
   const { company, people } = loadPeople([...EMPLOYEES, ...OTHER_RESEARCH_MEMBERS]);
@@ -125,10 +134,8 @@ async function main(): Promise<void> {
   const agents = {} as Record<DemoEmployee, BadgeClient>;
   let enclave: EnclaveHandle | undefined;
 
-  // A loopback enclave runs on the dstack simulator; any other one (a Phala CVM) must present a real TDX quote
-  // matching the pins of BADGE_ENCLAVE_OS_MEASUREMENTS_FILE, or the channel is refused.
   const client = (url: string, sessionKey?: LocalAccount) => {
-    const attestationMode: AttestationMode = LOOPBACK_HOSTS.has(new URL(url).hostname) ? "simulated" : "tdx";
+    const attestationMode = attestationModeOf(url);
     return new BadgeClient({
       baseUrl: url,
       transport: "channel",
@@ -169,13 +176,14 @@ async function main(): Promise<void> {
       for (const ledger of connected) ledgers[ledger.who] = ledger;
       narrator.say("Ledgers d'Alice, Bob, Chloé, David et Emma connectés, adresses conformes à l'annuaire.");
       const attestation = await client(enclave.url).connect();
-      // Local runs use the dstack simulator; a remote enclave must have passed real TDX verification (pinned).
+      // A non-loopback enclave must have passed real TDX verification (pinned), never the simulator.
+      const realTee = attestationModeOf(enclave.url) === "tdx";
       check(
-        attestation.simulated !== remote,
-        remote ? "expected a real TDX quote" : "expected the dstack simulator",
+        attestation.simulated !== realTee,
+        realTee ? "expected a real TDX quote" : "expected the dstack simulator",
       );
       narrator.say(
-        remote
+        realTee
           ? `Canal attesté ouvert : quote Intel TDX vérifié (TCB ${attestation.tcbStatus}), mesure ${attestation.enclaveMeasurement}.`
           : `Canal attesté ouvert : quote vérifié (mode simulé), mesure ${attestation.enclaveMeasurement}.`,
       );
