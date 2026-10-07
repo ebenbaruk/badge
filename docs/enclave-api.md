@@ -1,197 +1,206 @@
 # Contrat de l'enclave (apps/enclave)
 
-> Spécification de référence de l'API de l'enclave Badge (en anglais, partagée par l'enclave, l'application web,
-> le serveur MCP et le script de démo).
+> Spécification de référence de l'API de l'enclave Badge, partagée par l'enclave, l'application web, le serveur MCP
+> et le script de démo. Rédigée en anglais. Les formes exactes des réponses sont les schémas zod de
+> `packages/client/src/api-schemas.ts` : le SDK valide chaque réponse avec eux et l'enclave type ses réponses avec
+> les mêmes types ; `apps/enclave/test/contract.test.ts` vérifie les deux bouts ensemble sur tout le scénario.
 
-## Actors & auth
+## Actors
 
-- Directory (seeded by admin from infra/seed/acme.json, loaded at boot, immutable while running): employees
-  {id, name, team, role: employee|compliance, address, desks[]}. Company "Acme". Alice (Ventes, desk Origination),
-  Bob (Grands comptes, desk Research), Chloe (Juridique & conformite, role compliance).
-  Research desk also has 2 extra members (David, Emma: `directoryOnlyEmployees` without a Ledger, whose desk
-  identities are DEMO FIXTURES derived from a public seed and registered at boot) so the anonymity set is >= 3
-  (Semaphore warns groups of 1-2 are not anonymous). They can never sign anything.
-  Ledger addresses: alice 0x9858EfFD232B4033E47d90003D41EC34EcaEda94,
-  bob 0x58A57ed9d8d624cBD12e2C467D34787555bB1b25, chloe 0x3061750d3dF69ef7B8d4407CB7f3F879Fd9d2398.
-  Exchange rules (`exchangeRules`): {id, label (device ASCII, shown on the Ledger), sourceDesk, recipientDesk,
-  allowedTags[]}; demo: `rule-4` "Regle 4 - marche capteurs", research -> origination, tags marche-capteurs,
-  prix-composants.
-- Employee Ledger signs EIP-712 messages (packages/consent). Agents act with an AgentSession key (secp256k1, software).
-- Every API call except the public ones is authenticated by a session-key signature:
-  headers x-badge-session (address), x-badge-ts (unix ms), x-badge-sig = personal_sign(keccak256(method|path|ts|sha256(body))).
-  Reject ts skew > 60 s, replay (ts+sig cache), unknown/expired/revoked session. Session's employee = the caller.
-  Public: GET /health, GET /v1/attestation/measurement, POST /v1/enroll, POST /v1/sessions (self-authenticated by
-  their Ledger signature), /v1/channel/\*. Everything else under /v1 goes through the authentication middleware
-  (one middleware with an allow-list: a new route is authenticated by default).
-- Code contract: the middleware sets `c.get("caller")`: `Caller {employeeId, address (Ledger), sessionKey}`, Hono env
-  `BadgeEnv` (apps/enclave/src/security/types.ts). Session lookup: `SessionRepository.findActiveCaller(sessionKey, nowMs)`
-  (unexpired, unrevoked session of an enrolled employee).
-- Every API call except the public routes (GET /health, GET /v1/attestation/measurement, POST /v1/channel/*,
-  POST /v1/enroll, POST /v1/sessions: their bodies are Ledger-signed) is authenticated by a session-key signature
-  (format in packages/client `request-auth.ts`, verified by apps/enclave `security/auth.ts`):
-  headers x-badge-session (session key address), x-badge-ts (unix ms), x-badge-sig = EIP-191 personal_sign by the
-  session key of the string `BADGE-REQ-V1\n{METHOD}\n{path+query}\n{ts}\n{sha256(body) lowercase hex}`.
-  Reject ts skew > 60 s (401 clock_skew), replay (401 replay; cache keyed on session + signed string, not on the
-  signature bytes, which are malleable; bounded, fails closed with 503 replay_cache_full), unknown/expired/revoked
-  session (401 session_unknown: the domain's SessionResolver returns null). Session's employee = the caller
-  (`c.var.caller: {employeeId, address, sessionKey}`). Bodies > 256 KiB: 413.
-- Attested encrypted channel (packages/attest): POST /v1/channel/open {nonce, clientPk} -> {channelId, enclavePk, bundle};
-  POST /v1/channel/:id {sealed} -> {sealed}; inner payload {method, path, headers, body} -> {status, contentType, body}
-  dispatched to the same Hono app in-process (app.request). Inner paths must be under /v1/ (no `..`, never the
-  channel itself); forwarded headers: content-type and the three x-badge-* headers. Channels live in memory (idle
-  TTL 15 min, cap 10 000, 503 channel_capacity when full); unknown/expired id -> 404 channel_unknown (the SDK then
-  reopens and retries once: the request was not executed); re-opening the same hello -> 409 channel_exists.
-  Plain HTTP routes also exist for local dev; `requireChannel: true` (production) answers 403 channel_required to
-  any /v1 call not dispatched by the channel (except the channel routes and the measurement).
-- Errors: every route answers `{ error: { code, message } }` with a stable machine `code`.
+- **Directory** (seeded by the administrator from `infra/seed/acme.json`, loaded at boot, immutable while running):
+  employees `{id, name, team, role: employee | compliance, address, desks[]}` of the company "Acme".
+  Alice (Ventes, desk Origination), Bob (Grands comptes, desk Research), Chloe (Juridique & conformite, compliance).
+  Ledger addresses: alice `0x9858EfFD232B4033E47d90003D41EC34EcaEda94`, bob `0x58A57ed9d8d624cBD12e2C467D34787555bB1b25`,
+  chloe `0x3061750d3dF69ef7B8d4407CB7f3F879Fd9d2398`.
+  The Research desk also lists two directory-only employees (David, Emma) without a Ledger: their desk identities are
+  DEMO FIXTURES derived from a public seed and registered at boot, so the anonymity set is >= 3 (Semaphore warns that
+  groups of 1-2 are not anonymous). They can never sign anything, and their context can never be shared.
+  Exchange rules `{id, label (device ASCII, shown on the Ledger), sourceDesk, recipientDesk, allowedTags[]}`; demo:
+  `rule-4` "Regle 4 - marche capteurs", research -> origination, tags `marche-capteurs`, `prix-composants`.
+- **Employees** sign EIP-712 messages on their Ledger (`packages/consent`, clear signing) and two EIP-191 personal
+  messages (desk identity, compliance key).
+- **Agents** act with an agent session key (secp256k1, software), delegated once by an `AgentSession` signed on the
+  Ledger. The session's employee is the caller of every request the key signs.
+
+## Transport and authentication
+
+Layering (`apps/enclave/src/api/app.ts`): the security layer (`src/security`) is mounted first and owns the transport
+and the caller; domain routes registered after it only see authenticated requests.
+
+- **Attested channel** (`packages/attest`, wire format in `packages/client/src/channel-wire.ts`):
+  `POST /v1/channel/open {nonce, clientPk} -> {channelId, enclavePk, bundle}` (TDX quote over
+  `sha512(nonce || clientPk || enclavePk)`, event log, app-compose); `POST /v1/channel/:id {sealed} -> {sealed}`.
+  The inner payload `{method, path, headers, body} -> {status, contentType, body}` is dispatched in-process to the
+  same app. Inner paths must be under `/v1/` (no `..`, never the channel itself); forwarded headers: `content-type`
+  and the three `x-badge-*` headers. Channels live in memory (idle TTL 15 min, cap 10 000, `503 channel_capacity`);
+  an unknown or expired id answers `404 channel_unknown` (the SDK reopens and retries once: the request was not
+  executed); reusing a hello answers `409 channel_exists`.
+- **Channel required**: with `BADGE_REQUIRE_CHANNEL=true` (default, forced inside a CVM: TLS ends at the Phala
+  gateway) any `/v1` call not dispatched by the channel answers `403 channel_required`, except the channel routes and
+  the measurement. `BADGE_REQUIRE_CHANNEL=false` allows plain HTTP for local tools.
+- **Request signature**: every `/v1` route except the public ones carries `x-badge-session` (session key address),
+  `x-badge-ts` (unix ms) and `x-badge-sig` = EIP-191 signature by the session key of
+  `BADGE-REQ-V1\n{METHOD}\n{path+query}\n{ts}\n{sha256(body) lowercase hex}` (`canonicalRequest`,
+  `packages/client/src/request-auth.ts`; verified by `src/security/auth.ts`). Refusals (401): `auth_missing`,
+  `auth_malformed`, `clock_skew` (more than 60 s), `bad_signature`, `replay` (cache keyed on session + signed string,
+  not on the malleable signature bytes; full cache fails closed with `503 replay_cache_full`), `session_unknown`
+  (unknown, expired or revoked session, resolved by `SessionRepository.findActiveCaller`). Bodies above 256 KiB: 413.
+- **Public routes**: `GET /health`, `GET /v1/attestation/measurement`, `POST /v1/channel/*`, and the two routes whose
+  bodies are Ledger-signed: `POST /v1/enroll`, `POST /v1/sessions`. Any new route is authenticated by default.
+- In code, the middleware sets `c.var.caller: Caller {employeeId, address (Ledger), sessionKey}` (Hono env
+  `BadgeEnv`, `src/security/types.ts`).
 
 ## Enclave measurement
 
-- = compose hash from dstack info() as bytes32 (simulator locally, real CVM on Phala). Exposed by
-  GET /v1/attestation/measurement -> {measurement}. Inside a CVM (dstack socket present) the simulator is never used.
-- Every signed message must carry it; mismatch -> reject (ENCLAVE_MISMATCH).
+`GET /v1/attestation/measurement -> {measurement, composeHash, appId}`: the deployment's compose hash read from the
+dstack guest agent (the simulator locally, the real CVM on Phala; inside a CVM the simulator is never used), and its
+bytes32 form, equal to `AttestationResult.enclaveMeasurement` of the channel. Every signed message carries it; a
+mismatch is refused (`ENCLAVE_MISMATCH`).
 
 ## Errors
 
-Single envelope `{ "error": { "code", "message" } }`. Codes: enclave (`INVALID_REQUEST` 400, `UNAUTHENTICATED` 401,
-`FORBIDDEN` / `UNKNOWN_EMPLOYEE` / `NOT_ENROLLED` 403, `NOT_FOUND` 404, `NONCE_REUSED` / `ALREADY_EXISTS` /
-`NOT_PENDING` / `COMPLIANCE_KEY_MISSING` 409, `SESSION_TOO_LONG` / `STALE` / `NO_RULE` 422, `UPSTREAM_FAILED` 502),
-@badge/consent codes (`INVALID_MESSAGE` 400, `SIGNATURE_MISMATCH` 403, `EXPIRED` / `ENCLAVE_MISMATCH` /
-`EXCERPT_HASH_MISMATCH`... 422), @badge/zk codes (`MALFORMED_PROOF` 400, `WRONG_ROOT` / `INVALID_PROOF`... 422,
-`NULLIFIER_REUSED` 409), `BODY_TOO_LARGE` 413 (64 KB), `INTERNAL` 500 (details only in the enclave log). Another
-employee's resource is reported as `NOT_FOUND`.
+Single envelope `{ "error": { "code", "message" } }`, with a stable machine `code`:
 
-Signed messages travel as the @badge/consent wire envelope `{kind, message, signature}` (bigints as decimal strings).
+- security layer (lowercase): `auth_*`, `clock_skew`, `bad_signature`, `replay`, `session_unknown` 401,
+  `channel_required` 403, `channel_unknown` 404, `channel_exists` 409, `body_too_large` 413, `invalid_body` /
+  `channel_rejected` 400, `replay_cache_full` / `channel_capacity` / `dstack_failed` 503;
+- domain: `INVALID_REQUEST` 400, `FORBIDDEN` / `UNKNOWN_EMPLOYEE` / `NOT_ENROLLED` 403, `NOT_FOUND` 404,
+  `NONCE_REUSED` / `ALREADY_EXISTS` / `NOT_PENDING` / `COMPLIANCE_KEY_MISSING` 409, `SESSION_TOO_LONG` / `STALE` /
+  `NO_RULE` 422, `UPSTREAM_FAILED` 502 (memory or LLM; never echoes their output), `INTERNAL` 500 (details only in
+  the enclave log);
+- `@badge/consent`: `INVALID_MESSAGE` / `NOT_DEVICE_ASCII` / `SIGNATURE_MALFORMED` 400, `SIGNATURE_MISMATCH` 403,
+  `EXPIRED` / `ENCLAVE_MISMATCH` / `EXCERPT_HASH_MISMATCH`... 422;
+- `@badge/zk`: `MALFORMED_PROOF` 400, `WRONG_ROOT` / `WRONG_MESSAGE` / `WRONG_SCOPE` / `INVALID_PROOF` 422,
+  `NULLIFIER_REUSED` 409.
 
-- = compose hash from dstack info() as bytes32 (simulator locally, real CVM on Phala). Exposed by GET /v1/attestation/measurement
-  -> {measurement: 0x-bytes32, composeHash: hex, appId}; equal to `AttestationResult.enclaveMeasurement` of the channel.
-- Every signed message must carry it; mismatch -> reject.
+Another employee's resource is reported as `NOT_FOUND`. Signed messages travel as the `@badge/consent` wire envelope
+`{kind, message, signature}` (bigints as decimal strings). Times outside signed messages are unix seconds.
 
 ## Flows
 
-1. POST /v1/enroll {signed EmployeeEnroll} (no session yet; signature by the directory address; company, employeeName,
-   team equal to the directory (device ASCII); issuedAt fresh <= 10 min; nonce unused) -> 201 {employeeId}
-2. POST /v1/sessions {signed AgentSession} (employee enrolled; expiresAt <= 12 h; sessionKey not a directory Ledger
-   address; registers sessionKey; the same employee may re-delegate a key whose session ended)
-   -> 201 {employeeId, sessionKey, expiresAt}
-   GET /v1/me -> {employeeId, name, team, role, address, desks, company}
-3. POST /v1/tasks {task: string <= 2000, taskLabel: string, requestFullContextOf?: employeeId} by Alice's agent
-   - memory.findCandidates(task) -> candidates across company + all personal scopes
-   - classifier keeps relevant ones; personal data flag recorded
-   - requestFullContextOf: one excerpt = all of that owner's notes concatenated, label "Tout le contexte de <name>";
-     not filtered by relevance (explicitly asked for), but goes through the same rules and consent (what a trapped,
-     prompt-injected agent does; not special-cased otherwise)
-   - global + requester's own -> allowed
-   - other owner's personal excerpt:
-     mass-extraction rules first: block -> blocked (never reaches the owner)
-     existing active grant (owner, recipient, excerptHash, not expired, not revoked) -> allowed (log "grant.reused")
-     matching active ContextPolicy (recipient team == granteeTeam, tag in excerpt tags, length <= max) and rules
-     outcome ok -> allowed (log "policy.used"); a warning always goes to the owner, even with a policy
-     else -> ConsentRequest pending, with the exact ContextShare message prepared by the enclave
-     (recipientName ASCII from directory "Alice Martin (Ventes)", excerptLabel ASCII <= 60 chars cut from the excerpt,
-     length, taskLabel (ASCII <= 60), expiresAt = now + 24 h, excerptHash, measurement, recipient, owner, taskId,
-     random nonce)
-   - mass-extraction rules (deterministic, named constants in src/policy/rules.ts) on every third-party request:
-     excerpt length (warn > 600, block > 8000), share of owner's total context requested by the task (warn >= 90 %),
-     distinct owners in one task (warn >= 3, block > 6), requests per owner per hour (warn >= 20, block >= 60), explicit
-     full-context request (warn). Outcome: ok | warn (reasons shown to owner, compliance alert "rule.warn" in audit)
-     | block ("rule.block", refused, never reaches the owner).
-     -> 201 task {id, status: waiting_consent|ready, taskLabel, createdAt, allowed[], pending[], blocked[], refused[]}
-     each excerpt {ref, ownerId, ownerName, scope, label, length, decision, basis, risk, reasons[]}. Never the text of
-     another owner's excerpt; until it is released, its label is "Contexte personnel de <name>".
-4. GET /v1/consents (caller = owner) -> {consents: [{id, taskId, kind: "ContextShare", message (wire, to sign),
-   requester {id, name, team, address}, excerpt {label, length, text, tags}, risk {level, reasons}, createdAt}],
-   deskShares: [{requestId, kind: "DeskShare", message, recipientDesk, sourceDesk, ruleLabel, excerpt, createdAt}]}
-   (requests whose message expired are retired first).
-   POST /v1/consents/:id/approve {signature} -> verify sig by owner, checkContextShare against stored excerpt text,
-   nonce -> Grant stored (id = hashBadgeMessage) -> {consentId, grantId}
-   POST /v1/consents/:id/reject -> {consentId, status: "rejected"}
-   GET /v1/grants (owner) -> {grants: [{id, recipient, excerptLabel, excerptLength, taskLabel, expiresAt, createdAt}]}
-5. GET /v1/tasks/:id (requester only) -> when no pending: brief = memory.draftBrief(task, allowedExcerpts) inside the
-   enclave (drafted once, then cached), from excerpts whose grant/policy is still active; returns the task plus
-   brief (null while pending or with nothing allowed) + tokenStats {selectedTokens, allContextTokens} (o200k_base)
-   - sources [{ownerId, ownerName, label, basis}].
-6. POST /v1/revocations {signed ContextRevoke} (owner's own agent) -> grantId = a grant or policy id of the owner, or
-   0x0 = all grants to `recipient` (a directory address) and the policies granted to their team. The owner's DEK is
-   rotated (KeyRotator) before the revocation is recorded; subsequent tasks need fresh consent.
-   -> 201 {revocationId, grantsRevoked, policiesRevoked}
-7. POST /v1/policies {signed ContextPolicy} (owner's own agent; granteeTeam must be a directory team, device ASCII)
-   -> 201 {policyId}; GET /v1/policies (owner) -> {policies: [{id, granteeTeam, contextTag, purpose,
-   maxExcerptLength, expiresAt, createdAt, revokedAt, active, uses}]}.
-8. Desks (ids in the API: research, origination; names in signed messages: "Research", "Origination"):
-   POST /v1/desks/join {signed DeskJoin} (signed by the caller's Ledger; employee must be desk member in directory;
-   deskName = desk name) -> 201 desk view
-   GET /v1/desks/:desk -> {id, name, members (registered identities), commitments[] (decimal, registration order), root}
-   POST /v1/desk-requests {fromDesk, task, ruleId?} (requester agent, member of fromDesk) -> enclave applies the
-   exchange rules table (rule whose recipientDesk == fromDesk; ruleId needed only if several) and finds, per member of
-   the source desk who has joined it, the best candidate excerpt whose tags intersect the rule's allowedTags; creates
-   one DeskConsentRequest per owner with the DeskShare message (requestId = the desk request id).
-   -> 201 {id, status: waiting_share|no_match, ruleId, ruleLabel, fromDesk, sourceDesk, deliveries: []}
-   POST /v1/desk-requests/:id/approve {signature, proof} (caller = asked owner) -> verify DeskShare sig (signer in
-   sourceDesk), checkDeskShare against stored text, a compliance key is registered (else COMPLIANCE_KEY_MISSING), nonce
-   unused, ZK proof (root == source desk root, message = excerptHash, scope = requestId, nullifier unused) -> delivered
-   to requester without identity; audit entry (actor "anonymous") stores signer identity SEALED to compliance pubkey.
-   POST /v1/desk-requests/:id/reject (caller = asked owner).
-   GET /v1/desk-requests/:id (requester) -> {..., status: waiting_share|delivered|no_match|declined,
-   deliveries: [{excerpt, excerptHash, proof, sourceDesk, ruleLabel}]} (ordered by excerpt hash, no owner).
-9. Compliance (role compliance): GET /v1/audit?afterSeq&limit -> {entries, verification (whole chain)}; compliance
-   pubkey (X25519) registered by Chloe: POST /v1/compliance/key {publicKey (0x + 32 bytes), issuedAt (unix s, decimal
-   string), signature = EIP-191 by her Ledger of `complianceKeyMessage(company, publicKey, issuedAt)`
-   (@badge/consent)}; fresh <= 10 min and newer than the current key -> 201 {keyId}. De-anonymisation happens
-   client-side (Chloe decrypts with key derived from her Ledger signature); the reveal is logged via
-   POST /v1/audit/reveal-notice {seq (a desk.share entry), reason} -> 201 {seq}.
+1. **Enrollment** `POST /v1/enroll` (signed `EmployeeEnroll`, no session yet): signed by the directory address;
+   company, employeeName and team equal to the directory (device ASCII); `issuedAt` at most 10 min old; nonce unused.
+   `201 {employee}`.
+2. **Agent session** `POST /v1/sessions` (signed `AgentSession`): employee enrolled; `expiresAt` at most 12 h ahead;
+   the session key is not a directory Ledger address; the same employee may re-delegate a key whose session ended.
+   `201 {sessionKey, employeeId, agentName, expiresAt}`. `GET /v1/me` returns the caller's directory profile.
+3. **Task** `POST /v1/tasks {task (<= 2000 chars), taskLabel, requestFullContextOf?}` by the requester's agent:
+   - memory finds candidates across the company context and every personal context; the LLM classifier keeps the
+     relevant ones;
+   - `requestFullContextOf` (what a prompt-injected agent does): one excerpt made of all of that owner's notes,
+     labelled "Tout le contexte de <name>", not filtered by relevance but subject to the same rules and consent;
+   - company context and the requester's own notes are allowed;
+   - another owner's excerpt: the mass-extraction rules first (block = refused, never reaches the owner); then an
+     active grant of this exact excerpt (`grant_reused`); then, if the rules are `ok`, a matching active standing
+     policy (team of the requester == `granteeTeam`, `contextTag` among the excerpt tags, length <= max: `policy`,
+     logged as `policy.used`); otherwise a pending consent with the exact `ContextShare` prepared by the enclave
+     (`recipientName` "Alice Martin (Ventes)", `excerptLabel` cut from the excerpt (<= 60 ASCII chars), length,
+     `taskLabel`, `expiresAt` = now + 24 h, `excerptHash`, measurement, recipient, owner, taskId, random nonce);
+   - an owner without a Ledger can never consent: their excerpts are blocked (`OWNER_CANNOT_CONSENT`).
+     Mass-extraction rules (named thresholds, `src/policy/rules.ts`): excerpt length (warn > 600, block > 8000), share
+     of the owner's whole context requested by the task (warn >= 90 %), distinct owners in one task (warn >= 3,
+     block > 6), requests per owner per hour (warn >= 20, block >= 60), explicit full-context request (warn). A warning
+     is shown to the owner and logged (`rule.warn`); a standing policy never covers a warned request.
+     `201 Task` (same as `GET /v1/tasks/:id` below; the brief is drafted at once when nothing is pending).
+4. **Task status** `GET /v1/tasks/:id` (requester only): `allowed[]` (`via`: `company | own | consent |
+grant_reused | policy`), `pending[]` (with `consentId` and `risk {level, reasons[{code, severity, message}]}`),
+   `blocked[]` (with `risk`), `refused[]` (`reason`: `rejected | expired | revoked`). Until an excerpt is released to
+   the requester its label reads "Contexte personnel de <name>"; its text never appears. Once nothing is pending,
+   `brief` is drafted inside the enclave from the excerpts still covered (a revoked grant or policy moves its excerpt
+   to `refused` and the cached brief is redrafted without it), with `tokenStats {selectedTokens, allContextTokens}`
+   (o200k_base).
+5. **Consents** `GET /v1/consents` (caller = owner): pending `ContextShare` requests `{id, taskId, requester, excerpt
+{label, length, text, tags}, message (to sign), risk, createdAt}` and pending `DeskShare` requests (below);
+   requests whose message expired are retired first. `POST /v1/consents/:id/approve {signature}`: the owner's
+   signature of the prepared message, checked against the stored excerpt text; nonce consumed; grant stored (id =
+   `hashBadgeMessage`) -> `{consentId, status: "approved", grantId}`. `POST /v1/consents/:id/reject` ->
+   `{consentId, status: "rejected", grantId: null}`. `GET /v1/grants`: the caller's active one-off grants.
+6. **Revocation** `POST /v1/revocations` (signed `ContextRevoke`, owner's own agent): `grantId` = one of the owner's
+   grants or policies, or `0x0` = every grant to `recipient` (a directory address) and the policies granted to their
+   team. The owner's data key is rotated (`KeyRotator.rotate`, version persisted) before the revocation is recorded.
+   `201 {revocationId, revokedGrants, revokedPolicies}`; later tasks need fresh consent.
+7. **Standing agreements** `POST /v1/policies` (signed `ContextPolicy`, owner's own agent; `granteeTeam` must be a
+   directory team in device ASCII) -> `201 Policy {id, granteeTeam, contextTag, purpose, maxExcerptLength, expiresAt,
+createdAt, status: active | revoked | expired, uses}`; `GET /v1/policies` lists the caller's policies.
+8. **Desks** (API ids `research`, `origination`; names in signed messages "Research", "Origination"):
+   - `POST /v1/desks/join` (signed `DeskJoin` by the caller's Ledger; the caller is a member of the desk in the
+     directory) -> `201 Desk {id, name, members, commitments[] (decimal, registration order), root | null}`;
+     `GET /v1/desks/:desk` -> `Desk` (what a member needs to build a proof).
+   - `POST /v1/desk-requests {fromDesk, task, ruleId?}` (requester is a member of `fromDesk`): the exchange rule whose
+     recipient is `fromDesk` (`ruleId` needed only if several apply) selects, per member of the source desk who joined
+     it, the best candidate excerpt whose tags intersect the rule's tags, and prepares one `DeskShare` per owner ->
+     `201 DeskRequest {id, status: waiting_share | delivered | no_match | declined, ruleId, ruleLabel, fromDesk,
+sourceDesk, deliveries[], createdAt}`.
+   - The asked owner sees `{kind: "DeskShare", id (= desk request id), recipientDesk, sourceDesk, ruleLabel, excerpt,
+message}` in `GET /v1/consents`, then `POST /v1/desk-requests/:id/approve {signature, proof}`: DeskShare signed by
+     the caller's Ledger (member of the source desk), checked against the stored text; a compliance key must be
+     registered (else `COMPLIANCE_KEY_MISSING`); nonce unused; Semaphore proof with root = source desk root, message =
+     `excerptHash`, scope = request id, fresh nullifier -> `{requestId, status: "delivered"}`. The audit entry
+     `desk.share` has actor `anonymous` and the signer identity sealed to the compliance key.
+     `POST /v1/desk-requests/:id/reject` -> `{requestId, status: "rejected"}`.
+   - `GET /v1/desk-requests/:id` (requester only): `deliveries[{excerpt, excerptHash, proof}]`, ordered by excerpt
+     hash, never naming the owner. The requester can verify the proof itself against `GET /v1/desks/:source`.
+9. **Compliance** (role `compliance` only):
+   - Key: Chloe signs (EIP-191, Ledger) `complianceKeyDeriveMessage("Acme")`; X25519 secret = keccak256(signature),
+     never sent (Ledger signatures are deterministic: the same Ledger re-derives the same key). Registration:
+     `POST /v1/compliance/key {publicKey (hex), signature}` where `signature` is her EIP-191 signature of
+     `complianceKeyRegistrationMessage("Acme", publicKey)` (all three in `packages/attest`) ->
+     `201 {keyId, employeeId, publicKey, registeredAt}`. Registering the current key again is a no-op; a replaced key
+     can never become current again (`STALE`).
+   - `GET /v1/audit?afterSeq&limit` -> `{entries[], chain {valid, length, brokenAt}}` (the chain verification covers
+     the whole log, the entries are a page of at most 500).
+   - De-anonymisation happens on the officer's side: she opens `data.sealedSigner` of a `desk.share` entry with her
+     Ledger-derived key (`openSealed`), then logs it with `POST /v1/audit/reveal-notice {seq, reason}` -> `201`
+     the new `compliance.reveal` audit entry.
 
-## Storage (node:sqlite, file under BADGE_DATA_DIR)
+## Storage
 
-enrollments, sessions, used_nonces(signer, nonce), tasks, task_excerpts, consent_requests, grants, policies,
-policy_uses, revocations, desk_members(commitment, registration order), desk_requests, desk_offers,
-nullifiers(scope, nullifier), audit_log (append-only, enforced by triggers), compliance_keys. The directory is not
-stored (seed configuration). Migrations as ordered SQL files (src/db/migrations); repositories with typed rows (zod).
+SQLite (`node:sqlite`), one file `enclave.sqlite` under `BADGE_DATA_DIR`, ordered SQL migrations
+(`src/db/migrations`), typed rows (zod). Tables: enrollments, sessions, used_nonces (signer, nonce), tasks,
+task_excerpts, consent_requests, grants, policies, policy_uses, revocations, key_versions, desk_members (registration
+order), desk_requests, desk_offers, nullifiers (scope, nullifier), audit_log (append-only, enforced by triggers),
+compliance_keys. The directory is configuration, not storage. A signed message only takes effect in one transaction
+that consumes its nonce, applies the effect and appends the audit entry.
 
 ## Audit
 
-append-only {seq, ts, type, actor, subject, data(json, never excerpt text — hashes only), prevHash, hash=sha256(prevHash|canonical)}.
-verifyChain(). Types: enroll, session.open, task.created, consent.requested, consent.approved, consent.rejected,
-grant.reused, policy.created, policy.used, revoke, rule.warn, rule.block, desk.join, desk.request, desk.share,
-compliance.key, compliance.reveal. Data shapes are closed per type (src/audit/events.ts).
-grant.reused, policy.created, policy.used, revoke, rule.warn, rule.block, desk.join, desk.share, compliance.reveal.
+Append-only `{seq, ts, type, actor, subject, data, prevHash, hash = sha256(prevHash | canonical entry)}`;
+`verifyChain()` checks the whole chain. `data` shapes are closed per type (`src/audit/events.ts`) and never contain
+excerpt text, only hashes, lengths and ids. Types: `enroll`, `session.open`, `task.created`, `consent.requested`,
+`consent.approved`, `consent.rejected`, `grant.reused`, `policy.created`, `policy.used`, `revoke`, `rule.warn`,
+`rule.block`, `desk.join`, `desk.request`, `desk.share`, `compliance.key`, `compliance.reveal`.
 
 ## Keys
 
-- Per-employee DEK = dstack getKey(`badge/dek/{employeeId}:{version}`), version from a persisted counter (starts at 1).
-  Rotation (after a revocation) = version + 1 (`KeyRotator.rotate`); old versions stay derivable to read old data.
-
-## Compliance key
-
-- Chloe signs (EIP-191, Ledger) `complianceKeyDeriveMessage("Acme")`; X25519 secret = keccak256(signature), never sent.
-  Registration: POST /v1/compliance/key {publicKey (hex, no prefix), signature = EIP-191 by Chloe's Ledger of
-  `complianceKeyRegistrationMessage("Acme", publicKey)`} (all three in packages/attest).
-- Desk share signer identity in the audit = `sealToPublicKey(compliancePk, json)` (packages/attest sealed box).
+- Channel key: X25519 derived from the dstack KMS (`badge/channel/x25519`).
+- Per-employee data key: dstack `getKey("badge/dek/{employeeId}:{version}")`, version persisted in `key_versions`
+  (starts at 1). A revocation rotates it (`version + 1`); old versions stay derivable to read old data.
+- Desk-share signer identity in the audit: `sealToPublicKey(compliancePublicKey, json)` (X25519 sealed box,
+  `packages/attest`).
 
 ## Wire shapes (v1)
 
-Response schemas live in packages/client `api-schemas.ts` (the SDK validates every response with them; the enclave
-should type its handlers with them). Times outside signed messages are unix seconds (JSON numbers); signed messages
-use the @badge/consent wire format (bigints as decimal strings).
-
-| Route                              | Body                                               | Response                                                                                      |
-| ---------------------------------- | -------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| POST /v1/enroll                    | signed EmployeeEnroll `{kind, message, signature}` | `{employee: {id, name, team, role, address, desks[]}}`                                        |
-| POST /v1/sessions                  | signed AgentSession                                | `{sessionKey, employeeId, agentName, expiresAt}`                                              |
-| POST /v1/tasks                     | `{task, taskLabel}`                                | Task `{id, taskLabel, status, allowed[], pending[], blocked[], brief, tokenStats, createdAt}` |
-| GET /v1/tasks/:id                  |                                                    | Task (brief and tokenStats non-null once nothing is pending)                                  |
-| GET /v1/consents                   |                                                    | `{consents: [ContextShare or DeskShare request {kind, id, status, message, risk, ...}]}`      |
-| POST /v1/consents/:id/approve      | `{signature}`                                      | `{consentId, status: "approved", grantId}`                                                    |
-| POST /v1/consents/:id/reject       | `{}`                                               | `{consentId, status: "rejected", grantId: null}`                                              |
-| POST /v1/revocations               | signed ContextRevoke                               | `{revokedGrants, revokedPolicies}`                                                            |
-| POST /v1/policies                  | signed ContextPolicy                               | Policy `{id, granteeTeam, contextTag, purpose, maxExcerptLength, expiresAt, status, uses}`    |
-| GET /v1/policies                   |                                                    | `{policies: Policy[]}`                                                                        |
-| POST /v1/desks/join                | signed DeskJoin                                    | Desk `{desk, members, commitments[], root}` (decimal strings)                                 |
-| GET /v1/desks/:desk                |                                                    | Desk                                                                                          |
-| POST /v1/desk-requests             | `{fromDesk, task}`                                 | DeskRequest `{id, fromDesk, sourceDesk, ruleId, status, delivery, createdAt}`                 |
-| POST /v1/desk-requests/:id/approve | `{signature, proof}` (proof: @badge/zk wire)       | DeskRequest                                                                                   |
-| GET /v1/desk-requests/:id          |                                                    | DeskRequest; `delivery` = `{excerpt, sourceDesk, proof}` or null, never the signer            |
-| POST /v1/compliance/key            | `{publicKey, signature}`                           | `{employeeId, publicKey, registeredAt}`                                                       |
-| GET /v1/audit                      |                                                    | `{entries: AuditEntry[], chain: {valid, length, brokenAt}}`                                   |
-| POST /v1/audit/reveal-notice       | `{seq, reason}`                                    | AuditEntry                                                                                    |
-| GET /v1/attestation/measurement    |                                                    | `{measurement, composeHash, appId}`                                                           |
+| Route                              | Body                                           | Response (`api-schemas.ts`)                     |
+| ---------------------------------- | ---------------------------------------------- | ----------------------------------------------- |
+| GET /v1/attestation/measurement    |                                                | `Measurement {measurement, composeHash, appId}` |
+| POST /v1/enroll                    | signed EmployeeEnroll                          | `{employee: Employee}`                          |
+| POST /v1/sessions                  | signed AgentSession                            | `Session`                                       |
+| GET /v1/me                         |                                                | `Me` (Employee + company)                       |
+| POST /v1/tasks                     | `{task, taskLabel, requestFullContextOf?}`     | `Task`                                          |
+| GET /v1/tasks/:id                  |                                                | `Task`                                          |
+| GET /v1/consents                   |                                                | `{consents: (ContextShare or DeskShare)[]}`     |
+| POST /v1/consents/:id/approve      | `{signature}`                                  | `ConsentDecision`                               |
+| POST /v1/consents/:id/reject       | `{}`                                           | `ConsentDecision`                               |
+| GET /v1/grants                     |                                                | `{grants: Grant[]}`                             |
+| POST /v1/revocations               | signed ContextRevoke                           | `RevocationResult`                              |
+| POST /v1/policies                  | signed ContextPolicy                           | `Policy`                                        |
+| GET /v1/policies                   |                                                | `{policies: Policy[]}`                          |
+| POST /v1/desks/join                | signed DeskJoin                                | `Desk`                                          |
+| GET /v1/desks/:desk                |                                                | `Desk`                                          |
+| POST /v1/desk-requests             | `{fromDesk, task, ruleId?}`                    | `DeskRequest`                                   |
+| GET /v1/desk-requests/:id          |                                                | `DeskRequest`                                   |
+| POST /v1/desk-requests/:id/approve | `{signature, proof}` (proof: `@badge/zk` wire) | `DeskShareDecision`                             |
+| POST /v1/desk-requests/:id/reject  | `{}`                                           | `DeskShareDecision`                             |
+| POST /v1/compliance/key            | `{publicKey, signature}`                       | `ComplianceKey`                                 |
+| GET /v1/audit                      | query `afterSeq`, `limit`                      | `AuditLog`                                      |
+| POST /v1/audit/reveal-notice       | `{seq, reason}`                                | `AuditEntry`                                    |

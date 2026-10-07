@@ -1,116 +1,106 @@
 # @badge/enclave
 
-Service confidentiel de Badge, exécuté dans l'enclave (Phala dstack) : API HTTP, moteur de politique, journal de
-conformité, partage anonyme entre desks, couches LLM et mémoire. Le contrat de l'API est `docs/enclave-api.md`.
+Service confidentiel de Badge, exécuté dans l'enclave (Phala dstack) : API HTTP, canal attesté, moteur de politique,
+journal de conformité, partage anonyme entre desks, couches LLM et mémoire. Le contrat de l'API est
+`docs/enclave-api.md` ; les formes des réponses sont les schémas de `@badge/client` (`api-schemas.ts`).
 
-## Domaine et API
+## Lancer l'enclave
 
-| Module           | Rôle                                                                                                                            |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `src/db`         | SQLite (`node:sqlite`), migrations SQL ordonnées, transactions, nonces par signataire (consommation atomique).                  |
-| `src/directory`  | Annuaire chargé depuis `infra/seed/acme.json` (rôles, desks, règles d'échange) et inventaire du contexte.                       |
-| `src/audit`      | Journal append-only chaîné (sha256), `verifyChain`, interface `Sealer` (scellement pour la conformité).                         |
-| `src/policy`     | Moteur de politique (inscription, sessions, consentements, accords, accords permanents, révocations) et règles anti-aspiration. |
-| `src/tasks`      | Orchestration des tâches : candidats, classification, décision par extrait, brief et statistiques de jetons.                    |
-| `src/desks`      | Adhésion aux desks, demandes entre desks, preuves Semaphore, registre de nullifiers persistant.                                 |
-| `src/compliance` | Clé de conformité (X25519, signée EIP-191), lecture du journal, notification de levée d'anonymat.                               |
-| `src/api`        | Application Hono pure (`createApp(deps)`), enveloppe d'erreur unique, middleware d'authentification injecté.                    |
-| `src/server.ts`  | Câblage réel (SQLite, Honcho, profil LLM, mesure dstack) et `startEnclaveServer(sécurité)`, port 8787.                          |
+```bash
+infra/dstack-sim.sh start          # TEE simulé (hors CVM)
+infra/stack.sh up && infra/stack.sh seed   # mémoire Honcho et jeu de données Acme
+pnpm --filter @badge/enclave start # ou `dev` (rechargement à chaud) ; écoute sur 127.0.0.1:8787
+```
 
-Principes : **échec fermé** (toute vérification lève une erreur typée avec un `code`), un message signé n'a d'effet
-que dans **une transaction** qui consomme son nonce, applique l'effet et écrit l'entrée d'audit ; le journal ne
-contient **jamais** de texte d'extrait (empreintes et longueurs uniquement).
+Au démarrage, l'enclave lit sa mesure auprès de dstack (échec immédiat si l'agent ou le simulateur ne répond pas),
+ouvre sa base SQLite, enregistre les identités de démonstration du desk Research, puis journalise une ligne sans
+secret : profil LLM (URL et modèles, jamais la clé), mesure, mode TEE (simulé ou CVM), canal exigé ou non, fichier
+de données. `SIGINT` / `SIGTERM` arrêtent proprement le serveur.
+
+| Variable                                                              | Rôle                                                                         | Défaut                    |
+| --------------------------------------------------------------------- | ---------------------------------------------------------------------------- | ------------------------- |
+| `BADGE_ENCLAVE_PORT`                                                  | port HTTP                                                                    | `8787`                    |
+| `BADGE_ENCLAVE_HOST`                                                  | interface d'écoute (`0.0.0.0` dans le CVM, derrière la passerelle dstack)    | `127.0.0.1`               |
+| `BADGE_DATA_DIR`                                                      | dossier de `enclave.sqlite`                                                  | `infra/.data/enclave`     |
+| `BADGE_SEED_FILE`                                                     | annuaire et notes (jeu de données)                                           | `infra/seed/acme.json`    |
+| `BADGE_REQUIRE_CHANNEL`                                               | `false` autorise le HTTP en clair pour les outils locaux ; forcé dans un CVM | `true`                    |
+| `DSTACK_SIMULATOR_ENDPOINT`                                           | simulateur dstack (ignoré dans un CVM, qui utilise `/var/run/dstack.sock`)   | `http://127.0.0.1:8090`   |
+| `BADGE_LLM_PROFILE`                                                   | `build` ou `phala` (voir « Couche LLM »)                                     | `build`                   |
+| `BADGE_ENV_FILE`                                                      | fichier des secrets LLM                                                      | `../.env` à côté du dépôt |
+| `BADGE_HONCHO_URL`, `BADGE_HONCHO_JWT_FILE`, `BADGE_HONCHO_WORKSPACE` | mémoire Honcho                                                               | pile locale, `acme`       |
+
+## Architecture
+
+`createEnclaveApp(deps)` (`src/api/app.ts`) monte d'abord la couche sécurité, puis les routes métier. Toutes les
+dépendances sont injectées (`AppDeps`) : les tests exécutent la vraie application en mémoire, `src/server.ts` branche
+les implémentations réelles et `src/main.ts` lance le processus.
+
+| Module           | Rôle                                                                                                                      |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `src/security`   | Canal attesté, authentification des requêtes (signature de la clé de session, rejeu, horloge), mesure, rotation des clés. |
+| `src/db`         | SQLite (`node:sqlite`), migrations SQL ordonnées, transactions, nonces par signataire (consommation atomique).            |
+| `src/directory`  | Annuaire chargé depuis le jeu de données (rôles, desks, règles d'échange) et inventaire du contexte.                      |
+| `src/audit`      | Journal append-only chaîné (sha256) et `verifyChain`.                                                                     |
+| `src/policy`     | Inscription, sessions, consentements, accords, accords permanents, révocations ; règles anti-aspiration.                  |
+| `src/tasks`      | Orchestration des tâches : candidats, classification, décision par extrait, brief et statistiques de jetons.              |
+| `src/desks`      | Adhésion aux desks, demandes entre desks, preuves Semaphore, nullifiers persistants, identité scellée.                    |
+| `src/compliance` | Clé de conformité (X25519, signée sur le Ledger), lecture du journal, levée d'anonymat journalisée.                       |
+| `src/llm`        | Profil unique compatible OpenAI, client (complétion, sortie structurée, embeddings).                                      |
+| `src/memory`     | Mémoire Honcho (candidats sur tous les contextes), classifieur, rédaction du brief.                                       |
+
+Principes :
+
+- **Échec fermé** : toute vérification lève une erreur typée avec un `code` ; un message signé n'a d'effet que dans
+  **une transaction** qui consomme son nonce, applique l'effet et écrit l'entrée d'audit.
+- **Une seule source de vérité** : l'authentification (`createAuthMiddleware` + `SessionRepository.findActiveCaller`),
+  la mesure (`GET /v1/attestation/measurement`, lue une fois auprès de dstack), les messages de la clé de conformité
+  et le scellement (`@badge/attest`), les formes filaires (`@badge/client`).
+- **Révocation** : `KeyRotator` (versions persistées dans `key_versions`) fait tourner la clé de données du
+  propriétaire avant d'enregistrer la révocation ; un brief rédigé avec un extrait révoqué est rédigé à nouveau sans lui.
+- Le journal ne contient **jamais** de texte d'extrait (empreintes et longueurs uniquement) ; l'identité du
+  signataire d'un partage de desk y est scellée pour la seule responsable conformité.
 
 Règles anti-aspiration (`src/policy/rules.ts`, seuils nommés) : longueur de l'extrait, part du contexte du
 propriétaire, nombre de propriétaires par tâche, demandes par propriétaire et par heure. Un agent piégé qui demande
-« tout le contexte de Bob » (`requestFullContextOf`) produit au minimum un avertissement montré à Bob ; au-delà du
-plafond (8 000 caractères), la demande est bloquée avant de lui parvenir.
+« tout le contexte de Bob » (`requestFullContextOf`) produit au minimum un avertissement montré à Bob, qu'aucun accord
+permanent ne couvre ; au-delà du plafond (8 000 caractères), la demande est bloquée avant de lui parvenir.
 
 **Données de démonstration** : David et Emma (desk Research) n'ont pas de Ledger ; leurs identités de desk sont
 dérivées d'une graine publique du jeu de données et enregistrées au démarrage, pour que le groupe Research compte au
-moins 3 membres. Elles ne peuvent rien signer.
-
-### Ce que l'intégrateur fournit
-
-`startEnclaveServer(fabriqueSécurité)` reçoit `{ db, clock, dstack, config }` et attend :
-
-- `authenticate` : middleware Hono qui vérifie la signature de session et fait `c.set("caller", …)` (types dans
-  `src/security/types.ts`) ; la session se résout avec `new SessionRepository(db).findActiveCaller(clé, maintenant)`.
-- `keyRotator` : `rotateOwnerKey(employeeId)`, appelé à chaque révocation.
-- `sealer` : `seal(cléPublique, octets)`, scellement X25519 de `@badge/attest`.
-
-Variables : `BADGE_DATA_DIR` (défaut `infra/.data/enclave`), `BADGE_ENCLAVE_PORT` (8787), `BADGE_ENCLAVE_HOST`
-(127.0.0.1), `BADGE_SEED_FILE`, `DSTACK_SIMULATOR_ENDPOINT` (hors CVM ; défaut `http://127.0.0.1:8090`).
+moins 3 membres. Elles ne peuvent rien signer et leur contexte ne peut jamais être partagé.
 
 ## Couche LLM (`src/llm`)
 
 - **Un seul « profil » compatible OpenAI** : URL de base, clé, modèle de chat, modèle d'embeddings (384 dimensions).
   - `build` : variables `BUILD_LLM_*` / `BUILD_EMBEDDING_*` (OpenAI, `text-embedding-3-small` réduit à 384).
   - `phala` : variables `PHALA_AI_*` (Phala Confidential AI, embeddings `sentence-transformers/all-minilm-l6-v2`).
-  - Choix par `BADGE_LLM_PROFILE=build|phala` ; secrets lus dans `BADGE_ENV_FILE` (défaut : `../.env` à côté du
-    dépôt) ; `BADGE_LLM_CHAT_MODEL` remplace le modèle de chat sans toucher aux secrets.
+  - `BADGE_LLM_CHAT_MODEL` remplace le modèle de chat sans toucher aux secrets.
 - `createLlmClient(profile)` : `complete`, `structuredCompletion(schemaZod, messages)` (sortie `json_schema`
   stricte puis validée par zod) et `embed`. Raisonnement désactivé (`reasoning_effort: "none"`).
 - La clé n'apparaît jamais dans les journaux ni dans les erreurs (propriété non énumérable, masquage des réponses).
 
 ## Couche mémoire (`src/memory`)
 
-- `HonchoMemory` (interface `MemoryStore`) :
-  - `ingest({ ownerId | "company", text, tags })` : idempotent (identifiant de note stable).
-  - `findCandidates(tâche, { requesterId })` : extraits candidats classés (`ownerId`, `scope`, `text`, `source`,
-    `score`) sur le contexte global **et** celui de chaque employé.
-- `classifyExcerpt(llm, tâche, extrait)` : pertinence, présence de données personnelles, justification.
-- `draftBrief(llm, tâche, extraitsAutorisés)` : rédige le brief **uniquement** à partir des extraits fournis.
+- `HonchoMemory` : `ingest` idempotent ; `findCandidates(tâche, { requesterId })` renvoie des extraits candidats
+  classés sur le contexte global **et** celui de chaque employé.
+- `classifyExcerpt` (pertinence, données personnelles) et `draftBrief` (rédigé **uniquement** à partir des extraits
+  autorisés).
 
 **Frontière de confiance** : la mémoire lit tous les contextes (clé admin Honcho, dans l'enclave). Ce qu'elle
-renvoie n'est qu'une liste de candidats : rien ne sort de l'enclave sans le moteur de politique (accord signé sur
-le Ledger du propriétaire pour tout extrait personnel d'un tiers).
+renvoie n'est qu'une liste de candidats : rien ne sort de l'enclave sans le moteur de politique.
 
-## Couche sécurité (`src/security`)
-
-À monter **avant** les routes métier (Hono applique les middlewares dans l'ordre d'enregistrement) :
-
-```ts
-const app = new Hono<BadgeEnv>();
-const security = mountSecurityRoutes(app, {
-  dstack: createDstackClient(), // socket dstack dans le CVM, DSTACK_SIMULATOR_ENDPOINT en local
-  sessions, // SessionResolver du domaine : clé de session -> Caller, null si inconnue, expirée ou révoquée
-  clock: systemClock,
-  requireChannel: true, // production : tout /v1 passe par le canal attesté
-});
-// puis les routes métier ; c.var.caller est défini sur toute route authentifiée.
-```
-
-- **Authentification** (`createAuthMiddleware`) : signature EIP-191 de la clé de session sur la requête canonique
-  (`@badge/client`), écart d'horloge ≤ 60 s, cache anti-rejeu borné (clé = session + chaîne signée, insensible à la
-  malléabilité ECDSA ; plein = refus 503 plutôt qu'oubli). Routes publiques : `isPublicRoute` ; toute nouvelle
-  route `/v1` est protégée par défaut.
-- **Canal attesté** : `POST /v1/channel/open`, `POST /v1/channel/:id` (requête interne rejouée en mémoire via
-  `app.request`, réponse scellée), table en mémoire avec TTL d'inactivité et plafond ; un même `hello` ne peut pas
-  rouvrir un canal (il remettrait les numéros de séquence à zéro).
-- **Mesure** : `GET /v1/attestation/measurement` ; `security.identity.read()` donne la même valeur au domaine.
-- **Clés** : `KeyRotator` (interface `DekProvider`) dérive la DEK de chaque employé via le KMS dstack
-  (`badge/dek/{id}:{version}`) ; `rotate(id)` incrémente la version, persistée par un `KeyVersionStore` du domaine.
-- Erreurs : `{ error: { code, message } }` (`SecurityError`).
-
-## Pile locale
-
-```bash
-export BADGE_ENV_FILE=/chemin/vers/.env   # si le fichier n'est pas à côté du dépôt
-infra/stack.sh up      # construit les images au besoin, démarre Postgres, Honcho, le deriver et la passerelle
-infra/stack.sh seed    # ingère infra/seed/acme.json, attend le deriver, vérifie le rappel
-infra/stack.sh logs deriver
-infra/stack.sh down    # arrêt (données conservées) ; reset = arrêt + suppression de la mémoire
-```
-
-Changer de profil LLM impose `reset` puis `up` et `seed` : les embeddings de deux modèles ne sont pas comparables.
+Changer de profil LLM impose `infra/stack.sh reset` puis `up` et `seed` : les embeddings de deux modèles ne sont pas
+comparables.
 
 ## Tests
 
 ```bash
-pnpm --filter @badge/enclave test        # unitaires et API en mémoire, sans réseau (test/desks : artefacts ZK)
-pnpm --filter @badge/enclave test        # unitaires, sans réseau
-pnpm --filter @badge/enclave test:sim    # couche sécurité + SDK de bout en bout (infra/dstack-sim.sh start)
+pnpm --filter @badge/enclave test        # unitaires, API et test de contrat (BadgeClient contre l'application réelle)
+pnpm --filter @badge/enclave test:sim    # canal attesté de bout en bout (infra/dstack-sim.sh start)
 pnpm --filter @badge/enclave test:live   # pile locale + profil build (quelques appels payants)
 BADGE_LIVE_PHALA=1 pnpm --filter @badge/enclave test:live   # + 2 appels Phala Confidential AI
+pnpm demo                                # scénario complet en direct (voir scripts/demo.ts)
 ```
+
+Les tests de desks et le test de contrat génèrent de vraies preuves Semaphore : artefacts dans `infra/zk-artifacts`
+(`infra/setup.sh`) ou `BADGE_ZK_ARTIFACTS_DIR`.

@@ -19,10 +19,12 @@ Projet de l'équipe DVB pour le Ledger N3XT Hackathon @ OP3N 2026.
 | `packages/ledger`  | signature sur Ledger via le Device Management Kit, pilotage de Speculos               |
 | `packages/zk`      | identités anonymes de desk (Semaphore) et preuves d'appartenance                      |
 | `packages/attest`  | vérification d'attestation TDX (Phala dstack) et canal chiffré vers l'enclave         |
+| `packages/client`  | SDK typé de l'API de l'enclave (canal attesté, requêtes signées, réponses validées)   |
 | `apps/enclave`     | service confidentiel : moteur de consentement, mémoire, journal de conformité         |
 | `apps/web`         | application des employés et tableau de bord de conformité                             |
 | `apps/mcp`         | serveur MCP pour brancher Badge sur les agents des employés                           |
 | `infra`            | Speculos, stack locale, déploiement Phala                                             |
+| `scripts`          | démonstration de bout en bout en direct (`pnpm demo`)                                 |
 
 ## Démarrage
 
@@ -30,3 +32,19 @@ Projet de l'équipe DVB pour le Ledger N3XT Hackathon @ OP3N 2026.
 pnpm install
 pnpm test
 ```
+
+## Démonstration de bout en bout
+
+Sur la pile locale (TEE simulé, mémoire Honcho, profil LLM de build, trois Ledgers Speculos) :
+
+```bash
+infra/setup.sh                       # artefacts ZK, clé CAL de test, app Ethereum
+infra/speculos.sh                    # Alice :5001, Bob :5002, Chloé :5003
+infra/stack.sh up && infra/stack.sh seed
+pnpm demo                            # démarre le simulateur dstack et l'enclave si besoin
+```
+
+Le script déroule le scénario complet par le canal attesté, avec de vraies signatures sur les Ledgers : brief Orion
+après accord de Bob, agent piégé refusé, révocation, accord permanent, partage anonyme entre desks avec preuve ZK,
+levée d'anonymat par la conformité. Chaque étape est vérifiée ; il s'arrête en erreur au premier écart.
+`BADGE_ENCLAVE_URL` le fait jouer contre une enclave déjà lancée.
