@@ -1,0 +1,14 @@
+# Local stack only: :8000 (published on 127.0.0.1) -> Honcho API, for the enclave and the seed script running on
+# the host. In the CVM, Honcho is never reachable from outside (see enclave-ingress.conf.template).
+
+log_format badge_api '$time_iso8601 api $request_method $uri status=$status upstream_s=$upstream_response_time';
+
+server {
+  listen 8000;
+  access_log /dev/stdout badge_api;
+
+  location / {
+    proxy_pass http://api:8000;
+    proxy_read_timeout 300s;
+  }
+}

@@ -11,6 +11,18 @@ infra/dstack-sim.sh start          # TEE simulé (hors CVM)
 infra/stack.sh up && infra/stack.sh seed   # mémoire Honcho et jeu de données Acme
 pnpm --filter @badge/enclave start # ou `dev` (rechargement à chaud) ; écoute sur 127.0.0.1:8787
 ```
+| Module           | Rôle                                                                                                                            |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `src/db`         | SQLite (`node:sqlite`), migrations SQL ordonnées, transactions, nonces par signataire (consommation atomique).                  |
+| `src/directory`  | Annuaire chargé depuis `infra/seed/acme.json` (rôles, desks, règles d'échange) et inventaire du contexte.                       |
+| `src/audit`      | Journal append-only chaîné (sha256), `verifyChain`, interface `Sealer` (scellement pour la conformité).                         |
+| `src/policy`     | Moteur de politique (inscription, sessions, consentements, accords, accords permanents, révocations) et règles anti-aspiration. |
+| `src/tasks`      | Orchestration des tâches : candidats, classification, décision par extrait, brief et statistiques de jetons.                    |
+| `src/desks`      | Adhésion aux desks, demandes entre desks, preuves Semaphore, registre de nullifiers persistant.                                 |
+| `src/compliance` | Clé de conformité (X25519, signée EIP-191), lecture du journal, notification de levée d'anonymat.                               |
+| `src/api`        | Application Hono pure (`createApp(deps)`), enveloppe d'erreur unique, middleware d'authentification injecté.                    |
+| `src/server.ts`  | Câblage réel (SQLite, Honcho, profil LLM, mesure dstack) et `startEnclaveServer(sécurité)`, port 8787.                          |
+| `src/main.ts`    | Point d'entrée du processus (`pnpm --filter @badge/enclave start`, image Docker) : assemble la sécurité et gère SIGTERM.        |
 
 Au démarrage, l'enclave lit sa mesure auprès de dstack (échec immédiat si l'agent ou le simulateur ne répond pas),
 ouvre sa base SQLite, enregistre les identités de démonstration du desk Research, puis journalise une ligne sans
@@ -69,12 +81,22 @@ permanent ne couvre ; au-delà du plafond (8 000 caractères), la demande est bl
 dérivées d'une graine publique du jeu de données et enregistrées au démarrage, pour que le groupe Research compte au
 moins 3 membres. Elles ne peuvent rien signer et leur contexte ne peut jamais être partagé.
 
+## Image et déploiement
+
+`apps/enclave/Dockerfile` (à construire depuis la racine, en `linux/amd64`) : dépendances de production filtrées,
+sources TypeScript exécutées par tsx, utilisateur non root, aucun secret. Déploiement dans le CVM Phala :
+`docs/DEPLOY.md`.
+
 ## Couche LLM (`src/llm`)
 
 - **Un seul « profil » compatible OpenAI** : URL de base, clé, modèle de chat, modèle d'embeddings (384 dimensions).
   - `build` : variables `BUILD_LLM_*` / `BUILD_EMBEDDING_*` (OpenAI, `text-embedding-3-small` réduit à 384).
   - `phala` : variables `PHALA_AI_*` (Phala Confidential AI, embeddings `sentence-transformers/all-minilm-l6-v2`).
   - `BADGE_LLM_CHAT_MODEL` remplace le modèle de chat sans toucher aux secrets.
+  - Dans le CVM, `BADGE_LLM_GATEWAY_URL` remplace l'URL du profil par la passerelle de sortie (HTTP sur le
+    réseau scellé) : c'est elle qui détient la vraie clé.
+  - Choix par `BADGE_LLM_PROFILE=build|phala` ; secrets lus dans `BADGE_ENV_FILE` (défaut : `../.env` à côté du
+    dépôt) ; `BADGE_LLM_CHAT_MODEL` remplace le modèle de chat sans toucher aux secrets.
 - `createLlmClient(profile)` : `complete`, `structuredCompletion(schemaZod, messages)` (sortie `json_schema`
   stricte puis validée par zod) et `embed`. Raisonnement désactivé (`reasoning_effort: "none"`).
 - La clé n'apparaît jamais dans les journaux ni dans les erreurs (propriété non énumérable, masquage des réponses).

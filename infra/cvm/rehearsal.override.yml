@@ -1,0 +1,25 @@
+# Local rehearsal of the CVM compose (infra/cvm/rehearse.sh), merged over compose.yml. Never deployed.
+# Differences with the CVM, and only these: locally built amd64 images instead of the pinned registry digests, the
+# dstack simulator instead of the guest agent socket (so the enclave also needs a route to the host), and the
+# enclave port published on loopback only.
+services:
+  secrets-init:
+    image: badge/honcho:3.2.2-amd64
+  api:
+    image: badge/honcho:3.2.2-amd64
+  deriver:
+    image: badge/honcho:3.2.2-amd64
+  enclave:
+    image: badge-enclave:cvm-amd64
+    environment:
+      DSTACK_SIMULATOR_ENDPOINT: http://host.docker.internal:8090
+    volumes: !override
+      - enclave-data:/data
+      - secrets:/run/badge-secrets:ro
+    networks: !override [sealed, egress]
+  seed:
+    image: badge-enclave:cvm-amd64
+  gateway:
+    image: badge-gateway:cvm-amd64
+    ports: !override
+      - "127.0.0.1:18787:8787"

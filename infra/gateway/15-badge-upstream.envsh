@@ -1,0 +1,21 @@
+#!/bin/sh
+# Sourced by the nginx image entrypoint before the templates are rendered (*.envsh files are sourced, so exports
+# reach envsubst). In the CVM only the upstream base URL is configured: the Host/SNI value is derived from it here,
+# and anything but https is refused (the gateway would otherwise send the upstream key in clear text).
+# No `set -u` here: options of a sourced file would leak into the nginx entrypoint. `exit` stops the container.
+
+case "${BADGE_UPSTREAM_BASE_URL:-}" in
+  https://*) ;;
+  *)
+    echo "badge gateway: BADGE_UPSTREAM_BASE_URL must be an https URL" >&2
+    exit 1
+    ;;
+esac
+[ -n "${BADGE_UPSTREAM_API_KEY:-}" ] || { echo "badge gateway: BADGE_UPSTREAM_API_KEY is empty" >&2; exit 1; }
+
+BADGE_UPSTREAM_BASE_URL="${BADGE_UPSTREAM_BASE_URL%/}"
+if [ -z "${BADGE_UPSTREAM_HOST:-}" ]; then
+  BADGE_UPSTREAM_HOST="${BADGE_UPSTREAM_BASE_URL#https://}"
+  BADGE_UPSTREAM_HOST="${BADGE_UPSTREAM_HOST%%/*}"
+fi
+export BADGE_UPSTREAM_BASE_URL BADGE_UPSTREAM_HOST

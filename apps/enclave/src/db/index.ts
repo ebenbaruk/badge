@@ -7,5 +7,6 @@ export {
   transaction,
   type Database,
 } from "./database";
+export { SqliteKeyVersionStore } from "./key-versions";
 export { NonceRepository } from "./nonces";
 export { parseRow, parseRows } from "./rows";

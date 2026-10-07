@@ -3,6 +3,7 @@
 # Why: migrations create vector(1536) columns and the API refuses to boot when they disagree with the configured
 # dimension. configure_embeddings is a no-op once the columns already have the right size.
 set -eu
+. /app/docker/badge-secrets-env.sh
 echo "[badge] database migrations"
 /app/.venv/bin/python scripts/provision_db.py
 echo "[badge] embedding columns -> ${EMBEDDING_VECTOR_DIMENSIONS} dimensions"

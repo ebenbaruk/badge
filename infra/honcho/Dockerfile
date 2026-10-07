@@ -19,4 +19,8 @@ RUN sed -i 's/m.startswith("gpt-5.")/m.startswith("gpt-5.") or m.startswith("gpt
     && grep -q 'm.startswith("gpt-6")' /app/src/llm/backends/openai.py
 
 COPY --chown=app:app entrypoint.sh /app/docker/badge-entrypoint.sh
+# CVM only (infra/cvm/compose.yml): secrets generated inside the CVM at first boot instead of passed by the operator.
+COPY --chown=app:app secrets-env.sh /app/docker/badge-secrets-env.sh
+COPY --chown=app:app secrets-init.sh /app/docker/badge-secrets-init.sh
+COPY --chown=app:app deriver-entrypoint.sh /app/docker/badge-deriver-entrypoint.sh
 USER app

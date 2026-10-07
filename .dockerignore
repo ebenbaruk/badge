@@ -1,0 +1,32 @@
+# Build context of the images built from the repository root (apps/enclave/Dockerfile).
+# Secrets, local state and anything machine-specific must never reach an image layer.
+**/node_modules
+**/.next
+**/dist
+**/coverage
+**/*.tsbuildinfo
+.git
+.claude
+.history
+.vscode
+.idea
+**/.DS_Store
+**/*.log
+
+# Secrets and keys
+.env
+.env.*
+**/*.pem
+**/*.key
+**/keys
+
+# Local state and downloaded binaries
+**/.data
+**/.sim
+**/*.sqlite
+**/*.sqlite-journal
+infra/vendor
+infra/apps
+infra/zk-artifacts
+infra/cvm/*.txt
+infra/cvm/*.json

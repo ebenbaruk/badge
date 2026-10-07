@@ -76,7 +76,20 @@ export interface ProfileSelection {
   readonly profile?: string | undefined;
   /** Optional chat model override (BADGE_LLM_CHAT_MODEL), e.g. to try another Phala model without editing secrets. */
   readonly chatModelOverride?: string | undefined;
+  /**
+   * BADGE_LLM_GATEWAY_URL: replaces the profile's base URL by the egress gateway of the CVM. Inside the CVM the
+   * enclave has no route out; the gateway (plain HTTP on the sealed network) forwards to the profile's upstream
+   * over verified TLS and injects the real key itself, so the enclave's own key can be a placeholder.
+   */
+  readonly gatewayUrl?: string | undefined;
 }
+
+/** Variable naming the in-CVM egress gateway (see {@link ProfileSelection.gatewayUrl}). */
+export const LLM_GATEWAY_URL_ENV = "BADGE_LLM_GATEWAY_URL";
+
+const GatewayUrlSchema = z
+  .url({ protocol: /^https?$/, error: `${LLM_GATEWAY_URL_ENV} must be an http(s) URL` })
+  .transform((url) => url.replace(/\/+$/, ""));
 
 /**
  * Builds a profile from a flat variable map (pure: no file or process access, so it is unit-testable).
@@ -90,6 +103,7 @@ export function resolveLlmProfile(
   if (!nameResult.success) throw new LlmConfigError(formatIssues(nameResult.error));
   const name = nameResult.data;
   const override = selection.chatModelOverride?.trim() || undefined;
+  const gateway = parseGatewayUrl(selection.gatewayUrl);
 
   if (name === "build") {
     const parsed = BuildVarsSchema.safeParse(vars);
@@ -97,7 +111,7 @@ export function resolveLlmProfile(
     const v = parsed.data;
     return withHiddenKey({
       name,
-      baseUrl: v.BUILD_LLM_BASE_URL,
+      baseUrl: gateway ?? v.BUILD_LLM_BASE_URL,
       apiKey: v.BUILD_LLM_API_KEY,
       chatModel: override ?? v.BUILD_LLM_MODEL,
       embeddingModel: v.BUILD_EMBEDDING_MODEL,
@@ -113,7 +127,7 @@ export function resolveLlmProfile(
   const v = parsed.data;
   return withHiddenKey({
     name,
-    baseUrl: v.PHALA_AI_BASE_URL,
+    baseUrl: gateway ?? v.PHALA_AI_BASE_URL,
     apiKey: v.PHALA_AI_API_KEY,
     chatModel: override ?? v.PHALA_AI_MODEL,
     embeddingModel: v.PHALA_AI_EMBEDDING_MODEL,
@@ -139,12 +153,21 @@ export function loadLlmProfile(env: NodeJS.ProcessEnv = process.env): LlmProfile
   return resolveLlmProfile(vars, {
     profile: env["BADGE_LLM_PROFILE"],
     chatModelOverride: env["BADGE_LLM_CHAT_MODEL"],
+    gatewayUrl: env[LLM_GATEWAY_URL_ENV],
   });
 }
 
 /** A loggable view of a profile (everything but the key). */
 export function describeLlmProfile(profile: LlmProfile): string {
   return `${profile.name} (${profile.baseUrl}, chat ${profile.chatModel}, embeddings ${profile.embeddingModel}/${profile.embeddingDimensions})`;
+}
+
+function parseGatewayUrl(value: string | undefined): string | undefined {
+  const trimmed = value?.trim();
+  if (!trimmed) return undefined;
+  const parsed = GatewayUrlSchema.safeParse(trimmed);
+  if (!parsed.success) throw new LlmConfigError(formatIssues(parsed.error));
+  return parsed.data;
 }
 
 function withHiddenKey(profile: LlmProfile): LlmProfile {

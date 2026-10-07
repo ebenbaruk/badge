@@ -49,6 +49,18 @@ describe("resolveLlmProfile", () => {
     );
   });
 
+  it("routes through the CVM egress gateway when one is configured (plain HTTP allowed there only)", () => {
+    const profile = resolveLlmProfile(PHALA_VARS, {
+      profile: "phala",
+      gatewayUrl: "http://gateway:8080/v1/",
+    });
+    expect(profile.baseUrl).toBe("http://gateway:8080/v1");
+    expect(profile.chatModel).toBe("qwen/test");
+    expect(() => resolveLlmProfile(PHALA_VARS, { profile: "phala", gatewayUrl: "ftp://gateway" })).toThrow(
+      /BADGE_LLM_GATEWAY_URL/,
+    );
+  });
+
   it("never exposes the API key when serialised or described", () => {
     const profile = resolveLlmProfile(BUILD_VARS);
     expect(JSON.stringify(profile)).not.toContain(TEST_API_KEY);

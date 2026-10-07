@@ -1,0 +1,22 @@
+# CVM only: :8787 -> the enclave API. This is the single port of the CVM published through the dstack gateway
+# (TLS ends there; confidentiality to the enclave itself comes from the attested channel, POST /v1/channel/*).
+# The enclave sits on the sealed network only: Docker cannot publish a port of a container whose only network is
+# internal, and the enclave must not get a route out, so the gateway carries the inbound traffic too.
+
+log_format badge_ingress '$time_iso8601 enclave $request_method $uri status=$status '
+                         'upstream_s=$upstream_response_time';
+
+server {
+  listen 8787;
+  access_log /dev/stdout badge_ingress;
+  # The enclave enforces its own, smaller limits; this only bounds what nginx buffers.
+  client_max_body_size 1m;
+
+  location / {
+    proxy_pass http://enclave:8787;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    # Task orchestration waits for LLM calls (classification, brief).
+    proxy_read_timeout 300s;
+  }
+}

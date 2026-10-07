@@ -23,7 +23,7 @@ Projet de l'équipe DVB pour le Ledger N3XT Hackathon @ OP3N 2026.
 | `apps/enclave`     | service confidentiel : moteur de consentement, mémoire, journal de conformité         |
 | `apps/web`         | application des employés et tableau de bord de conformité                             |
 | `apps/mcp`         | serveur MCP pour brancher Badge sur les agents des employés                           |
-| `infra`            | Speculos, stack locale, déploiement Phala                                             |
+| `infra`            | Speculos, stack locale, déploiement Phala (`docs/DEPLOY.md`)                          |
 | `scripts`          | démonstration de bout en bout en direct (`pnpm demo`)                                 |
 
 ## Démarrage

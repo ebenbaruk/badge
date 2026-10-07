@@ -144,7 +144,8 @@ services:
       # Only our variables are substituted: nginx's own $variables stay untouched.
       NGINX_ENVSUBST_FILTER: ^BADGE_
     volumes:
-      - ./gateway/nginx.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - ./gateway/llm-egress.conf.template:/etc/nginx/templates/llm-egress.conf.template:ro
+      - ./gateway/honcho-ingress.conf.template:/etc/nginx/templates/honcho-ingress.conf.template:ro
       - ./gateway/upstream-tls.conf:/etc/nginx/badge-upstream-tls.conf:ro
     ports:
       - "127.0.0.1:8000:8000"
