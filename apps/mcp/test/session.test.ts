@@ -107,8 +107,8 @@ describe("configuration", () => {
   const base = { BADGE_SESSION_KEY_FILE: "/tmp/session.json" };
 
   it("defaults to the attested channel in tdx mode, which needs a pinned compose hash", () => {
-    expect(() => loadMcpConfig(base, [])).toThrow(/BADGE_EXPECTED_COMPOSE_HASH/);
-    const config = loadMcpConfig({ ...base, BADGE_EXPECTED_COMPOSE_HASH: COMPOSE_HASH }, []);
+    expect(() => loadMcpConfig(base, [])).toThrow(/BADGE_ENCLAVE_COMPOSE_HASH/);
+    const config = loadMcpConfig({ ...base, BADGE_ENCLAVE_COMPOSE_HASH: COMPOSE_HASH }, []);
     expect(config).toMatchObject({
       enclaveTransport: "channel",
       attestationMode: "tdx",
@@ -117,7 +117,7 @@ describe("configuration", () => {
   });
 
   it("allows the plain transport only with the simulator", () => {
-    const plain = { ...base, BADGE_ENCLAVE_TRANSPORT: "plain", BADGE_EXPECTED_COMPOSE_HASH: COMPOSE_HASH };
+    const plain = { ...base, BADGE_ENCLAVE_TRANSPORT: "plain", BADGE_ENCLAVE_COMPOSE_HASH: COMPOSE_HASH };
     expect(() => loadMcpConfig(plain, [])).toThrow(/plain transport/);
     expect(loadMcpConfig({ ...plain, BADGE_ATTESTATION_MODE: "simulated" }, []).enclaveTransport).toBe(
       "plain",

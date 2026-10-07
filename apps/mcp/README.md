@@ -56,15 +56,15 @@ règles anti-aspiration…) reviennent comme erreurs d'outil lisibles, pas comme
 
 ## Configuration
 
-| Variable                      | Défaut                  | Rôle                                                                     |
-| ----------------------------- | ----------------------- | ------------------------------------------------------------------------ |
-| `BADGE_SESSION_KEY_FILE`      | (obligatoire)           | Fichier de session ; `--session <fichier>` le remplace.                  |
-| `BADGE_ENCLAVE_URL`           | `http://127.0.0.1:8787` | Origine de l'enclave.                                                    |
-| `BADGE_ENCLAVE_TRANSPORT`     | `channel`               | `channel` (canal attesté) ou `plain` (développement, simulateur requis). |
-| `BADGE_ATTESTATION_MODE`      | `tdx`                   | `tdx` (vrai TEE) ou `simulated` (simulateur dstack).                     |
-| `BADGE_EXPECTED_COMPOSE_HASH` | —                       | Compose hash épinglé, obligatoire en `tdx`.                              |
-| `BADGE_MCP_TRANSPORT`         | `stdio`                 | `stdio` ou `http` (`--http`).                                            |
-| `BADGE_MCP_HTTP_PORT`         | `8790`                  | Port HTTP local (`--port`).                                              |
+| Variable                     | Défaut                  | Rôle                                                                     |
+| ---------------------------- | ----------------------- | ------------------------------------------------------------------------ |
+| `BADGE_SESSION_KEY_FILE`     | (obligatoire)           | Fichier de session ; `--session <fichier>` le remplace.                  |
+| `BADGE_ENCLAVE_URL`          | `http://127.0.0.1:8787` | Origine de l'enclave.                                                    |
+| `BADGE_ENCLAVE_TRANSPORT`    | `channel`               | `channel` (canal attesté) ou `plain` (développement, simulateur requis). |
+| `BADGE_ATTESTATION_MODE`     | `tdx`                   | `tdx` (vrai TEE) ou `simulated` (simulateur dstack).                     |
+| `BADGE_ENCLAVE_COMPOSE_HASH` | —                       | Compose hash épinglé, obligatoire en `tdx`.                              |
+| `BADGE_MCP_TRANSPORT`        | `stdio`                 | `stdio` ou `http` (`--http`).                                            |
+| `BADGE_MCP_HTTP_PORT`        | `8790`                  | Port HTTP local (`--port`).                                              |
 
 Les journaux vont sur la sortie d'erreur : en stdio, la sortie standard ne porte que le protocole MCP.
 
@@ -82,7 +82,7 @@ claude mcp add badge --scope user \
 ```
 
 En production, remplacer `BADGE_ATTESTATION_MODE=simulated` par `-e BADGE_ATTESTATION_MODE=tdx
--e BADGE_EXPECTED_COMPOSE_HASH=<compose hash publié> -e BADGE_ENCLAVE_URL=https://<enclave>`.
+-e BADGE_ENCLAVE_COMPOSE_HASH=<compose hash publié> -e BADGE_ENCLAVE_URL=https://<enclave>`.
 
 Claude Code en HTTP (serveur lancé à part avec `pnpm --filter @badge/mcp start --http`) :
 

@@ -31,7 +31,13 @@ export function waitingTask(): Task {
     taskLabel: "Brief Durand",
     status: "waiting_consent",
     allowed: [
-      { ownerId: "company", ownerName: "Acme", excerptLabel: "Catalogue capteurs 2026", via: "company" },
+      {
+        ownerId: "company",
+        ownerName: "Acme",
+        excerptLabel: "Catalogue capteurs 2026",
+        excerptLength: 900,
+        via: "company",
+      },
     ],
     pending: [
       {
@@ -40,10 +46,11 @@ export function waitingTask(): Task {
         ownerName: "Bob Durand",
         excerptLabel: "Contexte personnel de Bob Durand",
         excerptLength: 420,
-        risk: { level: "ok", flags: [] },
+        risk: { level: "ok", reasons: [] },
       },
     ],
     blocked: [],
+    refused: [],
     brief: null,
     tokenStats: null,
     createdAt: CREATED_AT,
@@ -56,8 +63,20 @@ export function readyTask(): Task {
     ...waitingTask(),
     status: "ready",
     allowed: [
-      { ownerId: "company", ownerName: "Acme", excerptLabel: "Catalogue capteurs 2026", via: "company" },
-      { ownerId: "bob", ownerName: "Bob Durand", excerptLabel: "Notes rendez-vous Durand", via: "consent" },
+      {
+        ownerId: "company",
+        ownerName: "Acme",
+        excerptLabel: "Catalogue capteurs 2026",
+        excerptLength: 900,
+        via: "company",
+      },
+      {
+        ownerId: "bob",
+        ownerName: "Bob Durand",
+        excerptLabel: "Notes rendez-vous Durand",
+        excerptLength: 420,
+        via: "consent",
+      },
     ],
     pending: [],
     brief: BRIEF,
@@ -72,6 +91,12 @@ export function contextShareConsent(): ConsentRequest {
     status: "pending",
     taskId: TASK_ID,
     requester: { id: "alice", name: "Alice Martin", team: "Ventes" },
+    excerpt: {
+      label: "Notes rendez-vous Durand",
+      length: 420,
+      text: "Durand SA renouvelle en novembre.",
+      tags: ["clients"],
+    },
     message: {
       recipientName: "Alice Martin (Ventes)",
       excerptLabel: "Notes rendez-vous Durand",
@@ -85,7 +110,16 @@ export function contextShareConsent(): ConsentRequest {
       taskId: TASK_ID,
       nonce: 7n,
     },
-    risk: { level: "warn", flags: ["owner_share_too_high"] },
+    risk: {
+      level: "warn",
+      reasons: [
+        {
+          code: "OWNER_SHARE_HIGH",
+          severity: "warn",
+          message: "la tache demande presque tout votre contexte",
+        },
+      ],
+    },
     createdAt: CREATED_AT,
   };
 }
@@ -93,10 +127,12 @@ export function contextShareConsent(): ConsentRequest {
 export function deskShareConsent(): ConsentRequest {
   return {
     kind: "DeskShare",
-    id: "desk-1",
-    status: "approved",
-    deskRequestId: `0x${"22".repeat(32)}`,
+    id: `0x${"22".repeat(32)}`,
+    status: "pending",
     recipientDesk: "Origination",
+    sourceDesk: "Research",
+    ruleLabel: "Regle 4 - marche capteurs",
+    excerpt: { label: "Prix composants T4", length: 300, text: "Prix composants en hausse au T4." },
     message: {
       recipientDesk: "Origination",
       excerptLabel: "Prix composants T4",
@@ -109,7 +145,6 @@ export function deskShareConsent(): ConsentRequest {
       requestId: `0x${"22".repeat(32)}`,
       nonce: 8n,
     },
-    risk: { level: "ok", flags: [] },
     createdAt: CREATED_AT,
   };
 }

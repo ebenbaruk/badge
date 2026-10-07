@@ -3,7 +3,7 @@
  * employees' text can appear solely inside a brief the enclave drafted from excerpts it released to this employee.
  */
 import type { AttestationResult } from "@badge/attest";
-import type { AllowedVia, ConsentRequest, Risk, Task } from "@badge/client";
+import type { AllowedVia, ConsentRequest, RefusedReason, Risk, Task } from "@badge/client";
 import type { Hex } from "viem";
 
 /**
@@ -23,16 +23,23 @@ const VIA_LABELS: Record<AllowedVia, string> = {
   policy: "accord permanent signé par le propriétaire",
 };
 
+const REFUSED_LABELS: Record<RefusedReason, string> = {
+  rejected: "refusé sur son Ledger",
+  expired: "demande expirée sans réponse",
+  revoked: "accord révoqué",
+};
+
 const MILLIS_PER_SECOND = 1000;
 
 function isoFromUnixSeconds(seconds: number | bigint): string {
   return new Date(Number(seconds) * MILLIS_PER_SECOND).toISOString();
 }
 
+/** The enclave's own explanation of each mass-extraction rule that fired; never recomputed here. */
 function riskText(risk: Risk): string {
   if (risk.level === "ok") return "";
-  const flags = risk.flags.length > 0 ? ` (${risk.flags.join(", ")})` : "";
-  return ` Alerte anti-aspiration : ${risk.level}${flags}.`;
+  const reasons = risk.reasons.length > 0 ? ` : ${risk.reasons.map((r) => r.message).join(" ; ")}` : "";
+  return ` Alerte anti-aspiration (${risk.level})${reasons}.`;
 }
 
 /** Text of a task: status, brief (fenced), provenance, pending consents and blocked excerpts. */
@@ -81,9 +88,17 @@ export function formatTask(task: Task): string {
   if (task.blocked.length > 0) {
     lines.push("", "## Refusé par les règles de l'entreprise");
     for (const blocked of task.blocked) {
-      lines.push(`- « ${blocked.excerptLabel} » : ${blocked.reason} (règle ${blocked.rule}).`);
+      const rules = blocked.risk.reasons.map((r) => `${r.message} [${r.code}]`).join(" ; ");
+      lines.push(`- ${blocked.ownerName}, « ${blocked.excerptLabel} » : ${rules || "refusé"}.`);
     }
     lines.push("Ces refus sont définitifs et journalisés : ne reformulez pas la tâche pour les contourner.");
+  }
+
+  if (task.refused.length > 0) {
+    lines.push("", "## Non partagé par son propriétaire");
+    for (const refused of task.refused) {
+      lines.push(`- ${refused.ownerName}, « ${refused.excerptLabel} » : ${REFUSED_LABELS[refused.reason]}.`);
+    }
   }
   return lines.join("\n");
 }
@@ -93,33 +108,28 @@ function formatConsent(consent: ConsentRequest): string {
   if (consent.kind === "ContextShare") {
     const { message, requester } = consent;
     return (
-      `- [${consent.status}] ${requester.name} (${requester.team}) demande « ${message.excerptLabel} » ` +
+      `- ${requester.name} (${requester.team}) demande « ${message.excerptLabel} » ` +
       `(${message.excerptLength} caractères) pour la tâche « ${message.taskLabel} » ; expire le ${expires}.` +
       riskText(consent.risk)
     );
   }
   const { message } = consent;
   return (
-    `- [${consent.status}] Partage anonyme vers le desk ${consent.recipientDesk} : « ${message.excerptLabel} » ` +
-    `(${message.excerptLength} caractères), ${message.ruleLabel} ; expire le ${expires}.` +
-    riskText(consent.risk)
+    `- Partage anonyme vers le desk ${consent.recipientDesk} : « ${message.excerptLabel} » ` +
+    `(${message.excerptLength} caractères), ${consent.ruleLabel} ; expire le ${expires}.`
   );
 }
 
-/** Text of the consent requests addressed to the employee, pending ones first. */
+/** Text of the consent requests awaiting the employee's signature (the enclave only lists pending ones). */
 export function formatConsents(consents: ConsentRequest[]): string {
   if (consents.length === 0) return "Aucune demande d'accord ne vous est adressée.";
-  const pending = consents.filter((c) => c.status === "pending");
-  const others = consents.filter((c) => c.status !== "pending");
-  const lines = [`${pending.length} demande(s) en attente de votre accord, ${others.length} traitée(s).`];
-  for (const consent of [...pending, ...others]) lines.push(formatConsent(consent));
-  if (pending.length > 0) {
-    lines.push(
-      "",
-      "Votre agent ne peut ni approuver ni refuser : chaque accord se signe sur votre Ledger, depuis l'application " +
-        "web Badge (page « Demandes d'accord »), après lecture du texte exact affiché à l'écran.",
-    );
-  }
+  const lines = [`${consents.length} demande(s) en attente de votre accord.`];
+  for (const consent of consents) lines.push(formatConsent(consent));
+  lines.push(
+    "",
+    "Votre agent ne peut ni approuver ni refuser : chaque accord se signe sur votre Ledger, depuis l'application " +
+      "web Badge (page « Demandes d'accord »), après lecture du texte exact affiché à l'écran.",
+  );
   return lines.join("\n");
 }
 

@@ -27,17 +27,17 @@ const EnvSchema = z
     BADGE_ENCLAVE_TRANSPORT: z.enum(["channel", "plain"]).default("channel"),
     // Fail closed: the real-TEE checks apply unless the simulator is chosen explicitly.
     BADGE_ATTESTATION_MODE: z.enum(["tdx", "simulated"]).default("tdx"),
-    BADGE_EXPECTED_COMPOSE_HASH: z
+    BADGE_ENCLAVE_COMPOSE_HASH: z
       .string()
       .regex(COMPOSE_HASH_HEX, { error: "must be 32 bytes of hex" })
       .optional(),
     BADGE_MCP_TRANSPORT: z.enum(["stdio", "http"]).default("stdio"),
     BADGE_MCP_HTTP_PORT: z.coerce.number().int().min(1).max(65_535).default(DEFAULT_MCP_HTTP_PORT),
   })
-  .refine((env) => env.BADGE_ATTESTATION_MODE !== "tdx" || env.BADGE_EXPECTED_COMPOSE_HASH !== undefined, {
+  .refine((env) => env.BADGE_ATTESTATION_MODE !== "tdx" || env.BADGE_ENCLAVE_COMPOSE_HASH !== undefined, {
     message:
-      "BADGE_EXPECTED_COMPOSE_HASH is mandatory in tdx mode: without it any deployment would be trusted",
-    path: ["BADGE_EXPECTED_COMPOSE_HASH"],
+      "BADGE_ENCLAVE_COMPOSE_HASH is mandatory in tdx mode: without it any deployment would be trusted",
+    path: ["BADGE_ENCLAVE_COMPOSE_HASH"],
   })
   .refine((env) => env.BADGE_ENCLAVE_TRANSPORT !== "plain" || env.BADGE_ATTESTATION_MODE === "simulated", {
     message: "the plain transport skips attestation: only allowed with BADGE_ATTESTATION_MODE=simulated",
@@ -71,7 +71,7 @@ function enclaveConfigOf(vars: z.infer<typeof EnvSchema>): EnclaveConfig {
     enclaveUrl: vars.BADGE_ENCLAVE_URL,
     enclaveTransport: vars.BADGE_ENCLAVE_TRANSPORT,
     attestationMode: vars.BADGE_ATTESTATION_MODE,
-    expectedComposeHash: vars.BADGE_EXPECTED_COMPOSE_HASH,
+    expectedComposeHash: vars.BADGE_ENCLAVE_COMPOSE_HASH,
   };
 }
 

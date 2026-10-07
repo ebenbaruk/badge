@@ -146,11 +146,17 @@ async function main(argv: string[]): Promise<void> {
   throw new UsageError(command === undefined ? "commande manquante" : `commande inconnue : ${command}`);
 }
 
-main(process.argv.slice(2)).catch((error: unknown) => {
-  // node:util parseArgs reports unknown or malformed flags with ERR_PARSE_ARGS_* codes.
-  const parseArgsError = String((error as { code?: unknown }).code ?? "").startsWith("ERR_PARSE_ARGS");
-  if (error instanceof UsageError || parseArgsError) console.error(`${(error as Error).message}\n\n${USAGE}`);
-  else if (error instanceof McpSetupError) console.error(`${error.code}: ${error.message}`);
-  else console.error(error instanceof Error ? `${error.name}: ${error.message}` : String(error));
-  process.exit(1);
-});
+main(process.argv.slice(2)).then(
+  // The Device Management Kit keeps transport timers alive after its session is closed (`--ledger`): exit
+  // explicitly once the command is done rather than hang.
+  () => process.exit(0),
+  (error: unknown) => {
+    // node:util parseArgs reports unknown or malformed flags with ERR_PARSE_ARGS_* codes.
+    const parseArgsError = String((error as { code?: unknown }).code ?? "").startsWith("ERR_PARSE_ARGS");
+    if (error instanceof UsageError || parseArgsError)
+      console.error(`${(error as Error).message}\n\n${USAGE}`);
+    else if (error instanceof McpSetupError) console.error(`${error.code}: ${error.message}`);
+    else console.error(error instanceof Error ? `${error.name}: ${error.message}` : String(error));
+    process.exit(1);
+  },
+);

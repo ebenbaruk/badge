@@ -1,4 +1,4 @@
-import { BadgeApiError } from "@badge/client";
+import { BadgeApiError, type Task } from "@badge/client";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { beforeEach, describe, expect, it } from "vitest";
 import { CONTEXT_FENCE_CLOSE, CONTEXT_FENCE_OPEN } from "../src/format";
@@ -53,24 +53,24 @@ describe("tools", () => {
     });
 
     it("reports excerpts blocked by the anti-extraction rules as final", async () => {
-      api.createTaskResult = {
-        ...waitingTask(),
-        pending: [],
-        status: "ready",
-        blocked: [
-          {
-            ownerId: "bob",
-            excerptLabel: "Tout le contexte de Bob Durand",
-            rule: "excerpt_too_long",
-            reason: "extrait trop long",
+      const blocked: Task["blocked"] = [
+        {
+          ownerId: "bob",
+          ownerName: "Bob Durand",
+          excerptLabel: "Tout le contexte de Bob Durand",
+          excerptLength: 9000,
+          risk: {
+            level: "block",
+            reasons: [{ code: "EXCERPT_OVER_CAP", severity: "block", message: "extrait trop long" }],
           },
-        ],
-      };
-      api.getTaskResult = { ...readyTask(), blocked: api.createTaskResult.blocked };
+        },
+      ];
+      api.createTaskResult = { ...waitingTask(), pending: [], status: "ready", blocked };
+      api.getTaskResult = { ...readyTask(), blocked: blocked };
       const text = textOf(await tools.getContext(input));
 
       expect(text).toContain(
-        "« Tout le contexte de Bob Durand » : extrait trop long (règle excerpt_too_long)",
+        "Bob Durand, « Tout le contexte de Bob Durand » : extrait trop long [EXCERPT_OVER_CAP]",
       );
       expect(text).toContain("ne reformulez pas");
     });
@@ -124,14 +124,15 @@ describe("tools", () => {
   });
 
   describe("badge_list_my_consents", () => {
-    it("lists pending requests first, with requester, task and risk", async () => {
+    it("lists the pending requests with requester, task and the enclave's risk explanation", async () => {
       const text = textOf(await tools.listMyConsents());
       const lines = text.split("\n");
 
-      expect(lines[0]).toBe("1 demande(s) en attente de votre accord, 1 traitée(s).");
-      expect(lines[1]).toContain("[pending] Alice Martin (Ventes) demande « Notes rendez-vous Durand »");
-      expect(lines[1]).toContain("owner_share_too_high");
-      expect(lines[2]).toContain("[approved] Partage anonyme vers le desk Origination");
+      expect(lines[0]).toBe("2 demande(s) en attente de votre accord.");
+      expect(lines[1]).toContain("Alice Martin (Ventes) demande « Notes rendez-vous Durand »");
+      expect(lines[1]).toContain("la tache demande presque tout votre contexte");
+      expect(lines[2]).toContain("Partage anonyme vers le desk Origination");
+      expect(lines[2]).toContain("Regle 4 - marche capteurs");
       expect(text).toContain("se signe sur votre Ledger");
     });
 
