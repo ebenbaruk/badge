@@ -2,6 +2,7 @@ import { verifyProof } from "@semaphore-protocol/core";
 import { beforeAll, describe, expect, it } from "vitest";
 import {
   buildDeskGroup,
+  checkDeskProof,
   createDeskProof,
   decodeDeskProof,
   deriveDeskIdentity,
@@ -187,6 +188,18 @@ describe("verifyDeskProof", () => {
       ),
     ).rejects.toEqual(rejectsWith("INVALID_PROOF"));
     await expect(verifyDeskProof(aliceProof, expectationsForDeskA(), registry)).resolves.toBeDefined();
+  });
+
+  it("checkDeskProof verifies without recording the nullifier (the enclave records it in its own transaction)", async () => {
+    expect((await checkDeskProof(aliceProof, expectationsForDeskA())).nullifier).toBe(
+      BigInt(aliceProof.nullifier),
+    );
+    const registry = new InMemoryNullifierRegistry();
+    await checkDeskProof(aliceProof, expectationsForDeskA());
+    await expect(verifyDeskProof(aliceProof, expectationsForDeskA(), registry)).resolves.toBeDefined();
+    await expect(
+      checkDeskProof(aliceProof, { ...expectationsForDeskA(), expectedRoot: deskB.root }),
+    ).rejects.toEqual(rejectsWith("WRONG_ROOT"));
   });
 
   it("gives the same member an unlinkable nullifier per request", async () => {

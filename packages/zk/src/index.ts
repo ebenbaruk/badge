@@ -5,6 +5,7 @@ export { buildDeskGroup, deskGroupRoot, SNARK_SCALAR_FIELD } from "./group";
 export { deriveDeskIdentity } from "./identity";
 export { InMemoryNullifierRegistry, type NullifierRegistry } from "./nullifiers";
 export {
+  checkDeskProof,
   createDeskProof,
   type CreateDeskProofInput,
   type DeskProofExpectations,

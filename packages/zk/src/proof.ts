@@ -63,7 +63,7 @@ export async function createDeskProof(input: CreateDeskProofInput): Promise<Desk
 
 /** What the verifier expects the proof to be bound to; all three come from the enclave, never from the prover. */
 export interface DeskProofExpectations {
-  /** Root of the claimed source desk's group, as currently registered in the enclave. */
+  /** Root of the source desk's group the proof must be against (the enclave snapshots it per request). */
   expectedRoot: bigint;
   expectedExcerptHash: Hex;
   expectedRequestId: Hex;
@@ -75,20 +75,19 @@ export interface VerifiedDeskProof {
 }
 
 /**
- * Accepts a desk proof only if it is well-formed, at depth 16, for the expected desk root, excerpt and request,
- * cryptographically valid, and its nullifier was never used for this request. Records the nullifier on success.
+ * Checks a desk proof without recording its nullifier: well-formed, at depth 16, for the expected desk root,
+ * excerpt and request, and cryptographically valid. What a requester runs on a delivery, and what the enclave runs
+ * before recording the nullifier in the same transaction as the delivery itself.
  *
  * The root check is not optional: `verifyProof` alone returns true for a valid proof from ANY group, including
- * another desk's. Cheap binding checks run first; the nullifier is consumed last so that an invalid proof can never
- * burn a legitimate member's nullifier.
+ * another desk's. Cheap binding checks run first.
  *
- * @throws {ZkError} `INVALID_INPUT`, `MALFORMED_PROOF`, `WRONG_DEPTH`, `WRONG_ROOT`, `WRONG_MESSAGE`, `WRONG_SCOPE`,
- * `INVALID_PROOF` or `NULLIFIER_REUSED`.
+ * @throws {ZkError} `INVALID_INPUT`, `MALFORMED_PROOF`, `WRONG_DEPTH`, `WRONG_ROOT`, `WRONG_MESSAGE`, `WRONG_SCOPE`
+ * or `INVALID_PROOF`.
  */
-export async function verifyDeskProof(
+export async function checkDeskProof(
   proof: DeskProof,
   expected: DeskProofExpectations,
-  nullifiers: NullifierRegistry,
 ): Promise<VerifiedDeskProof> {
   const expectedMessage = bytes32ToBigInt(expected.expectedExcerptHash, "expectedExcerptHash");
   const expectedScope = bytes32ToBigInt(expected.expectedRequestId, "expectedRequestId");
@@ -128,9 +127,24 @@ export async function verifyDeskProof(
     throw new ZkError("INVALID_PROOF", "Groth16 verification failed");
   }
 
-  const nullifierValue = BigInt(nullifier);
-  if (!(await nullifiers.consume(expectedScope, nullifierValue))) {
+  return { nullifier: BigInt(nullifier) };
+}
+
+/**
+ * {@link checkDeskProof}, then records the nullifier: a member can share at most once per request. The nullifier is
+ * consumed last so that an invalid proof can never burn a legitimate member's nullifier.
+ *
+ * @throws {ZkError} the codes of {@link checkDeskProof}, or `NULLIFIER_REUSED`.
+ */
+export async function verifyDeskProof(
+  proof: DeskProof,
+  expected: DeskProofExpectations,
+  nullifiers: NullifierRegistry,
+): Promise<VerifiedDeskProof> {
+  const verified = await checkDeskProof(proof, expected);
+  const scope = bytes32ToBigInt(expected.expectedRequestId, "expectedRequestId");
+  if (!(await nullifiers.consume(scope, verified.nullifier))) {
     throw new ZkError("NULLIFIER_REUSED", "this member already shared for this request");
   }
-  return { nullifier: nullifierValue };
+  return verified;
 }
