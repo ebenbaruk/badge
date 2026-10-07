@@ -378,9 +378,7 @@ export class LiveEnclave implements EnclaveApi {
       baseUrl: this.config.baseUrl,
       transport: "channel",
       attestationMode: this.config.attestationMode,
-      ...(this.config.expectedComposeHash === undefined
-        ? {}
-        : { expectedComposeHash: this.config.expectedComposeHash }),
+      ...this.config.pins,
       ...(sessionKey === undefined ? {} : { sessionKey }),
     });
   }

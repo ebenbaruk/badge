@@ -34,7 +34,7 @@ const config: EnclaveConfig = {
   enclaveUrl: BASE_URL,
   enclaveTransport: "channel",
   attestationMode: "simulated",
-  expectedComposeHash: undefined,
+  pins: {},
 };
 
 function task(status: Task["status"]): Task {
@@ -170,7 +170,18 @@ describe("MCP server through the attested channel (dstack simulator)", () => {
       await readSessionFile(await sessionFile(`0x${"66".repeat(32)}`)),
       new Date(),
     );
-    const tdx: EnclaveConfig = { ...config, attestationMode: "tdx", expectedComposeHash: "ab".repeat(32) };
+    const os = {
+      mrtd: "11".repeat(48),
+      rtmr0: "22".repeat(48),
+      rtmr1: "33".repeat(48),
+      rtmr2: "44".repeat(48),
+    };
+    const pins = {
+      expectedComposeHash: "ab".repeat(32),
+      expectedAppId: "cd".repeat(20),
+      expectedOsMeasurements: os,
+    };
+    const tdx: EnclaveConfig = { ...config, attestationMode: "tdx", pins };
     await expect(connectEnclave(tdx, session, { fetch: fetchFn, warn: () => {} })).rejects.toMatchObject({
       code: "ATTESTATION_FAILED",
     });

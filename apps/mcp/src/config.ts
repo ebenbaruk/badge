@@ -2,8 +2,11 @@
  * MCP server configuration from the environment and the command line, validated once at startup.
  * The session key itself is not read here (see session-file.ts): this module only knows its path.
  */
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { parseArgs } from "node:util";
 import type { AttestationMode } from "@badge/attest";
+import { BadgeApiError, enclavePinsFromEnv, type EnclavePins } from "@badge/client";
 import { z } from "zod";
 import { McpSetupError } from "./errors";
 
@@ -18,8 +21,6 @@ export const DEFAULT_MCP_HTTP_PORT = 8790;
 export const MCP_HTTP_HOST = "127.0.0.1";
 export const MCP_HTTP_PATH = "/mcp";
 
-const COMPOSE_HASH_HEX = /^(0x)?[0-9a-fA-F]{64}$/;
-
 const EnvSchema = z
   .object({
     BADGE_ENCLAVE_URL: z.url({ protocol: /^https?$/ }).default(DEFAULT_ENCLAVE_URL),
@@ -27,17 +28,8 @@ const EnvSchema = z
     BADGE_ENCLAVE_TRANSPORT: z.enum(["channel", "plain"]).default("channel"),
     // Fail closed: the real-TEE checks apply unless the simulator is chosen explicitly.
     BADGE_ATTESTATION_MODE: z.enum(["tdx", "simulated"]).default("tdx"),
-    BADGE_ENCLAVE_COMPOSE_HASH: z
-      .string()
-      .regex(COMPOSE_HASH_HEX, { error: "must be 32 bytes of hex" })
-      .optional(),
     BADGE_MCP_TRANSPORT: z.enum(["stdio", "http"]).default("stdio"),
     BADGE_MCP_HTTP_PORT: z.coerce.number().int().min(1).max(65_535).default(DEFAULT_MCP_HTTP_PORT),
-  })
-  .refine((env) => env.BADGE_ATTESTATION_MODE !== "tdx" || env.BADGE_ENCLAVE_COMPOSE_HASH !== undefined, {
-    message:
-      "BADGE_ENCLAVE_COMPOSE_HASH is mandatory in tdx mode: without it any deployment would be trusted",
-    path: ["BADGE_ENCLAVE_COMPOSE_HASH"],
   })
   .refine((env) => env.BADGE_ENCLAVE_TRANSPORT !== "plain" || env.BADGE_ATTESTATION_MODE === "simulated", {
     message: "the plain transport skips attestation: only allowed with BADGE_ATTESTATION_MODE=simulated",
@@ -49,7 +41,11 @@ export interface EnclaveConfig {
   readonly enclaveUrl: string;
   readonly enclaveTransport: "channel" | "plain";
   readonly attestationMode: AttestationMode;
-  readonly expectedComposeHash: string | undefined;
+  /**
+   * What the quote must match (BADGE_ENCLAVE_COMPOSE_HASH, BADGE_ENCLAVE_APP_ID, BADGE_ENCLAVE_OS_MEASUREMENTS_FILE):
+   * compose hash, app id and OS measurements are all mandatory in tdx mode, or any deployment would be trusted.
+   */
+  readonly pins: EnclavePins;
 }
 
 export interface McpConfig extends EnclaveConfig {
@@ -57,6 +53,10 @@ export interface McpConfig extends EnclaveConfig {
   readonly mcpTransport: "stdio" | "http";
   readonly httpPort: number;
 }
+
+/** Reads a pins file (relative paths from the working directory). */
+export type ReadFile = (path: string) => string;
+const readUtf8: ReadFile = (path) => readFileSync(resolve(path), "utf8");
 
 function parseEnv(env: NodeJS.ProcessEnv): z.infer<typeof EnvSchema> {
   const parsed = EnvSchema.safeParse(env);
@@ -66,12 +66,23 @@ function parseEnv(env: NodeJS.ProcessEnv): z.infer<typeof EnvSchema> {
   return parsed.data;
 }
 
-function enclaveConfigOf(vars: z.infer<typeof EnvSchema>): EnclaveConfig {
+function enclaveConfigOf(
+  vars: z.infer<typeof EnvSchema>,
+  env: NodeJS.ProcessEnv,
+  readFile: ReadFile,
+): EnclaveConfig {
+  let pins: EnclavePins;
+  try {
+    pins = enclavePinsFromEnv(env, vars.BADGE_ATTESTATION_MODE, readFile);
+  } catch (error) {
+    if (!(error instanceof BadgeApiError)) throw error;
+    throw new McpSetupError("CONFIG_INVALID", `invalid configuration: ${error.message}`, { cause: error });
+  }
   return {
     enclaveUrl: vars.BADGE_ENCLAVE_URL,
     enclaveTransport: vars.BADGE_ENCLAVE_TRANSPORT,
     attestationMode: vars.BADGE_ATTESTATION_MODE,
-    expectedComposeHash: vars.BADGE_ENCLAVE_COMPOSE_HASH,
+    pins,
   };
 }
 
@@ -79,8 +90,11 @@ function enclaveConfigOf(vars: z.infer<typeof EnvSchema>): EnclaveConfig {
  * Reads only the enclave connection settings (session CLI).
  * @throws McpSetupError("CONFIG_INVALID").
  */
-export function loadEnclaveConfig(env: NodeJS.ProcessEnv = process.env): EnclaveConfig {
-  return enclaveConfigOf(parseEnv(env));
+export function loadEnclaveConfig(
+  env: NodeJS.ProcessEnv = process.env,
+  readFile: ReadFile = readUtf8,
+): EnclaveConfig {
+  return enclaveConfigOf(parseEnv(env), env, readFile);
 }
 
 /**
@@ -91,6 +105,7 @@ export function loadEnclaveConfig(env: NodeJS.ProcessEnv = process.env): Enclave
 export function loadMcpConfig(
   env: NodeJS.ProcessEnv = process.env,
   argv: string[] = process.argv.slice(2),
+  readFile: ReadFile = readUtf8,
 ): McpConfig {
   let flags: { session?: string; http?: boolean; port?: string };
   try {
@@ -115,7 +130,7 @@ export function loadMcpConfig(
     );
   }
   return {
-    ...enclaveConfigOf(vars),
+    ...enclaveConfigOf(vars, env, readFile),
     sessionFile: vars.BADGE_SESSION_KEY_FILE,
     mcpTransport: vars.BADGE_MCP_TRANSPORT,
     httpPort: vars.BADGE_MCP_HTTP_PORT,

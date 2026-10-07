@@ -106,22 +106,40 @@ describe("session file", () => {
 describe("configuration", () => {
   const base = { BADGE_SESSION_KEY_FILE: "/tmp/session.json" };
 
-  it("defaults to the attested channel in tdx mode, which needs a pinned compose hash", () => {
-    expect(() => loadMcpConfig(base, [])).toThrow(/BADGE_ENCLAVE_COMPOSE_HASH/);
-    const config = loadMcpConfig({ ...base, BADGE_ENCLAVE_COMPOSE_HASH: COMPOSE_HASH }, []);
+  const OS = {
+    mrtd: "11".repeat(48),
+    rtmr0: "22".repeat(48),
+    rtmr1: "33".repeat(48),
+    rtmr2: "44".repeat(48),
+  };
+  const PINS_FILE = "/pins.json";
+  const readPins = () =>
+    JSON.stringify({ composeHash: COMPOSE_HASH, appId: "cd".repeat(20), osMeasurements: OS });
+
+  it("defaults to the attested channel in tdx mode, which needs every pin (compose hash, app id, OS image)", () => {
+    expect(() => loadMcpConfig(base, [], readPins)).toThrow(/BADGE_ENCLAVE_COMPOSE_HASH/);
+    expect(() => loadMcpConfig({ ...base, BADGE_ENCLAVE_COMPOSE_HASH: COMPOSE_HASH }, [], readPins)).toThrow(
+      /BADGE_ENCLAVE_APP_ID, BADGE_ENCLAVE_OS_MEASUREMENTS_FILE/,
+    );
+    const config = loadMcpConfig({ ...base, BADGE_ENCLAVE_OS_MEASUREMENTS_FILE: PINS_FILE }, [], readPins);
     expect(config).toMatchObject({
       enclaveTransport: "channel",
       attestationMode: "tdx",
       mcpTransport: "stdio",
+      pins: { expectedComposeHash: COMPOSE_HASH, expectedAppId: "cd".repeat(20), expectedOsMeasurements: OS },
     });
   });
 
   it("allows the plain transport only with the simulator", () => {
-    const plain = { ...base, BADGE_ENCLAVE_TRANSPORT: "plain", BADGE_ENCLAVE_COMPOSE_HASH: COMPOSE_HASH };
-    expect(() => loadMcpConfig(plain, [])).toThrow(/plain transport/);
-    expect(loadMcpConfig({ ...plain, BADGE_ATTESTATION_MODE: "simulated" }, []).enclaveTransport).toBe(
-      "plain",
-    );
+    const plain = {
+      ...base,
+      BADGE_ENCLAVE_TRANSPORT: "plain",
+      BADGE_ENCLAVE_OS_MEASUREMENTS_FILE: PINS_FILE,
+    };
+    expect(() => loadMcpConfig(plain, [], readPins)).toThrow(/plain transport/);
+    expect(
+      loadMcpConfig({ ...plain, BADGE_ATTESTATION_MODE: "simulated" }, [], readPins).enclaveTransport,
+    ).toBe("plain");
   });
 
   it("lets flags override the environment and requires a session file", () => {
@@ -141,10 +159,10 @@ describe("enclave verification at startup", () => {
   const channel = {
     enclaveUrl: "http://127.0.0.1:8787",
     enclaveTransport: "channel",
-    expectedComposeHash: undefined,
+    pins: {},
   } as const;
   const simulated = { ...channel, attestationMode: "simulated" } as const;
-  const tdx = { ...channel, attestationMode: "tdx", expectedComposeHash: COMPOSE_HASH } as const;
+  const tdx = { ...channel, attestationMode: "tdx", pins: { expectedComposeHash: COMPOSE_HASH } } as const;
   const unreachable = {
     connect: () => Promise.reject(new BadgeApiError(0, "NETWORK_ERROR", "ECONNREFUSED")),
   };

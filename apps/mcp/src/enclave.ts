@@ -29,7 +29,7 @@ export function createEnclaveClient(
     transport: config.enclaveTransport,
     attestationMode: config.attestationMode,
     ...(sessionKey === undefined ? {} : { sessionKey }),
-    ...(config.expectedComposeHash === undefined ? {} : { expectedComposeHash: config.expectedComposeHash }),
+    ...config.pins,
     ...(fetch === undefined ? {} : { fetch }),
   });
 }
