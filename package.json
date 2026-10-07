@@ -14,7 +14,7 @@
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
     "dev": "pnpm -r --parallel --if-present dev",
-    "demo": "tsx scripts/demo.ts"
+    "demo": "pnpm --filter @badge/scripts demo"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

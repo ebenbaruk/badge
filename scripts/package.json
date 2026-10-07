@@ -1,0 +1,19 @@
+{
+  "name": "@badge/scripts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "demo": "tsx --no-warnings=ExperimentalWarning demo.ts"
+  },
+  "dependencies": {
+    "@badge/attest": "workspace:*",
+    "@badge/client": "workspace:*",
+    "@badge/consent": "workspace:*",
+    "@badge/ledger": "workspace:*",
+    "@badge/zk": "workspace:*",
+    "viem": "2.57.3",
+    "zod": "4.6.5"
+  }
+}
