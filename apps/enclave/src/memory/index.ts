@@ -2,8 +2,11 @@ export { draftBrief, type AllowedExcerpt } from "./brief";
 export {
   classifyExcerpt,
   ExcerptClassificationSchema,
+  PersonalDataScreenSchema,
+  screenPersonalData,
   type ClassifiableExcerpt,
   type ExcerptClassification,
+  type PersonalDataScreen,
 } from "./classifier";
 export { BriefInputError, MemoryBackendError, MemoryConfigError } from "./errors";
 export {

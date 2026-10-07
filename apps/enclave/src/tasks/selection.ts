@@ -4,6 +4,7 @@
  * owners for signature. Data minimisation comes first: asking an owner to share a note the task does not need is
  * noise on their Ledger at best, and a privacy leak if they approve out of fatigue.
  */
+import { toDeviceAscii } from "@badge/consent";
 import type { ExcerptClassification } from "../memory/classifier";
 import { COMPANY_OWNER_ID, type CandidateExcerpt } from "../memory/types";
 
@@ -15,9 +16,14 @@ export const MIN_COLLEAGUE_RELEVANCE = 0.7;
 
 /**
  * Tags an owner puts on private notes (the seed uses them; the web mock applies the same list). Such a note is never
- * proposed for someone else's task, whatever the classifier says.
+ * proposed for someone else's task, whatever the classifier says. Compared in device ASCII, lower case.
  */
 export const PRIVATE_TAGS: ReadonlySet<string> = new Set(["perso", "rh", "confidentiel"]);
+
+/** Whether `tag` is a private tag, however it is spelled ("RH", "Perso", "Confidentiel", "confidentièl"...). */
+export function isPrivateTag(tag: string): boolean {
+  return PRIVATE_TAGS.has(toDeviceAscii(tag).toLowerCase());
+}
 
 /** The parts of a candidate the gate looks at. */
 export type SelectableExcerpt = Pick<CandidateExcerpt, "ownerId" | "tags">;
@@ -36,7 +42,7 @@ export function servesTask(
   if (!classification.relevant) return false;
   const fromColleague = excerpt.ownerId !== COMPANY_OWNER_ID && excerpt.ownerId !== requesterId;
   if (!fromColleague) return true;
-  const taggedPrivate = excerpt.tags.some((tag) => PRIVATE_TAGS.has(tag));
+  const taggedPrivate = excerpt.tags.some(isPrivateTag);
   return (
     classification.relevance >= MIN_COLLEAGUE_RELEVANCE &&
     !classification.containsPersonalData &&

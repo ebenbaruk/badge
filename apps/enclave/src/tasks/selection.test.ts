@@ -39,6 +39,12 @@ describe("servesTask", () => {
     expect(servesTask({ ownerId: "chloe", tags: ["rh", "confidentiel"] }, RELEVANT, "alice")).toBe(false);
   });
 
+  it("recognises private tags whatever their case or accents", () => {
+    for (const tags of [["RH"], ["Perso"], ["CONFIDENTIEL"], ["Confidentièl"], [" rh "]]) {
+      expect(servesTask({ ownerId: "bob", tags }, RELEVANT, "alice")).toBe(false);
+    }
+  });
+
   it("keeps the requester's own personal notes", () => {
     const personal = { ...RELEVANT, containsPersonalData: true };
     expect(servesTask(BOB_LEAVE, personal, "bob")).toBe(true);

@@ -105,9 +105,16 @@ export class FakeLlm implements LlmClient {
     return "Brief Orion\n- point [1]";
   }
 
+  /**
+   * Personal-data verdict of the task-free screen (`screenPersonalData`, whose prompt has no `<task>`), e.g. to model
+   * a task-based classification fooled by an injected task while the excerpt alone is clearly personal.
+   */
+  screenFlags: ((prompt: string) => boolean) | undefined;
+
   async structuredCompletion<T>(schema: z.ZodType<T>, messages: readonly ChatMessage[]): Promise<T> {
     const user = messages.find((m) => m.role === "user")?.content ?? "";
-    const confidential = user.includes("Confidentiel RH");
+    const screen = !user.includes("<task>");
+    const confidential = user.includes("Confidentiel RH") || (screen && (this.screenFlags?.(user) ?? false));
     return schema.parse({
       relevant: !confidential,
       relevance: confidential ? 0.1 : 0.8,

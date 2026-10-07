@@ -344,6 +344,17 @@ describe("standing policies", () => {
     expect(await policyBases()).toBe(0);
   });
 
+  it("never auto-releases under a policy what the excerpt alone shows is personal, whatever the task says", async () => {
+    await postPolicy(h, policy(h));
+    expect(await policyBases()).toBe(3);
+    // The task-based classification said "no personal data" (as an injected task could make it say); the
+    // requester-independent screen of the excerpt alone flags one note: it goes to Bob's Ledger instead.
+    h.llm.screenFlags = (prompt) => prompt.includes("remise 12 %");
+    const task = await orionTask(h);
+    expect(task.allowed.filter((e: { via: string }) => e.via === "policy")).toHaveLength(2);
+    expect(task.pending.filter((e: { ownerId: string }) => e.ownerId === "bob")).toHaveLength(1);
+  });
+
   it("stops covering once expired or revoked", async () => {
     const created = (await postPolicy(h, policy(h, { expiresAt: nowSec(h) + 2n * 24n * 3600n }))).json;
     expect(await policyBases()).toBe(3);

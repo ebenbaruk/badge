@@ -25,7 +25,7 @@ import { EnclaveError } from "../errors";
 import { randomBytes32, randomNonce } from "../ids";
 import type { LlmClient } from "../llm/client";
 import { draftBrief } from "../memory/brief";
-import { classifyExcerpt, type ExcerptClassification } from "../memory/classifier";
+import { classifyExcerpt, screenPersonalData, type ExcerptClassification } from "../memory/classifier";
 import {
   COMPANY_OWNER_ID,
   OwnerIdSchema,
@@ -133,8 +133,8 @@ export class TaskService {
     const taskId = taskIdFrom(taskLabel, randomBytes32());
 
     const kept = await this.selectExcerpts(requester, input);
+    const decisions = await this.screenPolicyReleases(kept, this.decide(requester, kept));
     const nowMs = this.ctx.clock.now().getTime();
-    const decisions = this.decide(requester, kept);
 
     transaction(this.ctx.db, () => {
       this.deps.policy.tasks.insertTask({
@@ -211,6 +211,27 @@ export class TaskService {
       label: fullContextLabel(owner.name),
       explicit: true,
     };
+  }
+
+  /**
+   * A standing policy releases an excerpt without its owner reading it, and the selection gate's personal-data flag
+   * came from a prompt that contains the requester's task (which a compromised agent writes). Every policy release
+   * is therefore screened again on the excerpt alone (`screenPersonalData`); one flagged as personal goes to its
+   * owner's Ledger as a one-off consent instead.
+   */
+  private async screenPolicyReleases(
+    kept: readonly KeptExcerpt[],
+    decisions: Decision[],
+  ): Promise<Decision[]> {
+    return Promise.all(
+      decisions.map(async (decision, index) => {
+        const excerpt = kept[index];
+        if (decision.basis !== "policy" || !excerpt) return decision;
+        const screen = await screenPersonalData(this.deps.llm, excerpt.candidate);
+        if (!screen.containsPersonalData) return decision;
+        return { ...decision, decision: "pending", basis: null, policyId: null };
+      }),
+    );
   }
 
   /** Pure decision pass (reads only): rules first, then grant, then policy, else consent. */
