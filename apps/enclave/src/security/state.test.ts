@@ -71,12 +71,32 @@ describe("ChannelTable", () => {
     expect(() => table.get(channel.channelId)).toThrow(expect.objectContaining({ code: "CHANNEL_UNKNOWN" }));
   });
 
-  it("refuses a re-used handshake and new channels when full", () => {
+  it("refuses a re-used handshake and new channels when every slot is in use", () => {
     const table = new ChannelTable(manualClock(), 1_000, 1);
     const channel = freshChannel();
     table.add(channel);
     expect(() => table.add(channel)).toThrow(expect.objectContaining({ code: "CHANNEL_EXISTS" }));
+    table.get(channel.channelId);
     expect(() => table.add(freshChannel())).toThrow(expect.objectContaining({ code: "CHANNEL_CAPACITY" }));
+  });
+
+  it("cannot be kept full by unauthenticated opens: never-used channels expire fast and yield their slot", () => {
+    const clock = manualClock();
+    const table = new ChannelTable(clock, 60_000, 2, 500);
+    const live = freshChannel();
+    table.add(live);
+    table.get(live.channelId);
+    const flood = freshChannel();
+    table.add(flood);
+    // Full: the never-used channel is dropped, the one in use is kept.
+    const real = freshChannel();
+    table.add(real);
+    expect(table.has(flood.channelId)).toBe(false);
+    expect(table.has(live.channelId)).toBe(true);
+    // A never-used channel expires after the short TTL, a used one only after the idle TTL.
+    clock.advance(501);
+    expect(table.has(real.channelId)).toBe(false);
+    expect(table.has(live.channelId)).toBe(true);
   });
 });
 
