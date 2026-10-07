@@ -7,13 +7,14 @@
 #    to other code tomorrow without changing the hash. phala-up.sh refuses the all-zero placeholders;
 #  - it is self-contained: the CVM receives no other file from the operator, so nothing is bind-mounted from the
 #    host except the dstack guest agent socket. The Honcho settings are therefore repeated from infra/compose.yml;
-#  - no secret in clear: the four PHALA_AI_* variables are Phala encrypted secrets (encrypted on the operator's
+#  - no secret in clear: the three PHALA_AI_* variables are Phala encrypted secrets (encrypted on the operator's
 #    machine to the CVM's KMS key, only their names are part of the hash). The Honcho JWT secret, the database
 #    password and the admin JWT are generated inside the CVM at first boot (secrets-init) and never leave it.
 #
 # Network model (same argument as the local stack):
 #  - `sealed` is internal (no route out, no external DNS): Postgres, Honcho, the enclave, the seed job.
 #  - `gateway` is the only container also on `egress`. It forwards exactly two LLM routes to Phala Confidential AI
+#    (host pinned below AND in the gateway image: the deployer cannot redirect employees' context elsewhere)
 #    over verified TLS, injecting the key itself (Honcho and the enclave only hold a placeholder), and it carries
 #    the single published port, 8787, to the enclave (dstack gateway URL https://<app-id>-8787.<cluster>).
 name: badge
@@ -88,7 +89,8 @@ x-honcho-env: &honcho-env
 x-enclave-env: &enclave-env
   BADGE_LLM_PROFILE: phala
   BADGE_LLM_GATEWAY_URL: http://gateway:8080/v1
-  PHALA_AI_BASE_URL: ${PHALA_AI_BASE_URL}
+  # Not a secret and not configurable: the gateway only forwards to this host (it is pinned in its image).
+  PHALA_AI_BASE_URL: https://inference.phala.com/v1
   PHALA_AI_API_KEY: dummy-key-the-gateway-injects-the-real-one
   PHALA_AI_MODEL: ${PHALA_AI_MODEL}
   PHALA_AI_EMBEDDING_MODEL: ${PHALA_AI_EMBEDDING_MODEL}
@@ -209,7 +211,8 @@ services:
   gateway:
     image: ghcr.io/ebenbaruk/badge-gateway@sha256:3fd17cf78c44d39b876741e7a864a003bfbf443fe03d17400cb69f2e28aa9f61
     environment:
-      BADGE_UPSTREAM_BASE_URL: ${PHALA_AI_BASE_URL}
+      # The upstream itself is pinned in the gateway image (15-badge-upstream.envsh): only the key is a secret.
+      BADGE_UPSTREAM_BASE_URL: https://inference.phala.com/v1
       BADGE_UPSTREAM_API_KEY: ${PHALA_AI_API_KEY}
     ports:
       - "8787:8787"

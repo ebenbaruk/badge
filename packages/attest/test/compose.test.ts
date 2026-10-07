@@ -59,6 +59,16 @@ describe("compose policy", () => {
     ]);
   });
 
+  it("flags a deployer-supplied endpoint: its value is not attested", () => {
+    const compose = JSON.stringify({
+      ...JSON.parse(COMPLIANT_COMPOSE),
+      allowed_envs: ["PHALA_AI_API_KEY", "PHALA_AI_MODEL", "PHALA_AI_BASE_URL"],
+    });
+    expect(composePolicyViolations(parseAppCompose(compose))).toEqual([
+      "allowed_envs must not configure an endpoint (PHALA_AI_BASE_URL)",
+    ]);
+  });
+
   it("rejects malformed documents", () => {
     expect(() => parseAppCompose("not json")).toThrow(ComposeError);
     expect(() => parseAppCompose('{"public_logs":"no"}')).toThrow(ComposeError);

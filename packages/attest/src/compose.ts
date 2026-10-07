@@ -44,7 +44,14 @@ const appComposeSchema = z.looseObject({
   public_logs: z.boolean().optional(),
   public_sysinfo: z.boolean().optional(),
   local_key_provider_enabled: z.boolean().optional(),
+  allowed_envs: z.array(z.string()).optional(),
 });
+
+/**
+ * Names of deployer-supplied variables that would choose where data goes. Encrypted variables are only the
+ * deployer's choice kept out of the hash: an endpoint among them could send employees' context anywhere.
+ */
+const ENDPOINT_ENV_NAME = /(_URL|_URI|_HOST|_ENDPOINT|_ADDR)$/i;
 
 export type AppCompose = z.infer<typeof appComposeSchema>;
 
@@ -71,7 +78,9 @@ export function parseAppCompose(appCompose: string): AppCompose {
  * - `public_logs` / `public_sysinfo` must be explicitly false: Phala defaults them to true, and container logs
  *   or system info published by the gateway would leak employee context out of the enclave;
  * - `kms_enabled` must be true and `local_key_provider_enabled` false: a local key provider is a dev posture where
- *   keys are not bound to the app's KMS policy.
+ *   keys are not bound to the app's KMS policy;
+ * - no `allowed_envs` entry may name an endpoint (`*_URL`, `*_HOST`...): their values are not attested, so every
+ *   destination of data must be a literal of the compose or of a pinned image.
  */
 export function composePolicyViolations(compose: AppCompose): string[] {
   const violations: string[] = [];
@@ -80,5 +89,9 @@ export function composePolicyViolations(compose: AppCompose): string[] {
   if (compose.kms_enabled !== true) violations.push("kms_enabled must be true");
   if (compose.local_key_provider_enabled === true)
     violations.push("local_key_provider_enabled must be false");
+  for (const name of compose.allowed_envs ?? []) {
+    if (ENDPOINT_ENV_NAME.test(name))
+      violations.push(`allowed_envs must not configure an endpoint (${name})`);
+  }
   return violations;
 }

@@ -1,21 +1,27 @@
 #!/bin/sh
 # Sourced by the nginx image entrypoint before the templates are rendered (*.envsh files are sourced, so exports
-# reach envsubst). In the CVM only the upstream base URL is configured: the Host/SNI value is derived from it here,
-# and anything but https is refused (the gateway would otherwise send the upstream key in clear text).
+# reach envsubst). CVM image only (the local stack mounts the templates on the stock image instead).
+#
+# The LLM upstream is PINNED HERE, in the image whose digest the attested compose pins: every chat completion and
+# embedding carries employees' notes, so where they go must be part of the measured code, not a value the deployer
+# chooses. Phala encrypted variables only hide values from the operator's view; they are still the operator's
+# choice (and can be changed by an env update without changing the compose hash). Only the API key stays a secret.
+# A configured base URL other than the pinned one stops the container rather than being silently ignored.
 # No `set -u` here: options of a sourced file would leak into the nginx entrypoint. `exit` stops the container.
 
-case "${BADGE_UPSTREAM_BASE_URL:-}" in
-  https://*) ;;
-  *)
-    echo "badge gateway: BADGE_UPSTREAM_BASE_URL must be an https URL" >&2
-    exit 1
-    ;;
-esac
+BADGE_PINNED_UPSTREAM_BASE_URL="https://inference.phala.com/v1"
+BADGE_PINNED_UPSTREAM_HOST="inference.phala.com"
+
+if [ -n "${BADGE_UPSTREAM_BASE_URL:-}" ] && [ "${BADGE_UPSTREAM_BASE_URL%/}" != "$BADGE_PINNED_UPSTREAM_BASE_URL" ]; then
+  echo "badge gateway: refusing upstream ${BADGE_UPSTREAM_BASE_URL}: only ${BADGE_PINNED_UPSTREAM_BASE_URL} is allowed" >&2
+  exit 1
+fi
+if [ -n "${BADGE_UPSTREAM_HOST:-}" ] && [ "$BADGE_UPSTREAM_HOST" != "$BADGE_PINNED_UPSTREAM_HOST" ]; then
+  echo "badge gateway: refusing upstream host ${BADGE_UPSTREAM_HOST}: only ${BADGE_PINNED_UPSTREAM_HOST} is allowed" >&2
+  exit 1
+fi
 [ -n "${BADGE_UPSTREAM_API_KEY:-}" ] || { echo "badge gateway: BADGE_UPSTREAM_API_KEY is empty" >&2; exit 1; }
 
-BADGE_UPSTREAM_BASE_URL="${BADGE_UPSTREAM_BASE_URL%/}"
-if [ -z "${BADGE_UPSTREAM_HOST:-}" ]; then
-  BADGE_UPSTREAM_HOST="${BADGE_UPSTREAM_BASE_URL#https://}"
-  BADGE_UPSTREAM_HOST="${BADGE_UPSTREAM_HOST%%/*}"
-fi
+BADGE_UPSTREAM_BASE_URL="$BADGE_PINNED_UPSTREAM_BASE_URL"
+BADGE_UPSTREAM_HOST="$BADGE_PINNED_UPSTREAM_HOST"
 export BADGE_UPSTREAM_BASE_URL BADGE_UPSTREAM_HOST

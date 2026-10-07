@@ -12,8 +12,7 @@ CVM_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$CVM_DIR/../.." && pwd)"
 PROJECT="badge-cvm-rehearsal"
 ENDPOINT="http://127.0.0.1:18787"
-# Not secrets: a public endpoint and a key the upstream rejects.
-export PHALA_AI_BASE_URL="https://api.openai.com/v1"
+# Not secrets: a key the (pinned) upstream rejects, and placeholder model names.
 export PHALA_AI_API_KEY="placeholder-rejected-upstream"
 export PHALA_AI_MODEL="rehearsal-model"
 export PHALA_AI_EMBEDDING_MODEL="rehearsal-embeddings"

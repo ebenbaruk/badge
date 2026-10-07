@@ -14,8 +14,9 @@
 #                             API + deriver, enclave, nginx) on top of the dstack OS and Docker; tdx.small (2 GB)
 #                             leaves no margin for image pulls and the deriver's peaks.
 #   BADGE_PHALA_DISK_SIZE     default 20G (images ~1.5 GB, memory database a few MB)
-#   BADGE_ENV_FILE            secrets file (default <repo>/../.env): PHALA_AI_BASE_URL, PHALA_AI_API_KEY,
-#                             PHALA_AI_MODEL, optional PHALA_AI_EMBEDDING_MODEL, PHALA_CLOUD_API_KEY.
+#   BADGE_ENV_FILE            secrets file (default <repo>/../.env): PHALA_AI_API_KEY, PHALA_AI_MODEL, optional
+#                             PHALA_AI_EMBEDDING_MODEL, PHALA_CLOUD_API_KEY. The LLM endpoint is not configurable:
+#                             it is pinned in compose.yml and in the gateway image (attested).
 set -euo pipefail
 # shellcheck source=cvm/phala-common.sh
 . "$(dirname "$0")/cvm/phala-common.sh"
@@ -39,15 +40,15 @@ if [ -n "$(git -C "$REPO_ROOT" status --porcelain -- "$COMPOSE_FILE")" ] && [ "$
   die "commit $COMPOSE_FILE first: the clients pin the hash of the committed file"
 fi
 
-# --- 2. Secrets for the CVM: only the four PHALA_AI_* variables, never the whole env file ---------------------
+# --- 2. Secrets for the CVM: only the three PHALA_AI_* variables, never the whole env file --------------------
+# No endpoint among them: an encrypted variable is the deployer's choice outside the compose hash, so the LLM
+# upstream is a literal of the attested compose and gateway image (clients reject an endpoint in allowed_envs).
 [ -r "$ENV_FILE" ] || die "secrets file not readable: $ENV_FILE (set BADGE_ENV_FILE)"
-base_url="$(env_get PHALA_AI_BASE_URL)"
 api_key="$(env_get PHALA_AI_API_KEY)"
 model="$(env_get PHALA_AI_MODEL)"
 embedding_model="$(env_get PHALA_AI_EMBEDDING_MODEL)"
 embedding_model="${embedding_model:-$DEFAULT_EMBEDDING_MODEL}"
 [ -n "$api_key" ] && [ -n "$model" ] || die "PHALA_AI_API_KEY and PHALA_AI_MODEL are required in $ENV_FILE"
-case "$base_url" in https://*) ;; *) die "PHALA_AI_BASE_URL must be an https URL" ;; esac
 
 phala_auth
 cvm_exists "$CVM_NAME" && die "a CVM named '$CVM_NAME' already exists: infra/phala-status.sh, or infra/phala-down.sh first"
@@ -58,7 +59,6 @@ secrets_file="$(umask 077 && mktemp "$STATE_DIR/deploy-env.XXXXXX")"
 trap 'rm -f "$secrets_file"' EXIT
 # The CLI encrypts these locally to the CVM's KMS key; the variable NAMES become `allowed_envs` (part of the hash).
 {
-  printf 'PHALA_AI_BASE_URL=%s\n' "${base_url%/}"
   printf 'PHALA_AI_API_KEY=%s\n' "$api_key"
   printf 'PHALA_AI_MODEL=%s\n' "$model"
   printf 'PHALA_AI_EMBEDDING_MODEL=%s\n' "$embedding_model"
