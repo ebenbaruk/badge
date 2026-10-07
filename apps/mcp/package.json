@@ -1,0 +1,26 @@
+{
+  "name": "@badge/mcp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/main.ts",
+    "session": "tsx src/session-cli.ts",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "test:sim": "vitest run --config vitest.sim.config.ts"
+  },
+  "dependencies": {
+    "@badge/attest": "workspace:*",
+    "@badge/client": "workspace:*",
+    "@badge/consent": "workspace:*",
+    "@badge/ledger": "workspace:*",
+    "@modelcontextprotocol/sdk": "1.32.1",
+    "viem": "2.57.3",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@badge/enclave": "workspace:*",
+    "hono": "4.13.13"
+  }
+}
