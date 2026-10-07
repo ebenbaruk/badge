@@ -71,12 +71,18 @@ export async function approveDeskShare(input: {
     }
     const message = decodeBadgeMessage("DeskShare", request.message);
     const sourceDesk = (await api.listDesks(employee)).find((d) => DESK_NAMES[d.id] === message.sourceDesk);
-    if (sourceDesk === undefined || !sourceDesk.joined) {
+    if (sourceDesk === undefined || !sourceDesk.isMember) {
+      throw new EnclaveError("FORBIDDEN", `vous n'êtes pas membre du desk ${message.sourceDesk}`);
+    }
+    // The identity is not kept across a bridge restart: re-derived here (one more device review) when needed,
+    // rather than asking the member to join again a desk the enclave already lists them in. Declining that
+    // derivation is not an answer to the request, which stays pending.
+    const identity = await deskIdentity(employee);
+    if (!sourceDesk.commitments.includes(identity.commitment.toString())) {
       throw new EnclaveError("FORBIDDEN", `rejoignez d'abord le desk ${message.sourceDesk}`);
     }
     try {
       const signed = await signOnDevice(employee, "DeskShare", message);
-      const identity = await deskIdentity(employee);
       // The group comes from the enclave's registration order: the proof's root must equal the enclave's root.
       const group = buildDeskGroup(sourceDesk.commitments.map((c) => BigInt(c)));
       const proof = await createDeskProof({

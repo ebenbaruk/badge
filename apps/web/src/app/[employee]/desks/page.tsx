@@ -53,7 +53,7 @@ function DeskCard({ desk, employee }: { desk: DeskView; employee: Employee }) {
               <Users className="size-3.5 text-muted-foreground" />
               {desk.commitments.length} / {desk.directoryMembers} membres
               <span className={cn("text-[11px] font-normal", anonymous ? "text-success" : "text-warning")}>
-                {anonymous ? "anonymat assuré" : "groupe trop petit"}
+                {anonymous ? "anonymat assuré" : `groupe trop petit (${MIN_ANONYMITY_SET} minimum)`}
               </span>
             </dd>
           </div>
@@ -65,13 +65,13 @@ function DeskCard({ desk, employee }: { desk: DeskView; employee: Employee }) {
         {desk.isMember && !desk.joined && (
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-dashed p-3">
             <p className="text-xs text-muted-foreground">
-              Deux validations sur votre Ledger : dériver votre identité anonyme, puis l&apos;inscrire au
-              desk.
+              Deux validations sur votre Ledger : dériver votre identité anonyme, puis l&apos;inscrire au desk
+              (une seule si elle y est déjà inscrite).
             </p>
             <LedgerActionButton
               label={`Rejoindre ${desk.name}`}
               icon={<Fingerprint />}
-              reviewLabel={`Dériver mon identité anonyme puis rejoindre le desk ${desk.name}`}
+              reviewLabel={`Desk ${desk.name} : dérivation de l'identité anonyme puis inscription (2 messages)`}
               action={joinDesk.bind(null, { employee: employee.id, desk: desk.id })}
               successMessage={`Vous êtes inscrit au desk ${desk.name}, anonymement.`}
             />
