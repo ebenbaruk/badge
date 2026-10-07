@@ -1,7 +1,7 @@
 import type { AttestationResult } from "@badge/attest";
 import type { AuditLog, Task } from "@badge/client";
 import { describe, expect, it } from "vitest";
-import { attestationView, auditView, parseBrief, taskView, type TaskRecord } from "./live-views";
+import { attestationView, auditView, deskIdOf, parseBrief, taskView, type TaskRecord } from "./live-views";
 
 const TASK_ID = `0x${"ab".repeat(32)}` as const;
 const CREATED_AT = 1_791_100_800;
@@ -179,5 +179,13 @@ describe("auditView", () => {
     expect(anonymous.sealed[0]?.revealed?.employee).toBeUndefined();
     expect(anonymous.chain).toEqual({ ok: true, length: 3, headHash: "h3" });
     expect(auditView(log, new Map([[2, "bob"]])).sealed[0]?.revealed?.employee).toBe("bob");
+  });
+});
+
+describe("deskIdOf", () => {
+  it("accepts the API id and the device name, and nothing else", () => {
+    expect(deskIdOf("research")).toBe("research");
+    expect(deskIdOf("Origination")).toBe("origination");
+    expect(() => deskIdOf("Trading")).toThrow(/Trading/);
   });
 });

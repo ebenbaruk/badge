@@ -19,7 +19,15 @@ import type {
 import { encodeBadgeMessage } from "@badge/consent";
 import { keccak256, toHex, zeroHash, type Hex } from "viem";
 import { z } from "zod";
-import { DESK_NAMES, EMPLOYEES, isDeskId, isEmployeeId, type DeskId, type EmployeeId } from "@/lib/directory";
+import {
+  DESK_IDS,
+  DESK_NAMES,
+  EMPLOYEES,
+  isDeskId,
+  isEmployeeId,
+  type DeskId,
+  type EmployeeId,
+} from "@/lib/directory";
 import { EnclaveError } from "../errors";
 import type {
   AllowedBy,
@@ -59,9 +67,17 @@ export function employeeIdOf(id: string): EmployeeId {
   return id;
 }
 
-export function deskIdOf(id: string): DeskId {
-  if (!isDeskId(id)) throw new EnclaveError("INVALID_REQUEST", `unknown desk in enclave response: ${id}`);
-  return id;
+/**
+ * Narrows a desk the enclave named: API routes use ids (`research`), signed messages and the consents built from them
+ * use the name shown on the device (`Research`).
+ */
+export function deskIdOf(idOrName: string): DeskId {
+  if (isDeskId(idOrName)) return idOrName;
+  const byName = DESK_IDS.find((id) => DESK_NAMES[id].toLowerCase() === idOrName.toLowerCase());
+  if (byName === undefined) {
+    throw new EnclaveError("INVALID_REQUEST", `unknown desk in enclave response: ${idOrName}`);
+  }
+  return byName;
 }
 
 function ownerOf(id: string): ContextOwner {
