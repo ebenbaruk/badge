@@ -56,6 +56,8 @@ import {
 
 const EMPLOYEES = ["alice", "bob", "chloe"] as const satisfies readonly DemoEmployee[];
 const AGENT_NAME = "Claude Code";
+/** Tag of the seed's private notes (Bob's leave reminder): never proposed for a colleague's task. */
+const PRIVATE_NOTE_TAG = "perso";
 const ORION_TASK = {
   task: "Prepare le brief de mon rendez-vous de demain avec le client Orion Logistique",
   taskLabel: "Brief RDV Orion",
@@ -253,7 +255,14 @@ async function main(): Promise<void> {
     await narrator.step("Chaque propriétaire lit la demande et signe sur son Ledger (en clair)", async () => {
       const owners = [...new Set(orion.pending.map((e) => e.ownerId))] as DemoEmployee[];
       for (const owner of owners) {
-        for (const consent of pendingOf(await agents[owner].listConsents(), orion.id)) {
+        const consents = pendingOf(await agents[owner].listConsents(), orion.id);
+        // Bob's leave reminder names the Orion meeting, but it is his private matter: the enclave keeps a
+        // colleague's personal notes out of a work brief (tag "perso", classifier), so it never reaches his Ledger.
+        check(
+          !consents.some((consent) => consent.excerpt.tags.includes(PRIVATE_NOTE_TAG)),
+          `a personal note of ${owner} was proposed for the Orion brief`,
+        );
+        for (const consent of consents) {
           const { signature, screens } = await ledgers[owner].sign("ContextShare", consent.message);
           await agents[owner].approveConsent(consent.id, signature);
           narrator.say(
