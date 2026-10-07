@@ -28,6 +28,33 @@ s'y ajouter.
 renvoie n'est qu'une liste de candidats : rien ne sort de l'enclave sans le moteur de politique (accord signé sur
 le Ledger du propriétaire pour tout extrait personnel d'un tiers).
 
+## Couche sécurité (`src/security`)
+
+À monter **avant** les routes métier (Hono applique les middlewares dans l'ordre d'enregistrement) :
+
+```ts
+const app = new Hono<BadgeEnv>();
+const security = mountSecurityRoutes(app, {
+  dstack: createDstackClient(), // socket dstack dans le CVM, DSTACK_SIMULATOR_ENDPOINT en local
+  sessions, // SessionResolver du domaine : clé de session -> Caller, null si inconnue, expirée ou révoquée
+  clock: systemClock,
+  requireChannel: true, // production : tout /v1 passe par le canal attesté
+});
+// puis les routes métier ; c.var.caller est défini sur toute route authentifiée.
+```
+
+- **Authentification** (`createAuthMiddleware`) : signature EIP-191 de la clé de session sur la requête canonique
+  (`@badge/client`), écart d'horloge ≤ 60 s, cache anti-rejeu borné (clé = session + chaîne signée, insensible à la
+  malléabilité ECDSA ; plein = refus 503 plutôt qu'oubli). Routes publiques : `isPublicRoute` ; toute nouvelle
+  route `/v1` est protégée par défaut.
+- **Canal attesté** : `POST /v1/channel/open`, `POST /v1/channel/:id` (requête interne rejouée en mémoire via
+  `app.request`, réponse scellée), table en mémoire avec TTL d'inactivité et plafond ; un même `hello` ne peut pas
+  rouvrir un canal (il remettrait les numéros de séquence à zéro).
+- **Mesure** : `GET /v1/attestation/measurement` ; `security.identity.read()` donne la même valeur au domaine.
+- **Clés** : `KeyRotator` (interface `DekProvider`) dérive la DEK de chaque employé via le KMS dstack
+  (`badge/dek/{id}:{version}`) ; `rotate(id)` incrémente la version, persistée par un `KeyVersionStore` du domaine.
+- Erreurs : `{ error: { code, message } }` (`SecurityError`).
+
 ## Pile locale
 
 ```bash
@@ -44,6 +71,7 @@ Changer de profil LLM impose `reset` puis `up` et `seed` : les embeddings de deu
 
 ```bash
 pnpm --filter @badge/enclave test        # unitaires, sans réseau
+pnpm --filter @badge/enclave test:sim    # couche sécurité + SDK de bout en bout (infra/dstack-sim.sh start)
 pnpm --filter @badge/enclave test:live   # pile locale + profil build (quelques appels payants)
 BADGE_LIVE_PHALA=1 pnpm --filter @badge/enclave test:live   # + 2 appels Phala Confidential AI
 ```
