@@ -98,6 +98,16 @@ function replayDigests(digests: readonly string[]): string {
  * @throws EventLogError on any digest mismatch or unknown RTMR3 event type.
  */
 export function replayRtmrs(events: readonly DstackEvent[]): [string, string, string, string] {
+  // A real dstack CVM (unlike the simulator) leaves the digest of RTMR3 runtime events empty in the event log it
+  // returns with getQuote: the digest is defined by the payload, so we derive it. This loses nothing: the derived
+  // digests are then replayed and must reproduce the quote's RTMR3, which is what authenticates the payloads.
+  events = events.map((event) =>
+    event.imr === RUNTIME_RTMR_INDEX &&
+    event.event_type === DSTACK_RUNTIME_EVENT_TYPE &&
+    normalizeHex(event.digest) === ""
+      ? { ...event, digest: runtimeEventDigest(event.event_type, event.event, event.event_payload) }
+      : event,
+  );
   for (const event of events) {
     if (event.imr !== RUNTIME_RTMR_INDEX) continue;
     if (event.event_type !== DSTACK_RUNTIME_EVENT_TYPE) {
