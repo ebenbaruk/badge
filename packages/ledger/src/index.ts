@@ -16,9 +16,16 @@ export {
   type FilterSigner,
 } from "./clearSign";
 export {
+  ContactProofSchema,
+  SUGGESTED_CONTACT_FIELDS,
+  type ContactField,
+  type ContactProof,
+} from "./contacts";
+export {
   BADGE_DERIVATION_PATH,
   LedgerSigner,
   toSignatureHex,
   type LedgerSignerOptions,
+  type SignBadgeOptions,
   type SignOptions,
 } from "./signer";

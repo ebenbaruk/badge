@@ -2,6 +2,7 @@
  * Ledger signer for Badge, on top of the Device Management Kit and the Speculos transport.
  */
 import { ContextModuleBuilder, ContextModuleChainID } from "@ledgerhq/context-module";
+import { ContactsManagerBuilder, ETHEREUM_APP_NAME } from "@ledgerhq/device-contacts-kit";
 import {
   DeviceManagementKitBuilder,
   type DeviceManagementKit,
@@ -11,7 +12,10 @@ import { SignerEthBuilder, type SignerEth } from "@ledgerhq/device-signer-kit-et
 import { speculosTransportFactory } from "@ledgerhq/device-transport-kit-speculos";
 import { firstValueFrom, timeout } from "rxjs";
 import {
+  bytesToHex,
   getAddress as checksumAddress,
+  hexToBytes,
+  isAddress,
   isAddressEqual,
   recoverMessageAddress,
   recoverTypedDataAddress,
@@ -19,10 +23,16 @@ import {
   type Hex,
 } from "viem";
 import { z } from "zod";
-import type { BadgeMessageKind, BadgeMessages } from "@badge/consent";
+import { BADGE_DOMAIN, type BadgeMessageKind, type BadgeMessages } from "@badge/consent";
 import { BadgeClearSignLoader, loadCalTestSigner, type FilterSigner } from "./clearSign";
+import { provideContactApdus, toContactProof, type ContactField, type ContactProof } from "./contacts";
 import { runDeviceAction, type DeviceActionOptions } from "./deviceAction";
-import { LedgerConnectionError, NonAsciiFieldError, SignatureMismatchError } from "./errors";
+import {
+  DeviceActionError,
+  LedgerConnectionError,
+  NonAsciiFieldError,
+  SignatureMismatchError,
+} from "./errors";
 import { assertStringFieldsAscii, badgeTypedData, toDmkTypedData, toViemTypedData } from "./typedData";
 
 /** First Ethereum account (BIP-44). Every Badge identity is bound to it. */
@@ -32,6 +42,9 @@ const DEFAULT_CONNECT_TIMEOUT_MS = 10_000;
 const SIGNATURE_COMPONENT_HEX_LENGTH = 64;
 /** Legacy `v` offset: some app versions return the recovery id (0/1) instead of 27/28. */
 const LEGACY_V_OFFSET = 27;
+const APDU_SUCCESS = "9000";
+/** Default contact scope, shown as "Address name" when the contact is registered. */
+const DEFAULT_CONTACT_SCOPE = "Badge";
 /** Personal messages may span several lines; everything else must be printable ASCII (what the device renders). */
 const PERSONAL_MESSAGE_ASCII = /^[\x20-\x7E\n]+$/;
 
@@ -42,10 +55,21 @@ export interface LedgerSignerOptions {
   signFilter?: FilterSigner;
   /** Maximum time to discover and open the Speculos session. */
   connectTimeoutMs?: number;
+  /**
+   * Address fields displayed through the device address book (e.g. `SUGGESTED_CONTACT_FIELDS`). Off by default;
+   * needs app-ethereum >= 1.23 (develop build on Speculos).
+   */
+  contactFields?: Partial<Record<BadgeMessageKind, ContactField>>;
 }
 
-/** Options of a signing call: progress (to drive or display the device) and cancellation. */
+/** Options of a device call: progress (to drive or display the device) and cancellation. */
 export type SignOptions = DeviceActionOptions;
+
+/** Options of {@link LedgerSigner.signBadgeMessage}. */
+export interface SignBadgeOptions extends SignOptions {
+  /** Known contacts; the one matching the message's contact field (if any) is provided to the device first. */
+  contacts?: readonly ContactProof[];
+}
 
 interface RawSignature {
   r: string;
@@ -77,21 +101,23 @@ export class LedgerSigner {
     private readonly dmk: DeviceManagementKit,
     private readonly sessionId: DeviceSessionId,
     private readonly eth: SignerEth,
+    private readonly contactFields: Partial<Record<BadgeMessageKind, ContactField>>,
   ) {}
 
   /**
    * Opens a DMK session on a Speculos instance.
    * @param speculosUrl - Speculos API root, e.g. `http://localhost:5001`.
    * @throws LedgerConnectionError when Speculos cannot be reached in time.
-   * @throws ClearSignSetupError when the test CAL key cannot be loaded.
+   * @throws ClearSignSetupError when the test CAL key cannot be loaded or a contact field is invalid.
    */
   static async connect(speculosUrl: string, options: LedgerSignerOptions = {}): Promise<LedgerSigner> {
     const url = z
       .url({ protocol: /^https?$/ })
       .parse(speculosUrl)
       .replace(/\/+$/, "");
-    // Load the key first: a missing key is a setup error, better reported before touching the device.
+    // Build the loader first: a missing key is a setup error, better reported before touching the device.
     const signFilter = options.signFilter ?? loadCalTestSigner(options.calTestKeyPath);
+    const loader = new BadgeClearSignLoader(signFilter, options.contactFields);
     const dmk = new DeviceManagementKitBuilder().addTransport(speculosTransportFactory(url)).build();
     try {
       const device = await firstValueFrom(
@@ -102,10 +128,10 @@ export class LedgerSigner {
       const contextModule = new ContextModuleBuilder({})
         // Mandatory: build() throws "setChain() must be called before build()" otherwise (undocumented).
         .setChain(ContextModuleChainID.Ethereum)
-        .addTypedDataLoader(new BadgeClearSignLoader(signFilter))
+        .addTypedDataLoader(loader)
         .build();
       const eth = new SignerEthBuilder({ dmk, sessionId }).withContextModule(contextModule).build();
-      return new LedgerSigner(url, dmk, sessionId, eth);
+      return new LedgerSigner(url, dmk, sessionId, eth, options.contactFields ?? {});
     } catch (error) {
       dmk.close();
       throw new LedgerConnectionError(`Cannot open a Ledger session on Speculos at ${url}`, { cause: error });
@@ -132,18 +158,21 @@ export class LedgerSigner {
   async signBadgeMessage<K extends BadgeMessageKind>(
     kind: K,
     message: BadgeMessages[K],
-    options: SignOptions = {},
+    options: SignBadgeOptions = {},
   ): Promise<Hex> {
     assertStringFieldsAscii(kind, message);
     const address = await this.getAddress();
     const typedData = badgeTypedData(kind, message);
-    const raw = await this.exclusive(() =>
-      runDeviceAction(
+    const contact = this.matchingContact(kind, message, options.contacts ?? []);
+    const raw = await this.exclusive(async () => {
+      // Same exclusive slot as the signature: the contact must be the last thing provided before the message.
+      if (contact !== undefined) await this.provideContact(contact);
+      return runDeviceAction(
         `signTypedData(${kind})`,
         () => this.eth.signTypedData(BADGE_DERIVATION_PATH, toDmkTypedData(typedData)),
         options,
-      ),
-    );
+      );
+    });
     const signature = toSignatureHex(raw);
     const signer = await recoverTypedDataAddress({ ...toViemTypedData(typedData), signature });
     this.assertSignedBy(signer, address, `${kind} signature`);
@@ -166,12 +195,74 @@ export class LedgerSigner {
     return signature;
   }
 
+  /**
+   * Registers `address` as a contact on the device; the owner confirms the name on screen. Persist the returned
+   * proof: the device keeps no list, and the proof is needed to display the name later.
+   * Requires app-ethereum >= 1.23 (develop build on Speculos).
+   */
+  async registerContact(
+    contact: { contactName: string; address: Address; scope?: string },
+    options: SignOptions = {},
+  ): Promise<ContactProof> {
+    const manager = new ContactsManagerBuilder({
+      dmk: this.dmk,
+      sessionId: this.sessionId,
+      appName: ETHEREUM_APP_NAME,
+    }).build();
+    const output = await this.exclusive(() =>
+      runDeviceAction(
+        "registerContact",
+        () =>
+          manager.registerExternalAddress({
+            contactName: contact.contactName,
+            scope: contact.scope ?? DEFAULT_CONTACT_SCOPE,
+            identifier: hexToBytes(contact.address),
+            blockchainFamily: "ethereum",
+            // A contact is bound to a chain: it must match the EIP-712 domain it will be displayed in.
+            chainId: BigInt(BADGE_DOMAIN.chainId),
+          }),
+        options,
+      ),
+    );
+    return toContactProof({ ...output, address: contact.address, chainId: BADGE_DOMAIN.chainId });
+  }
+
   /** Closes the DMK session and releases the transport. */
   async close(): Promise<void> {
     try {
       await this.dmk.disconnect({ sessionId: this.sessionId });
     } finally {
       this.dmk.close();
+    }
+  }
+
+  private matchingContact<K extends BadgeMessageKind>(
+    kind: K,
+    message: BadgeMessages[K],
+    contacts: readonly ContactProof[],
+  ): ContactProof | undefined {
+    const field = this.contactFields[kind];
+    if (field === undefined) return undefined;
+    const value: unknown = (message as unknown as Record<string, unknown>)[field.path];
+    if (typeof value !== "string" || !isAddress(value)) return undefined;
+    return contacts.find(
+      (contact) => contact.chainId === BADGE_DOMAIN.chainId && isAddressEqual(contact.address, value),
+    );
+  }
+
+  /** Sends PROVIDE CONTACT; the device checks the HMAC proofs and refuses a forged or altered contact. */
+  private async provideContact(contact: ContactProof): Promise<void> {
+    for (const apdu of provideContactApdus(contact)) {
+      const response = await this.dmk.sendApdu({ sessionId: this.sessionId, apdu });
+      const statusWord = bytesToHex(response.statusCode).slice(2);
+      if (statusWord !== APDU_SUCCESS) {
+        throw new DeviceActionError(
+          "provideContact",
+          statusWord,
+          "ProvideContact",
+          "the device refused the contact proof",
+        );
+      }
     }
   }
 

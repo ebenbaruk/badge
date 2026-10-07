@@ -31,6 +31,7 @@ import {
   type BadgeMessageKind,
   type ClearSignDescriptor,
 } from "@badge/consent";
+import type { ContactField } from "./contacts";
 import { ClearSignSetupError } from "./errors";
 
 /** Env var overriding the path of the app-ethereum test CAL key (PEM). */
@@ -45,7 +46,15 @@ export const FILTER_MAGIC = {
   messageInfo: 183,
   datetime: 33,
   raw: 72,
+  trustedName: 44,
 } as const;
+
+/**
+ * Trusted-name filter parameters: accept an "account" name. The sources are those of app-ethereum's own
+ * address-book EIP-712 tests; a contact provided with PROVIDE CONTACT is then shown instead of the raw address.
+ */
+const TRUSTED_NAME_TYPES = [0x01 /* ACCOUNT */] as const;
+const TRUSTED_NAME_SOURCES = [0x01 /* CAL */, 0x02 /* ENS */] as const;
 
 /** PKI key usage "COIN_META": the certificate authorises its key to sign coin metadata, EIP-712 filters included. */
 const KEY_USAGE_COIN_META = 0x08;
@@ -119,6 +128,28 @@ export function fieldFilterPayload(
   ]);
 }
 
+/**
+ * Payload signed for an address field displayed through the device address book (trusted-name filter):
+ * path, label, accepted name types, accepted name sources.
+ */
+export function contactFilterPayload(binding: FilterBinding, field: ContactField): Buffer {
+  return Buffer.concat([
+    filterPrefix(FILTER_MAGIC.trustedName, binding),
+    Buffer.from(field.path, "ascii"),
+    Buffer.from(field.label, "ascii"),
+    Buffer.from(TRUSTED_NAME_TYPES),
+    Buffer.from(TRUSTED_NAME_SOURCES),
+  ]);
+}
+
+/** Types and sources as the DMK forwards them in the filter APDU: count-prefixed byte lists. */
+const TRUSTED_NAME_TYPES_AND_SOURCES = Buffer.from([
+  TRUSTED_NAME_TYPES.length,
+  ...TRUSTED_NAME_TYPES,
+  TRUSTED_NAME_SOURCES.length,
+  ...TRUSTED_NAME_SOURCES,
+]).toString("hex");
+
 function assertDeviceLabel(value: string, what: string): void {
   if (!PRINTABLE_ASCII.test(value))
     throw new ClearSignSetupError(`${what} must be non-empty printable ASCII`);
@@ -127,11 +158,13 @@ function assertDeviceLabel(value: string, what: string): void {
 /**
  * Compiles a descriptor into the signed clear-signing context the DMK expects from a typed-data loader.
  * Fields absent from the descriptor are still signed by the device, just not displayed.
+ * @param contactField - optional address field displayed through the device address book.
  */
 export function compileClearSignContext(
   descriptor: ClearSignDescriptor,
   binding: FilterBinding,
   signFilter: FilterSigner,
+  contactField?: ContactField,
 ): TypedDataClearSignContext {
   assertDeviceLabel(descriptor.intent, "Descriptor intent");
   const filters: Record<string, TypedDataFilter> = {};
@@ -144,7 +177,20 @@ export function compileClearSignContext(
       signature: signFilter(fieldFilterPayload(binding, field)),
     };
   }
-  const filtersCount = descriptor.fields.length;
+  if (contactField !== undefined) {
+    assertDeviceLabel(contactField.label, `Label of ${contactField.path}`);
+    filters[contactField.path] = {
+      type: "trusted-name",
+      displayName: contactField.label,
+      path: contactField.path,
+      // Informative only: the device reads typesAndSourcesPayload, which is what the signature covers.
+      types: ["eoa"],
+      sources: ["cal", "ens"],
+      typesAndSourcesPayload: TRUSTED_NAME_TYPES_AND_SOURCES,
+      signature: signFilter(contactFilterPayload(binding, contactField)),
+    };
+  }
+  const filtersCount = Object.keys(filters).length;
   return {
     type: "success",
     messageInfo: {
@@ -219,7 +265,22 @@ const SCHEMA_HASH_TO_KIND: ReadonlyMap<string, BadgeMessageKind> = new Map(
  * our test-signed filters are never attached to anything else.
  */
 export class BadgeClearSignLoader implements TypedDataContextLoader {
-  constructor(private readonly signFilter: FilterSigner) {}
+  /**
+   * @param contactFields - address fields rendered through the device address book (see SUGGESTED_CONTACT_FIELDS).
+   * @throws ClearSignSetupError if a contact field is not a hidden address field of its message.
+   */
+  constructor(
+    private readonly signFilter: FilterSigner,
+    private readonly contactFields: Partial<Record<BadgeMessageKind, ContactField>> = {},
+  ) {
+    for (const [kind, field] of Object.entries(contactFields) as [BadgeMessageKind, ContactField][]) {
+      const type = BADGE_TYPES[kind].find((candidate) => candidate.name === field.path)?.type;
+      if (type !== "address") throw new ClearSignSetupError(`${kind}.${field.path} is not an address field`);
+      if (BADGE_DESCRIPTORS[kind].fields.some((displayed) => displayed.path === field.path)) {
+        throw new ClearSignSetupError(`${kind}.${field.path} already has a display filter`);
+      }
+    }
+  }
 
   async load(context: TypedDataContext): Promise<TypedDataClearSignContext> {
     const schemaHash = getSchemaHash(context.schema);
@@ -232,7 +293,12 @@ export class BadgeClearSignLoader implements TypedDataContextLoader {
     // No check on context.deviceModelId: the Speculos transport reports "stax" whatever the emulated model, so
     // the bundled (Flex) certificate is always sent. Our Speculos devices are Flex (infra/speculos.sh).
     const binding = { chainId: context.chainId, verifyingContract: context.verifyingContract, schemaHash };
-    return compileClearSignContext(BADGE_DESCRIPTORS[kind], binding, this.signFilter);
+    return compileClearSignContext(
+      BADGE_DESCRIPTORS[kind],
+      binding,
+      this.signFilter,
+      this.contactFields[kind],
+    );
   }
 }
 

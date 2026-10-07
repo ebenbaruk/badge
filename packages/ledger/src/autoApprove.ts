@@ -11,6 +11,8 @@ const REVIEW_INTERACTIONS: ReadonlySet<string> = new Set([
   "sign-personal-message",
   "sign-transaction",
   "web3-checks-opt-in",
+  // Registering a contact (device-contacts-kit) reports this interaction.
+  "register-wallet",
 ]);
 
 export interface AutoResponder {

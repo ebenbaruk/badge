@@ -66,6 +66,7 @@ const TAP_DURATION_S = 0.1;
 
 const HOME_SCREEN = /this app enables signing/i;
 const HOLD_TO_SIGN = /hold to sign/i;
+const CONFIRM_BUTTON = /^confirm$/i;
 const BLIND_SIGNING_WARNING = /blind signing ahead/i;
 /** Interstitials that must be passed to reach the review: transaction-check opt-in, blind-signing warning. */
 const PROCEED_BUTTON = /^(maybe later|accept risk and continue|continue anyway)$/i;
@@ -163,7 +164,8 @@ export class SpeculosDevice {
 
   /**
    * Walks a pending review to the end and holds "Hold to sign": passes the transaction-check opt-in
-   * ("Maybe later"), swipes through every page, then signs. Returns every distinct page seen.
+   * ("Maybe later"), swipes through every page, then signs (or taps "Confirm" for reviews without signature,
+   * such as a contact registration). Returns every distinct page seen.
    * @throws DeviceNavigationError when the review does not show up, gets stuck, ends without a sign screen, or
    *   shows a blind-signing warning while `allowBlindSigning` is off.
    */
@@ -208,6 +210,14 @@ export class SpeculosDevice {
         const point = centerOf(holdButton);
         await this.hold(point.x, point.y);
         // Wait for the "signed" status to clear so the next review starts from the home screen.
+        await this.waitForText(HOME_SCREEN, STATUS_SCREEN_TIMEOUT_MS);
+        return pages;
+      }
+      // Reviews that need no signature (e.g. registering a contact) end with a plain "Confirm" tap.
+      const confirmButton = screen.find((element) => CONFIRM_BUTTON.test(element.text));
+      if (confirmButton !== undefined) {
+        const point = centerOf(confirmButton);
+        await this.tap(point.x, point.y);
         await this.waitForText(HOME_SCREEN, STATUS_SCREEN_TIMEOUT_MS);
         return pages;
       }
