@@ -200,7 +200,7 @@ export default async function OnboardingPage({ params }: { params: Promise<{ emp
             index={3}
             done={desksJoined}
             icon={<VenetianMask className="size-4" />}
-            title="Rejoindre mon desk (facultatif)"
+            title="Rejoindre mon desk"
             description="Pour répondre anonymement aux autres desks : votre identité anonyme est dérivée de votre Ledger, rien n'est stocké."
           >
             <Button asChild variant="outline" size="sm">

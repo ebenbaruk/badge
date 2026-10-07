@@ -90,7 +90,7 @@ On change d'employé avec le sélecteur du haut. Dans **Configuration** :
 | Employé | Actions                                                                                                                |
 | ------- | ---------------------------------------------------------------------------------------------------------------------- |
 | Alice   | « Rejoindre Badge (EmployeeEnroll) », puis « Autoriser mon agent (AgentSession) »                                      |
-| Bob     | les deux mêmes, puis « Rejoindre mon desk (facultatif) », requis pour l'étape 7 : dérivation, puis `DeskJoin` Research |
+| Bob     | les deux mêmes, puis « Rejoindre mon desk », requis pour l'étape 7 : dérivation, puis `DeskJoin` Research |
 | Chloé   | les deux mêmes, puis « Dériver et enregistrer sur mon Ledger » (clé de conformité, deux messages)                      |
 
 Les clés de session durent 8 h et survivent à un redémarrage du serveur web.
