@@ -241,6 +241,24 @@ describe("one-off consents", () => {
     expect(next.status).toBe("waiting_consent");
   });
 
+  it("never returns a brief drafted from an excerpt revoked while the LLM was drafting", async () => {
+    const task = await orionTask(h);
+    for (const share of await pendingShares(h, "bob")) {
+      const signature = await signTyped(ledgers.bob, "ContextShare", share.message);
+      await call(h, "POST", `/v1/consents/${share.id}/approve`, { as: "bob", body: { signature } });
+    }
+    const drafts = h.llm.briefInputs.length;
+    // Bob's revocation commits while Alice's brief is being drafted.
+    h.llm.duringDraft = () => h.services.policy.grants.revokeAllTo("bob", "alice", h.clock.now().getTime());
+    const view = (await call(h, "GET", `/v1/tasks/${task.id}`, { as: "alice" })).json;
+    expect(view.allowed.some((e: { ownerId: string }) => e.ownerId === "bob")).toBe(false);
+    expect(view.refused.some((e: { reason: string }) => e.reason === "revoked")).toBe(true);
+    // The first draft (with Bob's notes) was dropped; the brief returned comes from a second one without them.
+    expect(h.llm.briefInputs.length).toBe(drafts + 2);
+    expect(h.llm.briefInputs.at(-2)).toContain("remise 12 %");
+    expect(h.llm.briefInputs.at(-1)).not.toContain("remise 12 %");
+  });
+
   it("binds the label the owner reads on the device to what is actually revoked", async () => {
     await orionTask(h);
     const [share] = await pendingShares(h, "bob");

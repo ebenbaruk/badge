@@ -93,10 +93,15 @@ export class FakeMemory implements MemoryStore {
 /** LLM fake: everything is relevant except notes marked confidential; the brief cites what it was given. */
 export class FakeLlm implements LlmClient {
   readonly briefInputs: string[] = [];
+  /** Runs while a brief is being drafted (e.g. a revocation landing during the LLM call). */
+  duringDraft: (() => void) | undefined;
 
   async complete(messages: readonly ChatMessage[]): Promise<string> {
     const user = messages.find((m) => m.role === "user")?.content ?? "";
     this.briefInputs.push(user);
+    const during = this.duringDraft;
+    this.duringDraft = undefined;
+    during?.();
     return "Brief Orion\n- point [1]";
   }
 

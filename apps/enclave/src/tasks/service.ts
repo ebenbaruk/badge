@@ -112,6 +112,9 @@ function withoutLedger(verdict: ExtractionVerdict): ExtractionVerdict {
   };
 }
 
+/** Drafts attempted for one GET when revocations keep landing during the LLM call; then the request fails. */
+const MAX_BRIEF_DRAFT_ATTEMPTS = 3;
+
 export class TaskService {
   constructor(private readonly deps: TaskServiceDeps) {}
 
@@ -412,7 +415,11 @@ export class TaskService {
    * no longer covers its excerpt (it is reported as refused, reason "revoked"). The brief is cached together with
    * the excerpts it was drafted from, and redrafted when that set changes, so a revocation also reaches old briefs.
    */
-  async getTask(caller: Caller, taskId: Hex): Promise<Task> {
+  getTask(caller: Caller, taskId: Hex): Promise<Task> {
+    return this.taskView(caller, taskId, 1);
+  }
+
+  private async taskView(caller: Caller, taskId: Hex, draftAttempt: number): Promise<Task> {
     const task = this.requireTask(caller, taskId);
     const owners = new Set(this.deps.policy.tasks.excerptsOf(task.id).map((e) => e.owner_id));
     for (const ownerId of owners) this.deps.policy.expirePending(ownerId);
@@ -464,11 +471,26 @@ export class TaskService {
       createdAt: msToUnixSeconds(task.created_ms),
     };
     if (!ready) return { ...view, brief: null, tokenStats: null };
-    return { ...view, brief: await this.brief(task, usable), tokenStats: this.tokenStats(usable) };
+    const brief = await this.brief(task, usable);
+    if (brief === null) {
+      // A revocation committed while the LLM was drafting: the draft is dropped and the excerpts sorted again, so
+      // the revoked one moves to `refused` and never leaves the enclave inside a brief.
+      if (draftAttempt >= MAX_BRIEF_DRAFT_ATTEMPTS) {
+        throw new EnclaveError(
+          "STALE",
+          "the shared context kept changing while the brief was drafted: retry",
+        );
+      }
+      return this.taskView(caller, taskId, draftAttempt + 1);
+    }
+    return { ...view, brief, tokenStats: this.tokenStats(usable) };
   }
 
-  /** The cached brief when it was drafted from exactly `usable`, else a fresh draft (cached in turn). */
-  private async brief(task: TaskRow, usable: readonly ExcerptRow[]): Promise<string> {
+  /**
+   * The cached brief when it was drafted from exactly `usable`, else a fresh draft (cached in turn). Returns null,
+   * caching nothing, when one of `usable` stopped being covered during the draft (the LLM call takes seconds).
+   */
+  private async brief(task: TaskRow, usable: readonly ExcerptRow[]): Promise<string | null> {
     const sources = usable.map((e) => e.id);
     if (task.brief !== null && sameIds(task.brief_sources, sources)) return task.brief;
     const brief = await draftBrief(
@@ -476,6 +498,8 @@ export class TaskService {
       task.task,
       usable.map((e) => ({ ownerId: e.owner_id, scope: e.scope, text: e.text })),
     );
+    // Re-checked after the await, synchronously with the caching below: nothing can commit in between.
+    if (!usable.every((row) => this.stillCovered(row))) return null;
     this.deps.policy.tasks.setBrief(task.id, brief, sources, this.ctx.clock.now().getTime());
     return brief;
   }
