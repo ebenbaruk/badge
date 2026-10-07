@@ -38,9 +38,24 @@ importers:
 
   apps/enclave:
     dependencies:
+      '@badge/attest':
+        specifier: workspace:*
+        version: link:../../packages/attest
+      '@badge/client':
+        specifier: workspace:*
+        version: link:../../packages/client
+      '@badge/consent':
+        specifier: workspace:*
+        version: link:../../packages/consent
       '@honcho-ai/sdk':
         specifier: 2.5.1
         version: 2.5.1
+      hono:
+        specifier: 4.13.13
+        version: 4.13.13
+      viem:
+        specifier: 2.57.3
+        version: 2.57.3(typescript@6.0.3)(zod@4.6.5)
       zod:
         specifier: 4.6.5
         version: 4.6.5
@@ -62,6 +77,28 @@ importers:
       '@phala/dstack-sdk':
         specifier: 0.5.8
         version: 0.5.8(@noble/curves@1.9.1)(@noble/hashes@1.8.0)(viem@2.57.3(typescript@6.0.3)(zod@4.6.5))
+      zod:
+        specifier: 4.6.5
+        version: 4.6.5
+    devDependencies:
+      viem:
+        specifier: 2.57.3
+        version: 2.57.3(typescript@6.0.3)(zod@4.6.5)
+
+  packages/client:
+    dependencies:
+      '@badge/attest':
+        specifier: workspace:*
+        version: link:../attest
+      '@badge/consent':
+        specifier: workspace:*
+        version: link:../consent
+      '@badge/zk':
+        specifier: workspace:*
+        version: link:../zk
+      viem:
+        specifier: 2.57.3
+        version: 2.57.3(typescript@6.0.3)(zod@4.6.5)
       zod:
         specifier: 4.6.5
         version: 4.6.5
@@ -1260,6 +1297,10 @@ packages:
 
   hmac-drbg@1.0.1:
     resolution: {integrity: sha512-Tti3gMqLdZfhOQY1Mzf/AanLiqh1WTiJgEj26ZuYQ9fbkLomzGchCws4FyrSd4VkpBfiNhaE1On+lOz894jvXg==}
+
+  hono@4.13.13:
+    resolution: {integrity: sha512-CQ46U0ZkAGmbT/4UxdzzGJpacP2IeKgY4a5/tOI9AABbpOMfK739wfDXmv1usCk+3RkKj1hQy4/fjhiwa2xlrA==}
+    engines: {node: '>=16.9.0'}
 
   hookified@1.15.1:
     resolution: {integrity: sha512-MvG/clsADq1GPM2KGo2nyfaWVyn9naPiXrqIe4jYjXNZQt238kWyOGrsyc/DmRAQ+Re6yeo6yX/yoNCG5KAEVg==}
@@ -3217,6 +3258,8 @@ snapshots:
       hash.js: 1.1.7
       minimalistic-assert: 1.0.1
       minimalistic-crypto-utils: 1.0.1
+
+  hono@4.13.13: {}
 
   hookified@1.15.1: {}
 

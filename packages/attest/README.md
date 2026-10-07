@@ -19,6 +19,17 @@ l'enclave.
 
 `enclaveMeasurement` (messages EIP-712) = `enclaveMeasurementFrom(composeHash)` : le compose hash en bytes32.
 
+## Boîtes scellées et clé de conformité
+
+- `sealToPublicKey(clePubliqueX25519, texte)` / `openSealed(cleSecrete, boite)` : chiffrement vers une clé publique
+  sans échange préalable (X25519 éphémère + HKDF-SHA256 + AES-256-GCM, enveloppe JSON versionnée
+  `{ v: 1, alg, epk, nonce, ciphertext }`). L'enclave y scelle l'identité du signataire d'un partage de desk anonyme.
+- `complianceKeyFromSignature(signature)` : la responsable conformité signe `complianceKeyDeriveMessage(entreprise)`
+  (EIP-191) sur son Ledger ; clé secrète = keccak256(signature), clé publique = X25519. Les signatures Ledger sont
+  déterministes (RFC 6979) : même Ledger, même clé, rien à sauvegarder. **Cette signature est le secret** : elle ne
+  quitte jamais le navigateur. L'enregistrement de la clé publique passe par une seconde signature, distincte, de
+  `complianceKeyRegistrationMessage(entreprise, clePublique)`.
+
 ## Modes de vérification
 
 | Contrôle                                                            | `tdx`       | `simulated`   |

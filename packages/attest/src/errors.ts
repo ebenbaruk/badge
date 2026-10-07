@@ -23,7 +23,8 @@ export type AttestErrorCode =
   | "channel_mismatch"
   | "channel_auth_failed"
   | "channel_sequence"
-  | "channel_exhausted";
+  | "channel_exhausted"
+  | "sealed_box_auth_failed";
 
 /** Base class of every error raised by `@badge/attest`: callers branch on `code`, humans read `message`. */
 export class AttestError extends Error {

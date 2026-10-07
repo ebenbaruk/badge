@@ -40,7 +40,8 @@ export const ENCLAVE_KEY_PATHS = {
 } as const;
 
 const DERIVED_KEY_LENGTH = 32;
-const KEY_PATH_PATTERN = /^[a-z0-9][a-z0-9/_.-]{0,127}$/;
+/** `:` separates an id from a key version (e.g. `badge/dek/alice:2`), see the enclave key rotator. */
+const KEY_PATH_PATTERN = /^[a-z0-9][a-z0-9/_.:-]{0,127}$/;
 
 /**
  * Creates a dstack client. In a CVM it uses /var/run/dstack.sock; locally, `DSTACK_SIMULATOR_ENDPOINT`
@@ -99,7 +100,7 @@ export async function createAttestationBundle(
 export async function deriveEnclaveKey(dstack: DstackAgent, path: string): Promise<Uint8Array> {
   const checkedPath = z.string().regex(KEY_PATH_PATTERN).safeParse(path);
   if (!checkedPath.success) {
-    throw new AttestError("invalid_input", `invalid key path "${path}" (lowercase, digits, / _ . - only)`);
+    throw new AttestError("invalid_input", `invalid key path "${path}" (lowercase, digits, / _ . : - only)`);
   }
   let response: Awaited<ReturnType<DstackAgent["getKey"]>>;
   try {

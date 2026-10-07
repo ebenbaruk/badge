@@ -33,6 +33,19 @@ export {
   QuoteFormatError,
   type AttestErrorCode,
 } from "./errors";
+export {
+  complianceKeyDeriveMessage,
+  complianceKeyFromSignature,
+  complianceKeyRegistrationMessage,
+} from "./compliance";
+export {
+  openSealed,
+  SEALED_BOX_ALGORITHM,
+  SEALED_BOX_VERSION,
+  sealedBoxSchema,
+  sealToPublicKey,
+  type SealedBox,
+} from "./sealed";
 export { parseTdxQuote, type TdxQuote } from "./quote";
 export {
   assertRtmrsMatch,
