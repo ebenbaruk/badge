@@ -105,12 +105,12 @@ done
 pnpm --dir "$REPO_ROOT" exec tsx infra/cvm/pin-measurements.ts "$STATE_DIR/attestation.json"
 
 # --- 5. Endpoint and health ----------------------------------------------------------------------------------------
-phala cvms get "$app_id" --json >"$STATE_DIR/cvm.json"
-# Public URL pattern https://<app-id>-<port>.<cluster domain>: the cluster domain is read from any URL of the CVM.
-domain="$(jq -r '[.. | strings | select(test("^https://[^/]+\\.phala\\.network"))][0] // empty' "$STATE_DIR/cvm.json" |
-  sed -E 's#^https://[^.]+\.##; s#/.*$##')"
-[ -n "$domain" ] || die "cannot find the gateway domain in $STATE_DIR/cvm.json"
-endpoint="https://${app_id#0x}-$ENCLAVE_PORT.$domain"
+phala cvms get "$app_id" --json | sed -n '/^{/,$p' >"$STATE_DIR/cvm.json"
+# The CVM lists its public app URLs (https://<app-id>-<port>.<cluster domain>); other URLs of the response (KMS,
+# logs) can live on a different cluster, so select the enclave port URL of this app id explicitly.
+endpoint="$(jq -r --arg prefix "https://${app_id#0x}-$ENCLAVE_PORT." \
+  '[.. | strings | select(startswith($prefix))][0] // empty' "$STATE_DIR/cvm.json" | sed -E 's#/+$##')"
+[ -n "$endpoint" ] || die "no public URL for port $ENCLAVE_PORT in $STATE_DIR/cvm.json"
 printf '%s' "$endpoint" >"$ENDPOINT_FILE"
 echo "endpoint: $endpoint"
 
