@@ -166,7 +166,7 @@ services:
     restart: unless-stopped
 
   enclave:
-    image: ghcr.io/ebenbaruk/badge-enclave@sha256:fc526a878227147f6afab88c3f2fc2dbe62a85f6b73a50e7ae83b268364a5f75
+    image: ghcr.io/ebenbaruk/badge-enclave@sha256:599e1a7234b4df361231b4cde5ef5b0f92b05b2acea5fe0bfe7f3a2be64e617e
     environment: *enclave-env
     volumes:
       # dstack guest agent: quotes, KMS-derived keys, the compose hash (the enclave's measurement).
@@ -193,7 +193,7 @@ services:
   # Ingests the demo dataset (infra/seed/acme.json) and checks recall. Idempotent: on later boots it only re-runs
   # the checks (a few LLM calls). It cannot read the deriver logs from inside the CVM (BADGE_SEED_DERIVER_LOGS).
   seed:
-    image: ghcr.io/ebenbaruk/badge-enclave@sha256:fc526a878227147f6afab88c3f2fc2dbe62a85f6b73a50e7ae83b268364a5f75
+    image: ghcr.io/ebenbaruk/badge-enclave@sha256:599e1a7234b4df361231b4cde5ef5b0f92b05b2acea5fe0bfe7f3a2be64e617e
     working_dir: /app/apps/enclave
     command: ["node", "--import", "tsx", "../../infra/seed/seed.ts"]
     environment:
@@ -209,7 +209,7 @@ services:
     restart: "no"
 
   gateway:
-    image: ghcr.io/ebenbaruk/badge-gateway@sha256:3fd17cf78c44d39b876741e7a864a003bfbf443fe03d17400cb69f2e28aa9f61
+    image: ghcr.io/ebenbaruk/badge-gateway@sha256:a93e7cace1384d410caebd37b7d134abcd8688c6536d6f2fa6cb4c84eb95c86e
     environment:
       # The upstream itself is pinned in the gateway image (15-badge-upstream.envsh): only the key is a secret.
       BADGE_UPSTREAM_BASE_URL: https://inference.phala.com/v1
