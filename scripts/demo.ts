@@ -558,3 +558,6 @@ async function main(): Promise<void> {
 }
 
 await main();
+// The Device Management Kit keeps transport timers alive after its sessions are closed: exit explicitly with the
+// outcome rather than hang after the summary.
+process.exit(process.exitCode ?? 0);
