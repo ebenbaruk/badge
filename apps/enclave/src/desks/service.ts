@@ -62,7 +62,13 @@ export type DeskRequestStatus = DeskRequest["status"];
 /** A pending desk share as listed by GET /v1/consents (signed message in its JSON wire form). */
 export type DeskShareConsentWire = Extract<ConsentListWire["consents"][number], { kind: "DeskShare" }>;
 
-/** What the compliance officer reads once she opens the sealed signer of a desk share. */
+/**
+ * What the compliance officer reads once she opens the sealed signer of a desk share. The employee, address and
+ * signature are bound (the DeskShare is verified against the caller's own Ledger). The nullifier is only the one of
+ * the proof that came with it: the enclave cannot link a nullifier to a commitment without the member's secret, so
+ * it proves that SOME member of the snapshotted group shared, not that this employee's identity did. Since every
+ * member joined with their own Ledger, nobody can prove with another member's identity.
+ */
 export interface SealedSignerIdentity {
   readonly employeeId: string;
   readonly address: Hex;

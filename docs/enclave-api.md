@@ -157,7 +157,9 @@ message}` in `GET /v1/consents`, then `POST /v1/desk-requests/:id/approve {signa
      registered (else `COMPLIANCE_KEY_MISSING`); nonce unused; Semaphore proof with root = the request's
      `sourceRoot`, message = `excerptHash`, scope = request id; the delivery, the nonce, the nullifier (fresh, else
      `NULLIFIER_REUSED`) and the audit entry commit in one transaction -> `{requestId, status: "delivered"}`. The audit
-     entry `desk.share` has actor `anonymous` and the signer identity sealed to the compliance key. Expired offers are
+     entry `desk.share` has actor `anonymous` and the signer identity sealed to the compliance key (employee,
+     address, DeskShare signature; the nullifier recorded next to them is the proof's, which the enclave cannot link
+     to that employee's commitment without their secret). Expired offers are
      no longer listed in `GET /v1/consents`.
      `POST /v1/desk-requests/:id/reject` -> `{requestId, status: "rejected"}`.
    - `GET /v1/desk-requests/:id` (requester only): `deliveries[{excerpt, excerptHash, proof}]`, ordered by excerpt
