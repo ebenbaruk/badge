@@ -65,6 +65,11 @@ const MAX_IDENTICAL_SCREENS = 5;
 const TAP_DURATION_S = 0.1;
 
 const HOME_SCREEN = /this app enables signing/i;
+/**
+ * Where a finished review may land once its status screen clears: the home screen, or straight into the next
+ * review when the host chains signatures (e.g. derive a key, then register it).
+ */
+const AFTER_REVIEW = /this app enables signing|^review (typed )?message$/i;
 const HOLD_TO_SIGN = /hold to sign/i;
 const CONFIRM_BUTTON = /^confirm$/i;
 const BLIND_SIGNING_WARNING = /blind signing ahead/i;
@@ -209,8 +214,8 @@ export class SpeculosDevice {
       if (holdButton !== undefined) {
         const point = centerOf(holdButton);
         await this.hold(point.x, point.y);
-        // Wait for the "signed" status to clear so the next review starts from the home screen.
-        await this.waitForText(HOME_SCREEN, STATUS_SCREEN_TIMEOUT_MS);
+        // Wait for the "signed" status to clear, so a following review starts from a known screen.
+        await this.waitForText(AFTER_REVIEW, STATUS_SCREEN_TIMEOUT_MS);
         return pages;
       }
       // Reviews that need no signature (e.g. registering a contact) end with a plain "Confirm" tap.
@@ -218,7 +223,7 @@ export class SpeculosDevice {
       if (confirmButton !== undefined) {
         const point = centerOf(confirmButton);
         await this.tap(point.x, point.y);
-        await this.waitForText(HOME_SCREEN, STATUS_SCREEN_TIMEOUT_MS);
+        await this.waitForText(AFTER_REVIEW, STATUS_SCREEN_TIMEOUT_MS);
         return pages;
       }
 
