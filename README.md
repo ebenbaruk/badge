@@ -48,3 +48,19 @@ Le script déroule le scénario complet par le canal attesté, avec de vraies si
 après accord de Bob, agent piégé refusé, révocation, accord permanent, partage anonyme entre desks avec preuve ZK,
 levée d'anonymat par la conformité. Chaque étape est vérifiée ; il s'arrête en erreur au premier écart.
 `BADGE_ENCLAVE_URL` le fait jouer contre une enclave déjà lancée.
+
+## Utiliser Badge
+
+- **Application web** (`apps/web`) : écrans des employés et de la conformité, miroir des Ledgers Speculos, runtime
+  d'agent de chaque employé. `BADGE_CAL_TEST_KEY=$PWD/infra/keys/cal-test.pem pnpm --filter @badge/web dev`, puis
+  http://localhost:3000.
+- **Agent de l'employé** (`apps/mcp`) : serveur MCP pour Claude Code, Cursor ou toute harness compatible ; une clé
+  de session déléguée une fois sur le Ledger, quatre outils (`badge_get_context`, `badge_task_status`,
+  `badge_list_my_consents`, `badge_attestation`).
+- **SDK** (`packages/client`) : `BadgeClient`, canal attesté et requêtes signées, réponses validées.
+
+## Déploiement
+
+L'enclave, la mémoire et la passerelle de sortie tournent dans un CVM Intel TDX sur Phala Cloud. Images, répétition
+locale gratuite (`infra/cvm/rehearse.sh`), déploiement, épinglage des mesures et coûts : `docs/DEPLOY.md`. Contrat de
+l'API de l'enclave : `docs/enclave-api.md`.
