@@ -4,6 +4,7 @@
  */
 import { toUnixSeconds } from "@badge/consent";
 import { revalidatePath } from "next/cache";
+import { zeroHash } from "viem";
 import { z } from "zod";
 import { EMPLOYEES, TEAMS, type EmployeeId } from "@/lib/directory";
 import { enclave, type PolicyView } from "../enclave";
@@ -66,6 +67,34 @@ export async function revokeGrant(input: {
     );
     const result = await api.revoke(employee, await signOnDevice(employee, "ContextRevoke", message));
     revalidatePath(`/${employee}`, "layout");
+    return result;
+  });
+}
+
+const revokeAllSchema = z.object({ employee: employeeIdSchema, recipient: employeeIdSchema });
+
+/**
+ * Revokes everything the owner shared with one colleague (ContextRevoke with grantId 0x0): every one-off grant to
+ * their address and the standing agreements granted to their team. One signature, one key rotation.
+ */
+export async function revokeAllFor(input: {
+  employee: EmployeeId;
+  recipient: EmployeeId;
+}): Promise<ActionResult<{ revoked: number }>> {
+  return runAction(async () => {
+    const { employee, recipient } = revokeAllSchema.parse(input);
+    if (employee === recipient) throw new EnclaveError("INVALID_REQUEST", "rien à révoquer pour soi-même");
+    const message = buildContextRevoke(
+      EMPLOYEES[employee],
+      {
+        grantId: zeroHash,
+        recipient: EMPLOYEES[recipient].address,
+        targetLabel: `Tout ce que j'ai partage avec ${EMPLOYEES[recipient].name}`,
+      },
+      toUnixSeconds(new Date()),
+    );
+    const result = await enclave().revoke(employee, await signOnDevice(employee, "ContextRevoke", message));
+    revalidatePath("/", "layout");
     return result;
   });
 }

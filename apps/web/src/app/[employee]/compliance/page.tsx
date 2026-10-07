@@ -18,6 +18,7 @@ export const metadata: Metadata = { title: "Conformité" };
 /** Long hashes and decimals (nullifiers, roots) are cut in the table; the full value is in the tooltip. */
 const MAX_DATA_VALUE_LENGTH = 16;
 const SHORT_DATA_VALUE_LENGTH = 10;
+const SEALED_SIGNER_KEY = "sealedSigner";
 
 const TYPE_TONE: Record<string, string> = {
   "rule.warn": "bg-danger/12 text-danger",
@@ -51,7 +52,9 @@ function DataCell({ data }: { data: Record<string, unknown> }) {
   return (
     <div className="flex max-w-80 flex-wrap gap-x-2 gap-y-0.5 font-mono text-[10.5px] text-muted-foreground">
       {entries.map(([key, value]) => {
-        const text = typeof value === "string" ? value : JSON.stringify(value);
+        // Sealed boxes are ciphertext for the compliance key: meaningless to read, opened with « Lever l'anonymat ».
+        const text =
+          key === SEALED_SIGNER_KEY ? "scellé" : typeof value === "string" ? value : JSON.stringify(value);
         return (
           <span key={key} className="truncate" title={text}>
             {key}={text.length > MAX_DATA_VALUE_LENGTH ? `${text.slice(0, SHORT_DATA_VALUE_LENGTH)}…` : text}
@@ -95,7 +98,8 @@ function AlertRow({ entry }: { entry: AuditEntryView }) {
       {block ? <ShieldX className="size-4 text-danger" /> : <ShieldAlert className="size-4 text-danger" />}
       <span className="font-medium">{block ? "Bloqué" : "Signalé"}</span>
       <span className="text-muted-foreground">
-        Agent de {actorLabel(entry.actor)} → contexte de {owner === null ? "?" : EMPLOYEES[owner].name}
+        {isEmployeeId(entry.actor) ? `Agent de ${EMPLOYEES[entry.actor].name}` : "Demande d'un agent"} →
+        contexte de {owner === null ? "?" : EMPLOYEES[owner].name}
       </span>
       <span className="font-mono text-[11px] text-danger">{rules}</span>
       <time className="ml-auto text-muted-foreground">{formatDateTime(entry.ts)}</time>

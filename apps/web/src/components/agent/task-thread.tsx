@@ -30,32 +30,41 @@ function ownerLabel(owner: ContextOwner): string {
   return owner === "company" ? "Acme (global)" : EMPLOYEES[owner].name;
 }
 
+/** One callout per owner: an owner reviews all of a task's excerpts in their inbox, one Ledger signature each. */
 function PendingCallout({ task }: { task: TaskView }) {
+  const owners = [...new Set(task.pending.map((p) => p.owner))];
   return (
     <div className="space-y-2">
-      {task.pending.map((pending) => (
-        <div key={pending.consentId} className="rounded-lg border border-warning/30 bg-warning/6 p-3.5">
-          <div className="flex flex-wrap items-center gap-3">
-            <EmployeeAvatar employee={pending.owner} size="sm" />
-            <div className="min-w-0 flex-1">
-              <div className="text-[13px] font-medium">
-                En attente de {EMPLOYEES[pending.owner].name}
-                <span className="ml-1.5 font-normal text-muted-foreground">· sur son Ledger</span>
+      {owners.map((owner) => {
+        const excerpts = task.pending.filter((p) => p.owner === owner);
+        const findings = excerpts.flatMap((p) => p.findings);
+        const total = excerpts.reduce((sum, p) => sum + p.length, 0);
+        return (
+          <div key={owner} className="rounded-lg border border-warning/30 bg-warning/6 p-3.5">
+            <div className="flex flex-wrap items-center gap-3">
+              <EmployeeAvatar employee={owner} size="sm" />
+              <div className="min-w-0 flex-1">
+                <div className="text-[13px] font-medium">
+                  En attente de {EMPLOYEES[owner].name}
+                  <span className="ml-1.5 font-normal text-muted-foreground">· sur son Ledger</span>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {excerpts.length === 1
+                    ? `${excerpts[0]?.label ?? ""} · ${formatLength(total)}`
+                    : `${excerpts.length} extraits · ${formatLength(total)}`}
+                </div>
               </div>
-              <div className="text-xs text-muted-foreground">
-                {pending.label} · {formatLength(pending.length)}
-              </div>
+              <Button asChild variant="outline" size="sm">
+                <Link href={`/${owner}/consents` as Route}>
+                  Ouvrir la boîte de {EMPLOYEES[owner].firstName}
+                  <ArrowUpRight />
+                </Link>
+              </Button>
             </div>
-            <Button asChild variant="outline" size="sm">
-              <Link href={`/${pending.owner}/consents` as Route}>
-                Ouvrir la boîte de {EMPLOYEES[pending.owner].firstName}
-                <ArrowUpRight />
-              </Link>
-            </Button>
+            {findings.length > 0 && <RiskFindings findings={findings} className="mt-3" />}
           </div>
-          {pending.findings.length > 0 && <RiskFindings findings={pending.findings} className="mt-3" />}
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -179,8 +188,18 @@ export function TaskThread({ task, requester }: { task: TaskView; requester: Emp
               Agent compromis (simulation)
             </span>
           )}
-          <span className="font-mono text-[10px] text-muted-foreground">tâche « {task.taskLabel} »</span>
-          <span className={cn("ml-auto rounded-full px-2 py-0.5 text-[11px] font-medium", status.className)}>
+          <span
+            className="min-w-0 truncate font-mono text-[10px] text-muted-foreground"
+            title={task.taskLabel}
+          >
+            tâche « {task.taskLabel} »
+          </span>
+          <span
+            className={cn(
+              "ml-auto shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium whitespace-nowrap",
+              status.className,
+            )}
+          >
             {task.status === "waiting_consent" && <Hourglass className="mr-1 inline size-3" />}
             {status.label}
           </span>

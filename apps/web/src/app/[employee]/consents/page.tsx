@@ -63,6 +63,8 @@ function PendingRequest({ request, owner }: { request: ConsentRequestView; owner
       </div>
       <div className="grid gap-5 px-5 py-4 lg:grid-cols-2">
         <div className="space-y-4">
+          {/* Shown first: the owner must see why the enclave flagged the request before anything else. */}
+          <RiskFindings findings={request.findings} />
           <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
             <Fact label="Destinataire">{request.message.recipientName}</Fact>
             <Fact label="Extrait">{request.message.excerptLabel}</Fact>
@@ -88,7 +90,6 @@ function PendingRequest({ request, owner }: { request: ConsentRequestView; owner
               {request.excerpt.text}
             </p>
           </div>
-          <RiskFindings findings={request.findings} />
           <ApproveRejectButtons
             reviewLabel={`Partager « ${request.message.excerptLabel} » avec ${requester.name}`}
             approve={approveConsent.bind(null, { employee: owner.id, consentId: request.id })}

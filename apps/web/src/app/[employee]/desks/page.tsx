@@ -49,7 +49,7 @@ function DeskCard({ desk, employee }: { desk: DeskView; employee: Employee }) {
         <dl className="grid grid-cols-2 gap-3 text-xs">
           <div>
             <dt className="text-muted-foreground">Identités enregistrées</dt>
-            <dd className="mt-0.5 flex items-center gap-1.5 font-medium">
+            <dd className="mt-0.5 flex flex-wrap items-center gap-x-1.5 font-medium whitespace-nowrap">
               <Users className="size-3.5 text-muted-foreground" />
               {desk.commitments.length} / {desk.directoryMembers} membres
               <span className={cn("text-[11px] font-normal", anonymous ? "text-success" : "text-warning")}>
@@ -261,7 +261,7 @@ export default async function DesksPage({ params }: { params: Promise<{ employee
 
       {requests.data.outgoing.length > 0 && (
         <section className="mt-10">
-          <SectionTitle>Réponses reçues</SectionTitle>
+          <SectionTitle>Mes demandes aux autres desks</SectionTitle>
           <div className="space-y-4">
             {requests.data.outgoing.map((request) => (
               <OutgoingRequest key={request.id} request={request} />

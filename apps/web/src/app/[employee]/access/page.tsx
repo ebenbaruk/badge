@@ -6,9 +6,9 @@ import { EmptyState, PageHeader, SectionTitle } from "@/components/page-header";
 import { EmployeeAvatar } from "@/components/shell/employee-avatar";
 import { CopyableHash } from "@/components/copyable-hash";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import type { EmployeeId } from "@/lib/directory";
+import { EMPLOYEES, type EmployeeId } from "@/lib/directory";
 import { formatDateTime, formatRelative } from "@/lib/format";
-import { revokeGrant } from "@/server/actions/agreements";
+import { revokeAllFor, revokeGrant } from "@/server/actions/agreements";
 import { enclave, type GrantView } from "@/server/enclave";
 import { employeeFromParams, load } from "@/server/load";
 
@@ -18,41 +18,46 @@ function isActive(grant: GrantView, now: Date): boolean {
   return grant.status === "active" && new Date(grant.expiresAt) > now;
 }
 
+function typeLabel(grant: GrantView): string {
+  if (grant.kind === "share") return "Ponctuel";
+  return grant.uses === undefined
+    ? "Permanent"
+    : `Permanent · ${grant.uses} usage${grant.uses > 1 ? "s" : ""}`;
+}
+
 function GrantsTable({ grants, owner, active }: { grants: GrantView[]; owner: EmployeeId; active: boolean }) {
   return (
-    <div className="rounded-xl border bg-card">
-      <Table>
+    <div className="overflow-hidden rounded-xl border bg-card">
+      <Table className="table-fixed">
         <TableHeader>
           <TableRow>
-            <TableHead className="pl-4">Bénéficiaire</TableHead>
+            <TableHead className="w-40 pl-4">Bénéficiaire</TableHead>
             <TableHead>Accès</TableHead>
-            <TableHead>Type</TableHead>
-            <TableHead>{active ? "Expire" : "Fin"}</TableHead>
-            <TableHead className="text-right">Usages</TableHead>
-            <TableHead>Identifiant</TableHead>
-            {active && <TableHead className="pr-4 text-right" />}
+            <TableHead className="w-24">Type</TableHead>
+            <TableHead className="w-32">{active ? "Expire" : "Fin"}</TableHead>
+            <TableHead className="w-28">Identifiant</TableHead>
+            {active && <TableHead className="w-30 pr-4 text-right" />}
           </TableRow>
         </TableHeader>
         <TableBody>
           {grants.map((grant) => (
             <TableRow key={grant.id} className={active ? undefined : "text-muted-foreground"}>
               <TableCell className="pl-4">
-                <div className="flex items-center gap-2">
+                <div className="flex min-w-0 items-center gap-2">
                   {grant.recipient !== undefined && <EmployeeAvatar employee={grant.recipient} size="sm" />}
-                  <span className="font-medium">{grant.recipientLabel}</span>
+                  <span className="truncate font-medium">{grant.recipientLabel}</span>
                 </div>
               </TableCell>
-              <TableCell className="max-w-64 truncate">{grant.label}</TableCell>
-              <TableCell>{grant.kind === "share" ? "Ponctuel" : "Permanent"}</TableCell>
+              <TableCell className="truncate" title={grant.label}>
+                {grant.label}
+              </TableCell>
+              <TableCell>{typeLabel(grant)}</TableCell>
               <TableCell className="text-muted-foreground">
                 {active
                   ? formatRelative(grant.expiresAt)
                   : grant.status === "revoked"
                     ? "Révoqué"
                     : `Expiré le ${formatDateTime(grant.expiresAt)}`}
-              </TableCell>
-              <TableCell className="text-right font-mono tabular-nums">
-                {grant.uses ?? <span className="text-muted-foreground">—</span>}
               </TableCell>
               <TableCell>
                 <CopyableHash value={grant.id} />
@@ -74,6 +79,27 @@ function GrantsTable({ grants, owner, active }: { grants: GrantView[]; owner: Em
           ))}
         </TableBody>
       </Table>
+    </div>
+  );
+}
+
+/** One signature to cut everything shared with a colleague (and the standing agreements granted to their team). */
+function RevokeAllBar({ owner, recipients }: { owner: EmployeeId; recipients: readonly EmployeeId[] }) {
+  if (recipients.length === 0) return null;
+  return (
+    <div className="mb-3 flex flex-wrap items-center gap-2">
+      {recipients.map((recipient) => (
+        <LedgerActionButton
+          key={recipient}
+          label={`Tout révoquer pour ${EMPLOYEES[recipient].firstName}`}
+          size="sm"
+          variant="destructive"
+          icon={<Undo2 />}
+          reviewLabel={`Révoquer tout ce que j'ai partagé avec ${EMPLOYEES[recipient].name}`}
+          action={revokeAllFor.bind(null, { employee: owner, recipient })}
+          successMessage={`Tout ce que vous partagiez avec ${EMPLOYEES[recipient].firstName} est révoqué ; la clé de vos données a été renouvelée.`}
+        />
+      ))}
     </div>
   );
 }
@@ -104,7 +130,13 @@ export default async function AccessPage({ params }: { params: Promise<{ employe
           Personne ne peut utiliser votre contexte personnel en ce moment.
         </EmptyState>
       ) : (
-        <GrantsTable grants={active} owner={owner.id} active />
+        <>
+          <RevokeAllBar
+            owner={owner.id}
+            recipients={[...new Set(active.flatMap((g) => (g.recipient === undefined ? [] : [g.recipient])))]}
+          />
+          <GrantsTable grants={active} owner={owner.id} active />
+        </>
       )}
       {ended.length > 0 && (
         <section className="mt-10">
