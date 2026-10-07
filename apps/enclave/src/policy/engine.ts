@@ -25,8 +25,12 @@ import {
   decodeSignedMessage,
   encodeBadgeMessage,
   hashBadgeMessage,
+  revocationTargetLabel,
   toDeviceAscii,
   verifyBadgeSignature,
+  type ContextRevoke,
+  type RevocationTarget,
+  type WireMessage,
 } from "@badge/consent";
 import { getAddress, isAddressEqual, zeroAddress, zeroHash, type Address, type Hex } from "viem";
 import type { AuditLog } from "../audit";
@@ -34,6 +38,7 @@ import { msToUnixSeconds, nowSeconds, secondsToMs, type Clock } from "../clock";
 import { transaction, type Database, NonceRepository } from "../db";
 import type { Directory, Employee } from "../directory";
 import { EnclaveError } from "../errors";
+import { randomNonce } from "../ids";
 import type { Caller } from "../security/types";
 import { TaskRepository, type ExcerptRow } from "../tasks/repository";
 import type { EnclaveMeasurement, OwnerKeyRotator } from "./ports";
@@ -56,6 +61,20 @@ export type ContextShareConsentWire = Extract<ConsentListWire["consents"][number
 export const ENROLL_MAX_AGE_SECONDS = 10n * 60n;
 /** An agent session lives at most one working day (the consent package allows up to 7 days). */
 export const SESSION_MAX_TTL_SECONDS = 12n * 60n * 60n;
+
+/** Body of POST /v1/revocations/prepare: one grant or policy, or everything granted to one colleague. */
+export type RevocationRequest = { grantId: Hex } | { recipient: string };
+
+/** What a revocation removes, as resolved by the enclave, and the exact label and recipient it must be signed with. */
+interface RevocationScope {
+  kind: RevocationTarget["kind"];
+  /** Set for kind "recipient": everything granted to this colleague (and the policies of their team). */
+  recipient: Employee | undefined;
+  grantId: Hex;
+  /** The address the signed message must carry: the grant's recipient, the colleague, or 0x0 for a policy. */
+  recipientAddress: Address;
+  targetLabel: string;
+}
 
 /** Dependencies shared by the enclave's domain services. */
 export interface DomainContext {
@@ -420,9 +439,90 @@ export class PolicyEngine {
   }
 
   /**
+   * Resolves what revoking `grantId` (or, with 0x0, everything granted to `recipient`) means for this owner, with the
+   * canonical device label naming that real scope (see `revocationTargetLabel`).
+   * @throws {EnclaveError} NOT_FOUND for another owner's or an unknown grant, INVALID_REQUEST for a bad recipient.
+   */
+  private revocationScope(owner: Employee, grantId: Hex, recipient: Employee | undefined): RevocationScope {
+    if (grantId === zeroHash) {
+      if (!recipient?.address || recipient.id === owner.id) {
+        throw new EnclaveError("INVALID_REQUEST", "revoking everything needs another directory employee");
+      }
+      const target: RevocationTarget = {
+        kind: "recipient",
+        recipientName: recipient.name,
+        recipientTeam: recipient.team,
+      };
+      return {
+        kind: target.kind,
+        recipient,
+        grantId,
+        recipientAddress: recipient.address,
+        targetLabel: revocationTargetLabel(target),
+      };
+    }
+    const grant = this.grants.get(grantId);
+    if (grant?.owner_id === owner.id) {
+      const share = decodeBadgeMessage("ContextShare", JSON.parse(grant.message));
+      const target: RevocationTarget = {
+        kind: "grant",
+        recipientName: share.recipientName,
+        excerptLabel: share.excerptLabel,
+      };
+      return {
+        kind: target.kind,
+        recipient: undefined,
+        grantId,
+        recipientAddress: share.recipient,
+        targetLabel: revocationTargetLabel(target),
+      };
+    }
+    const policy = this.policies.get(grantId);
+    if (policy?.owner_id === owner.id) {
+      const target: RevocationTarget = {
+        kind: "policy",
+        granteeTeam: policy.grantee_team,
+        contextTag: policy.context_tag,
+      };
+      return {
+        kind: target.kind,
+        recipient: undefined,
+        grantId,
+        recipientAddress: zeroAddress,
+        targetLabel: revocationTargetLabel(target),
+      };
+    }
+    throw new EnclaveError("NOT_FOUND", `no grant or policy ${grantId} of ${owner.id}`);
+  }
+
+  /**
+   * POST /v1/revocations/prepare: the exact ContextRevoke the caller's Ledger must sign, with the label naming the
+   * real scope (like ContextShare, the enclave writes what the device shows; POST /v1/revocations accepts no other).
+   */
+  prepareRevocation(caller: Caller, request: RevocationRequest): { message: WireMessage<"ContextRevoke"> } {
+    const owner = this.ctx.directory.requireEmployee(caller.employeeId);
+    const ownerAddress = this.ctx.directory.requireAddress(owner);
+    const scope =
+      "grantId" in request
+        ? this.revocationScope(owner, request.grantId.toLowerCase() as Hex, undefined)
+        : this.revocationScope(owner, zeroHash, this.ctx.directory.requireEmployee(request.recipient));
+    const message: ContextRevoke = {
+      targetLabel: scope.targetLabel,
+      issuedAt: nowSeconds(this.ctx.clock),
+      grantId: scope.grantId,
+      recipient: scope.recipientAddress,
+      owner: ownerAddress,
+      nonce: randomNonce(),
+    };
+    return { message: encodeBadgeMessage("ContextRevoke", message) };
+  }
+
+  /**
    * POST /v1/revocations: revokes one grant or policy (grantId), or everything granted to `recipient`
-   * (grantId = 0x0: their one-off grants and the policies granted to their team). The owner's data key is
-   * rotated before the revocation is recorded, so a recorded revocation always comes with a rotated key.
+   * (grantId = 0x0: their one-off grants and the policies granted to their team). The signed label must be the
+   * canonical one of that scope and the recipient the target's own (what the owner read is what gets revoked).
+   * The owner's data key is rotated before the revocation is recorded, so a recorded revocation always comes with a
+   * rotated key.
    */
   async revoke(caller: Caller, body: unknown): Promise<RevocationResult> {
     const { message, signature } = decodeSignedMessage(body, "ContextRevoke");
@@ -431,9 +531,19 @@ export class PolicyEngine {
     await verifyBadgeSignature("ContextRevoke", message, signature, owner.address);
     checkContextRevoke(message, this.checkContext());
     const revokeAll = message.grantId === zeroHash;
-    const recipient = revokeAll ? this.ctx.directory.byAddress(message.recipient) : undefined;
-    if (revokeAll && (!recipient || isAddressEqual(message.recipient, zeroAddress))) {
-      throw new EnclaveError("INVALID_REQUEST", "revoking everything needs a directory recipient");
+    const scope = this.revocationScope(
+      owner,
+      message.grantId,
+      revokeAll ? this.ctx.directory.byAddress(message.recipient) : undefined,
+    );
+    if (
+      message.targetLabel !== scope.targetLabel ||
+      !isAddressEqual(message.recipient, scope.recipientAddress)
+    ) {
+      throw new EnclaveError(
+        "INVALID_REQUEST",
+        `the signed label or recipient does not describe what would be revoked (expected "${scope.targetLabel}"): prepare it with POST /v1/revocations/prepare`,
+      );
     }
     if (this.nonces.isUsed(owner.address, message.nonce)) {
       throw new EnclaveError("NONCE_REUSED", `nonce ${message.nonce} of ${owner.address} was already used`);
@@ -445,16 +555,13 @@ export class PolicyEngine {
       this.nonces.consume(owner.address, message.nonce, "ContextRevoke", nowMs);
       let grantsRevoked = 0;
       let policiesRevoked = 0;
-      if (recipient) {
-        grantsRevoked = this.grants.revokeAllTo(owner.id, recipient.id, nowMs);
-        policiesRevoked = this.policies.revokeForTeam(owner.id, toDeviceAscii(recipient.team), nowMs);
+      if (scope.kind === "recipient" && scope.recipient) {
+        grantsRevoked = this.grants.revokeAllTo(owner.id, scope.recipient.id, nowMs);
+        policiesRevoked = this.policies.revokeForTeam(owner.id, toDeviceAscii(scope.recipient.team), nowMs);
+      } else if (scope.kind === "policy") {
+        policiesRevoked = this.policies.revoke(message.grantId, nowMs);
       } else {
-        const grant = this.grants.get(message.grantId);
-        const policy = this.policies.get(message.grantId);
-        if (grant?.owner_id === owner.id) grantsRevoked = this.grants.revoke(message.grantId, nowMs);
-        else if (policy?.owner_id === owner.id)
-          policiesRevoked = this.policies.revoke(message.grantId, nowMs);
-        else throw new EnclaveError("NOT_FOUND", `no grant or policy ${message.grantId} of ${owner.id}`);
+        grantsRevoked = this.grants.revoke(message.grantId, nowMs);
       }
       this.revocations.insert({
         id: revocationId,

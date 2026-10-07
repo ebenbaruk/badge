@@ -2,7 +2,12 @@
  * Typed client of the enclave API (docs/enclave-api.md), shared by the web app, the MCP server and the demo script.
  */
 import type { AttestationMode, AttestationResult, VerifiedAttestation } from "@badge/attest";
-import { encodeSignedMessage, type BadgeMessageKind, type SignedMessage } from "@badge/consent";
+import {
+  encodeSignedMessage,
+  type BadgeMessageKind,
+  type ContextRevoke,
+  type SignedMessage,
+} from "@badge/consent";
 import { deskProofSchema, type DeskProofWire } from "@badge/zk/wire";
 import type { Hex, LocalAccount } from "viem";
 import { z } from "zod";
@@ -22,6 +27,7 @@ import {
   meSchema,
   policyListSchema,
   policySchema,
+  preparedRevocationSchema,
   revocationResultSchema,
   sessionSchema,
   taskSchema,
@@ -94,6 +100,9 @@ export interface CreateTaskInput {
    */
   requestFullContextOf?: string;
 }
+
+/** Body of `POST /v1/revocations/prepare`: one grant or policy by id, or everything granted to one colleague. */
+export type RevocationTargetInput = { grantId: Hex } | { recipient: string };
 
 /** Body of `POST /v1/desk-requests`. */
 export interface CreateDeskRequestInput {
@@ -266,7 +275,22 @@ export class BadgeClient {
     return list.grants;
   }
 
-  /** `POST /v1/revocations` with a Ledger-signed ContextRevoke. */
+  /**
+   * `POST /v1/revocations/prepare`: the ContextRevoke to sign on the owner's Ledger, labelled by the enclave with
+   * the real scope (`recipient` is a directory employee id).
+   */
+  async prepareRevocation(target: RevocationTargetInput): Promise<ContextRevoke> {
+    const prepared = await this.call({
+      method: "POST",
+      path: "/v1/revocations/prepare",
+      body: target,
+      authenticated: true,
+      schema: preparedRevocationSchema,
+    });
+    return prepared.message;
+  }
+
+  /** `POST /v1/revocations` with a Ledger-signed ContextRevoke (from {@link prepareRevocation}). */
   revoke(signed: SignedMessage<"ContextRevoke">): Promise<RevocationResult> {
     return this.signedCall("/v1/revocations", signed, true, revocationResultSchema);
   }

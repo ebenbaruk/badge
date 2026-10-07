@@ -25,13 +25,7 @@ import { mnemonicToAccount, type HDAccount } from "viem/accounts";
 import { beforeEach, describe, expect, it } from "vitest";
 import { EMPLOYEES, type EmployeeId } from "@/lib/directory";
 import { EnclaveError } from "../errors";
-import {
-  buildAgentSession,
-  buildContextPolicy,
-  buildContextRevoke,
-  buildDeskJoin,
-  buildEmployeeEnroll,
-} from "../messages";
+import { buildAgentSession, buildContextPolicy, buildDeskJoin, buildEmployeeEnroll } from "../messages";
 import { MockEnclave } from "./enclave";
 
 const TEST_MNEMONICS: Readonly<Record<EmployeeId, string>> = {
@@ -127,15 +121,8 @@ describe("mock enclave demo scenario", () => {
 
     const [grant] = await enclave.listGrants("bob");
     if (grant === undefined) throw new Error("expected a grant");
-    const revoke = buildContextRevoke(
-      EMPLOYEES.bob,
-      {
-        grantId: grant.id,
-        targetLabel: "Alice Martin (Ventes) - brief Orion",
-        recipient: EMPLOYEES.alice.address,
-      },
-      now(),
-    );
+    const revoke = await enclave.prepareRevocation("bob", { grantId: grant.id });
+    expect(revoke.targetLabel).toMatch(/^Alice Martin \(Ventes\) - /);
     expect(await enclave.revoke("bob", await sign("bob", "ContextRevoke", revoke))).toEqual({ revoked: 1 });
     expect((await enclave.createTask("alice", ORION_TASK)).status).toBe("waiting_consent");
   });

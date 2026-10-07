@@ -2,8 +2,14 @@
  * Policy engine, fail-closed cases: every signed message that is wrong in any way is refused with a typed code,
  * and nothing is granted.
  */
-import { encodeBadgeMessage, toDeviceAscii, type ContextPolicy } from "@badge/consent";
-import { zeroHash, type Hex } from "viem";
+import {
+  decodeBadgeMessage,
+  encodeBadgeMessage,
+  toDeviceAscii,
+  type ContextPolicy,
+  type ContextRevoke,
+} from "@badge/consent";
+import { zeroAddress, zeroHash, type Hex } from "viem";
 import { beforeEach, describe, expect, it } from "vitest";
 import { call, nowSec, onboard, pendingShares, refreshSessions } from "./flows";
 import {
@@ -37,6 +43,17 @@ function policy(h: Harness, overrides: Partial<ContextPolicy> = {}): ContextPoli
     nonce: nextNonce(),
     ...overrides,
   };
+}
+
+/** The ContextRevoke the enclave prepares for `as` (what the web app and the demo sign). */
+async function preparedRevoke(
+  h: Harness,
+  as: "alice" | "bob",
+  target: { grantId: Hex } | { recipient: string },
+): Promise<ContextRevoke> {
+  const response = await call(h, "POST", "/v1/revocations/prepare", { as, body: target });
+  if (response.status !== 200) throw new Error(`prepare failed: ${JSON.stringify(response.json)}`);
+  return decodeBadgeMessage("ContextRevoke", response.json.message);
 }
 
 async function postPolicy(
@@ -192,34 +209,67 @@ describe("one-off consents", () => {
     ).json;
     expect((await orionTask(h)).allowed.some((e: { via: string }) => e.via === "grant_reused")).toBe(true);
 
-    const revokeBody = async (owner: typeof ledgers.bob, id: Hex) =>
-      signedWire(owner, "ContextRevoke", {
-        targetLabel: "Partage Orion",
-        issuedAt: nowSec(h),
-        grantId: id,
-        recipient: ledgers.alice.address,
-        owner: owner.address,
-        nonce: nextNonce(),
-      });
+    const foreignPrepare = await call(h, "POST", "/v1/revocations/prepare", { as: "alice", body: { grantId } });
+    expect(foreignPrepare.json.error.code).toBe("NOT_FOUND");
+    const message = await preparedRevoke(h, "bob", { grantId });
+    expect(message).toMatchObject({
+      grantId,
+      recipient: ledgers.alice.address,
+      targetLabel: `Alice Martin (Ventes) - ${share.message.excerptLabel}`,
+    });
     const foreign = await call(h, "POST", "/v1/revocations", {
       as: "alice",
-      body: await revokeBody(ledgers.alice, grantId),
+      body: await signedWire(ledgers.alice, "ContextRevoke", { ...message, owner: ledgers.alice.address }),
     });
     expect(foreign.json.error.code).toBe("NOT_FOUND");
     const notMine = await call(h, "POST", "/v1/revocations", {
       as: "alice",
-      body: await revokeBody(ledgers.bob, grantId),
+      body: await signedWire(ledgers.bob, "ContextRevoke", message),
     });
     expect(notMine.json.error.code).toBe("FORBIDDEN");
 
     const revoked = await call(h, "POST", "/v1/revocations", {
       as: "bob",
-      body: await revokeBody(ledgers.bob, grantId),
+      body: await signedWire(ledgers.bob, "ContextRevoke", message),
     });
     expect(revoked.json.revokedGrants).toBe(1);
     const next = await orionTask(h);
     expect(next.allowed.some((e: { via: string }) => e.via === "grant_reused")).toBe(false);
     expect(next.status).toBe("waiting_consent");
+  });
+
+  it("binds the label the owner reads on the device to what is actually revoked", async () => {
+    await orionTask(h);
+    const [share] = await pendingShares(h, "bob");
+    if (!share) throw new Error("no share");
+    const signature = await signTyped(ledgers.bob, "ContextShare", share.message);
+    const { grantId } = (
+      await call(h, "POST", `/v1/consents/${share.id}/approve`, { as: "bob", body: { signature } })
+    ).json;
+    const all = await preparedRevoke(h, "bob", { recipient: "alice" });
+    // Revoking everything for Alice also revokes the standing agreements of her whole team: the label says so.
+    expect(all).toMatchObject({
+      grantId: zeroHash,
+      recipient: ledgers.alice.address,
+      targetLabel: "Tout ce que j'ai partage avec Alice Martin + accords equipe Ventes",
+    });
+    const one = await preparedRevoke(h, "bob", { grantId });
+    const forged: Array<[string, ContextRevoke]> = [
+      // The device reads "everything for Alice" while only one stale grant would be revoked...
+      ["a broad label on a narrow target", { ...one, targetLabel: all.targetLabel }],
+      // ...or reads one grant while everything would be wiped.
+      ["a narrow label on a broad target", { ...all, targetLabel: one.targetLabel }],
+      ["a grant revoked under another recipient", { ...one, recipient: ledgers.chloe.address }],
+    ];
+    for (const [, message] of forged) {
+      const response = await call(h, "POST", "/v1/revocations", {
+        as: "bob",
+        body: await signedWire(ledgers.bob, "ContextRevoke", { ...message, nonce: nextNonce() }),
+      });
+      expect(response.json.error.code).toBe("INVALID_REQUEST");
+    }
+    expect(await h.services.keys.currentVersion("bob")).toBe(1);
+    expect((await orionTask(h)).allowed.some((e: { via: string }) => e.via === "grant_reused")).toBe(true);
   });
 
   it("refuses a revocation of everything without a directory recipient", async () => {
@@ -282,16 +332,11 @@ describe("standing policies", () => {
 
     const second = (await postPolicy(h, policy(h))).json;
     expect(await policyBases()).toBe(3);
+    const message = await preparedRevoke(h, "bob", { grantId: second.id });
+    expect(message).toMatchObject({ targetLabel: "Accord equipe Ventes - orion", recipient: zeroAddress });
     const revoke = await call(h, "POST", "/v1/revocations", {
       as: "bob",
-      body: await signedWire(ledgers.bob, "ContextRevoke", {
-        targetLabel: "Accord Ventes",
-        issuedAt: nowSec(h),
-        grantId: second.id,
-        recipient: ledgers.alice.address,
-        owner: ledgers.bob.address,
-        nonce: nextNonce(),
-      }),
+      body: await signedWire(ledgers.bob, "ContextRevoke", message),
     });
     expect(revoke.json.revokedPolicies).toBe(1);
     expect(await policyBases()).toBe(0);

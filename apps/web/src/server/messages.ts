@@ -8,14 +8,8 @@ import {
   DEFAULT_AGENT_SESSION_TTL_SECONDS,
   type CreatedAgentSession,
 } from "@badge/client";
-import {
-  toDeviceAscii,
-  type ContextPolicy,
-  type ContextRevoke,
-  type DeskJoin,
-  type EmployeeEnroll,
-} from "@badge/consent";
-import { zeroAddress, type Address, type Hex } from "viem";
+import { toDeviceAscii, type ContextPolicy, type DeskJoin, type EmployeeEnroll } from "@badge/consent";
+import type { Hex } from "viem";
 import { COMPANY_NAME, type Employee } from "@/lib/directory";
 
 const SECONDS_PER_DAY = 86_400n;
@@ -105,30 +99,6 @@ export function buildContextPolicy(
     maxExcerptLength: input.maxExcerptLength,
     expiresAt: now + BigInt(input.durationDays) * SECONDS_PER_DAY,
     enclaveMeasurement,
-    owner: owner.address,
-    nonce,
-  };
-}
-
-export interface RevokeInput {
-  grantId: Hex;
-  /** Recipient of a share; omitted for a standing agreement (granted to a team, not to an address). */
-  recipient?: Address;
-  /** What the owner reads on the device, e.g. "Alice Martin (Ventes) - brief Orion". */
-  targetLabel: string;
-}
-
-export function buildContextRevoke(
-  owner: Employee,
-  input: RevokeInput,
-  now: bigint,
-  nonce: bigint = newNonce(),
-): ContextRevoke {
-  return {
-    targetLabel: deviceLabel(input.targetLabel),
-    issuedAt: now,
-    grantId: input.grantId,
-    recipient: input.recipient ?? zeroAddress,
     owner: owner.address,
     nonce,
   };

@@ -10,13 +10,21 @@ import {
   checkContextRevoke,
   checkEmployeeEnroll,
   hashBadgeMessage,
+  revocationTargetLabel,
+  type ContextRevoke,
   type SignedMessage,
 } from "@badge/consent";
-import { isAddressEqual, zeroAddress } from "viem";
+import { isAddressEqual, zeroAddress, zeroHash } from "viem";
 import { EMPLOYEES, type EmployeeId } from "@/lib/directory";
 import { EnclaveError } from "../errors";
-import { deviceName } from "../messages";
-import type { AgreementStatus, EnrollmentView, GrantView, PolicyView } from "../enclave/types";
+import { deviceName, newNonce } from "../messages";
+import type {
+  AgreementStatus,
+  EnrollmentView,
+  GrantView,
+  PolicyView,
+  RevocationTargetView,
+} from "../enclave/types";
 import {
   consumeNonce,
   employeeByAddress,
@@ -174,6 +182,56 @@ export function listGrants(state: MockState, owner: EmployeeId): GrantView[] {
     status: p.status,
   }));
   return [...shares, ...policies].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+/** Flow 6, first step: the ContextRevoke to sign, labelled like the real enclave does (`revocationTargetLabel`). */
+export function prepareRevocation(
+  state: MockState,
+  owner: EmployeeId,
+  target: RevocationTargetView,
+): ContextRevoke {
+  const base = { issuedAt: nowSeconds(), owner: EMPLOYEES[owner].address, nonce: newNonce() };
+  if ("recipient" in target) {
+    const recipient = EMPLOYEES[target.recipient];
+    return {
+      ...base,
+      grantId: zeroHash,
+      recipient: recipient.address,
+      targetLabel: revocationTargetLabel({
+        kind: "recipient",
+        recipientName: recipient.name,
+        recipientTeam: recipient.team,
+      }),
+    };
+  }
+  const grant = state.grants.get(target.grantId);
+  if (grant !== undefined && grant.owner === owner) {
+    const recipient = EMPLOYEES[grant.recipient];
+    return {
+      ...base,
+      grantId: grant.id,
+      recipient: recipient.address,
+      targetLabel: revocationTargetLabel({
+        kind: "grant",
+        recipientName: deviceName(recipient),
+        excerptLabel: grant.label,
+      }),
+    };
+  }
+  const policy = state.policies.get(target.grantId);
+  if (policy !== undefined && policy.owner === owner) {
+    return {
+      ...base,
+      grantId: policy.id,
+      recipient: zeroAddress,
+      targetLabel: revocationTargetLabel({
+        kind: "policy",
+        granteeTeam: policy.policy.granteeTeam,
+        contextTag: policy.policy.contextTag,
+      }),
+    };
+  }
+  throw new EnclaveError("NOT_FOUND", "accord introuvable");
 }
 
 /**

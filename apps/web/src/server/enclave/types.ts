@@ -5,7 +5,7 @@
  * View types are plain JSON (ISO dates, decimal strings for bigints, wire-format messages) so they cross the
  * server/client boundary of React Server Components unchanged. Client components import them with `import type`.
  */
-import type { SignedMessage, WireMessage } from "@badge/consent";
+import type { ContextRevoke, SignedMessage, WireMessage } from "@badge/consent";
 import type { DeskProofWire } from "@badge/zk";
 import type { Address, Hex } from "viem";
 import type { DeskId, EmployeeId } from "@/lib/directory";
@@ -306,6 +306,9 @@ export interface DeskRequestsView {
  * The enclave API as used by the web app. `live.ts` implements it on @badge/client (the real enclave); the mock
  * implements it in memory for UI development only.
  */
+/** What a revocation targets: one grant or standing agreement, or everything granted to one colleague. */
+export type RevocationTargetView = { grantId: Hex } | { recipient: EmployeeId };
+
 export interface EnclaveApi {
   readonly mode: EnclaveMode;
   attestation(): Promise<AttestationView>;
@@ -323,6 +326,11 @@ export interface EnclaveApi {
   rejectConsent(owner: EmployeeId, consentId: string): Promise<void>;
 
   listGrants(owner: EmployeeId): Promise<GrantView[]>;
+  /**
+   * The ContextRevoke the owner signs, prepared by the enclave with the canonical label of the real scope (the only
+   * one `revoke` accepts): one grant or policy by id, or everything granted to one colleague.
+   */
+  prepareRevocation(owner: EmployeeId, target: RevocationTargetView): Promise<ContextRevoke>;
   revoke(owner: EmployeeId, signed: SignedMessage<"ContextRevoke">): Promise<{ revoked: number }>;
 
   createPolicy(owner: EmployeeId, signed: SignedMessage<"ContextPolicy">): Promise<PolicyView>;

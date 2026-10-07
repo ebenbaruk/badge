@@ -119,10 +119,18 @@ grant_reused | policy`), `pending[]` (with `consentId` and `risk {level, reasons
    signature of the prepared message, checked against the stored excerpt text; nonce consumed; grant stored (id =
    `hashBadgeMessage`) -> `{consentId, status: "approved", grantId}`. `POST /v1/consents/:id/reject` ->
    `{consentId, status: "rejected", grantId: null}`. `GET /v1/grants`: the caller's active one-off grants.
-6. **Revocation** `POST /v1/revocations` (signed `ContextRevoke`, owner's own agent): `grantId` = one of the owner's
-   grants or policies, or `0x0` = every grant to `recipient` (a directory address) and the policies granted to their
-   team. The owner's data key is rotated (`KeyRotator.rotate`, version persisted) before the revocation is recorded.
-   `201 {revocationId, revokedGrants, revokedPolicies}`; later tasks need fresh consent.
+6. **Revocation**, prepared by the enclave like a `ContextShare`, because the device only shows `targetLabel` and
+   the date (`grantId` and `recipient` are signed but hidden):
+   - `POST /v1/revocations/prepare {grantId} | {recipient: employeeId}` (owner's agent) -> `{message}`: the exact
+     `ContextRevoke` to sign, whose `targetLabel` names the real scope (`revocationTargetLabel`, `@badge/consent`):
+     a grant `"<recipientName> - <excerptLabel>"` (recipient = the grant's), a policy
+     `"Accord equipe <team> - <tag>"` (recipient = `0x0`), everything for a colleague
+     `"Tout ce que j'ai partage avec <name> + accords equipe <team>"` (grantId = `0x0`).
+   - `POST /v1/revocations` (signed `ContextRevoke`, owner's own agent): `grantId` = one of the owner's grants or
+     policies, or `0x0` = every grant to `recipient` (a directory address) and the policies granted to their team.
+     A label or recipient other than the canonical ones of that target is refused (`INVALID_REQUEST`). The owner's
+     data key is rotated (`KeyRotator.rotate`, version persisted) before the revocation is recorded.
+     `201 {revocationId, revokedGrants, revokedPolicies}`; later tasks need fresh consent.
 7. **Standing agreements** `POST /v1/policies` (signed `ContextPolicy`, owner's own agent; `granteeTeam` must be a
    directory team in device ASCII) -> `201 Policy {id, granteeTeam, contextTag, purpose, maxExcerptLength, expiresAt,
 createdAt, status: active | revoked | expired, uses}`; `GET /v1/policies` lists the caller's policies.
@@ -197,6 +205,7 @@ excerpt text, only hashes, lengths and ids. Types: `enroll`, `session.open`, `ta
 | POST /v1/consents/:id/approve      | `{signature}`                                  | `ConsentDecision`                               |
 | POST /v1/consents/:id/reject       | `{}`                                           | `ConsentDecision`                               |
 | GET /v1/grants                     |                                                | `{grants: Grant[]}`                             |
+| POST /v1/revocations/prepare       | `{grantId}` or `{recipient}`                   | `PreparedRevocation {message}`                  |
 | POST /v1/revocations               | signed ContextRevoke                           | `RevocationResult`                              |
 | POST /v1/policies                  | signed ContextPolicy                           | `Policy`                                        |
 | GET /v1/policies                   |                                                | `{policies: Policy[]}`                          |

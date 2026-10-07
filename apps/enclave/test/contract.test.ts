@@ -185,16 +185,14 @@ describe("enclave API contract (BadgeClient against the real app)", () => {
 
   it("Bob revokes everything given to Alice: key rotated, old brief redrafted, consent needed again", async () => {
     expect(await agents.bob.listGrants()).toHaveLength(BOB_ORION_NOTES);
-    const result = await agents.bob.revoke(
-      await signed("bob", "ContextRevoke", {
-        targetLabel: "Tout ce que j'ai partage avec Alice",
-        issuedAt: toUnixSeconds(h.clock.now()),
-        grantId: zeroHash,
-        recipient: ledgers.alice.address,
-        owner: ledgers.bob.address,
-        nonce: nextNonce(),
-      }),
-    );
+    const prepared = await agents.bob.prepareRevocation({ recipient: "alice" });
+    expect(prepared).toMatchObject({
+      targetLabel: "Tout ce que j'ai partage avec Alice Martin + accords equipe Ventes",
+      grantId: zeroHash,
+      recipient: ledgers.alice.address,
+      owner: ledgers.bob.address,
+    });
+    const result = await agents.bob.revoke(await signed("bob", "ContextRevoke", prepared));
     expect(result).toMatchObject({ revokedGrants: BOB_ORION_NOTES, revokedPolicies: 0 });
     expect(await h.services.keys.currentVersion("bob")).toBe(2);
     const old = await agents.alice.getTask(orionTaskId);

@@ -3,7 +3,7 @@
  * (signatures, intrinsic checks, nonces, rules, ZK proofs) on scripted data from infra/seed/acme.json, so every
  * device signature and proof made through the UI is real even though the enclave is not.
  */
-import type { SignedMessage } from "@badge/consent";
+import type { ContextRevoke, SignedMessage } from "@badge/consent";
 import type { DeskProofWire } from "@badge/zk";
 import { complianceKeyRegistrationMessage } from "@badge/attest";
 import { isAddressEqual, keccak256, recoverMessageAddress, toHex, type Hex } from "viem";
@@ -11,6 +11,7 @@ import { COMPANY_NAME, EMPLOYEES, type DeskId, type EmployeeId } from "@/lib/dir
 import { EnclaveError } from "../errors";
 import type {
   AttestationView,
+  RevocationTargetView,
   ComplianceKeyInput,
   RevealNoticeInput,
   AuditView,
@@ -109,6 +110,10 @@ export class MockEnclave implements EnclaveApi {
 
   async listGrants(owner: EmployeeId): Promise<GrantView[]> {
     return access.listGrants(this.state, owner);
+  }
+
+  async prepareRevocation(owner: EmployeeId, target: RevocationTargetView): Promise<ContextRevoke> {
+    return access.prepareRevocation(this.state, owner, target);
   }
 
   async revoke(owner: EmployeeId, signed: SignedMessage<"ContextRevoke">): Promise<{ revoked: number }> {

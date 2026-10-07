@@ -9,7 +9,7 @@
  * the enclave that was just verified.
  */
 import { BadgeApiError, BadgeClient, type Session } from "@badge/client";
-import type { SignedMessage } from "@badge/consent";
+import type { ContextRevoke, SignedMessage } from "@badge/consent";
 import {
   decodeDeskProof,
   InMemoryNullifierRegistry,
@@ -40,6 +40,7 @@ import {
 } from "./live-views";
 import type {
   AttestationView,
+  RevocationTargetView,
   AuditView,
   ComplianceKeyInput,
   ConsentRequestView,
@@ -245,6 +246,10 @@ export class LiveEnclave implements EnclaveApi {
   async listGrants(owner: EmployeeId): Promise<GrantView[]> {
     const grants = await this.call(owner, (client) => client.listGrants());
     return grantViews(grants, await this.listPolicies(owner), owner);
+  }
+
+  async prepareRevocation(owner: EmployeeId, target: RevocationTargetView): Promise<ContextRevoke> {
+    return this.call(owner, (client) => client.prepareRevocation(target));
   }
 
   async revoke(owner: EmployeeId, signed: SignedMessage<"ContextRevoke">): Promise<{ revoked: number }> {

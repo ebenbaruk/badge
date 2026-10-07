@@ -41,7 +41,7 @@ import {
   InMemoryNullifierRegistry,
   verifyDeskProof,
 } from "@badge/zk";
-import { bytesToBigInt, getAddress, zeroHash, type Address, type LocalAccount } from "viem";
+import { bytesToBigInt, getAddress, type Address, type LocalAccount } from "viem";
 import { z } from "zod";
 import {
   check,
@@ -342,16 +342,9 @@ async function main(): Promise<void> {
     await narrator.step(
       "Bob révoque tout ce qu'il a partagé avec Alice : il faudra de nouveau son accord",
       async () => {
-        const result = await agents.bob.revoke(
-          await signed("bob", "ContextRevoke", {
-            targetLabel: toDeviceAscii("Tout ce que j'ai partagé avec Alice"),
-            issuedAt: nowSeconds(),
-            grantId: zeroHash,
-            recipient: people.alice.address,
-            owner: people.bob.address,
-            nonce: randomNonce(),
-          }),
-        );
+        // The enclave writes the label Bob reads ("... + accords equipe Ventes"): it names the real scope.
+        const prepared = await agents.bob.prepareRevocation({ recipient: "alice" });
+        const result = await agents.bob.revoke(await signed("bob", "ContextRevoke", prepared));
         check(result.revokedGrants > 0, "nothing was revoked");
         narrator.say(`${result.revokedGrants} accord(s) révoqué(s) ; la clé de données de Bob a tourné.`);
         const task = await agents.alice.createTask(ORION_TASK);

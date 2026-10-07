@@ -8,6 +8,10 @@ import { idParam, jsonBody, parseBody } from "../http";
 import type { EnclaveServices } from "../services";
 
 const ApproveConsentSchema = z.strictObject({ signature: signatureSchema });
+const PrepareRevocationSchema = z.union([
+  z.strictObject({ grantId: z.string().regex(/^0x[0-9a-fA-F]{64}$/) }),
+  z.strictObject({ recipient: z.string().min(1).max(64) }),
+]);
 
 /** Owner-side routes: pending requests, decisions, grants, standing policies and revocations. */
 export function registerConsentRoutes(app: Hono<BadgeEnv>, services: EnclaveServices): void {
@@ -36,6 +40,13 @@ export function registerConsentRoutes(app: Hono<BadgeEnv>, services: EnclaveServ
   );
 
   app.get("/v1/policies", (c) => c.json({ policies: services.policy.listPolicies(c.get("caller")) }));
+
+  /** The exact ContextRevoke to sign, labelled with the real scope (the only label /v1/revocations accepts). */
+  app.post("/v1/revocations/prepare", async (c) => {
+    const request = await parseBody(c, PrepareRevocationSchema);
+    const target = "grantId" in request ? { grantId: request.grantId as Hex } : request;
+    return c.json(services.policy.prepareRevocation(c.get("caller"), target));
+  });
 
   app.post("/v1/revocations", async (c) =>
     c.json(await services.policy.revoke(c.get("caller"), await jsonBody(c)), 201),

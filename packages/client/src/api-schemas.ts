@@ -192,6 +192,13 @@ export const grantSchema = z.object({
 export type Grant = z.infer<typeof grantSchema>;
 export const grantListSchema = z.object({ grants: z.array(grantSchema) });
 
+/**
+ * `POST /v1/revocations/prepare`: the exact ContextRevoke to sign. Its `targetLabel` (the only field the device
+ * shows with the date) names the real scope; `POST /v1/revocations` refuses any other label.
+ */
+export const preparedRevocationSchema = z.object({ message: BADGE_WIRE_SCHEMAS.ContextRevoke });
+export type PreparedRevocation = z.infer<typeof preparedRevocationSchema>;
+
 /** `POST /v1/revocations`. `revocationId` = hashBadgeMessage of the signed ContextRevoke. */
 export const revocationResultSchema = z.object({
   revocationId: bytes32,

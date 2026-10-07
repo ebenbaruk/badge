@@ -13,6 +13,7 @@ export {
   type CreateDeskRequestInput,
   type CreateTaskInput,
   type RegisterComplianceKeyInput,
+  type RevocationTargetInput,
   type RevealNoticeInput,
 } from "./client";
 export { apiErrorBodySchema, BadgeApiError, type ApiErrorBody, type ClientErrorCode } from "./errors";

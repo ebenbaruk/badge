@@ -4,12 +4,12 @@
  */
 import { toUnixSeconds } from "@badge/consent";
 import { revalidatePath } from "next/cache";
-import { zeroHash } from "viem";
+import type { Hex } from "viem";
 import { z } from "zod";
 import { EMPLOYEES, TEAMS, type EmployeeId } from "@/lib/directory";
 import { enclave, type PolicyView } from "../enclave";
 import { EnclaveError, runAction, type ActionResult } from "../errors";
-import { buildContextPolicy, buildContextRevoke, deviceName, MAX_POLICY_DAYS } from "../messages";
+import { buildContextPolicy, MAX_POLICY_DAYS } from "../messages";
 import { signOnDevice } from "../signing";
 import { bytes32Schema, employeeIdSchema } from "./schemas";
 
@@ -46,6 +46,7 @@ export async function createStandingAgreement(
 
 const revokeSchema = z.object({ employee: employeeIdSchema, grantId: bytes32Schema });
 
+/** Revokes one grant or standing agreement, with the label the enclave prepared for exactly that target. */
 export async function revokeGrant(input: {
   employee: EmployeeId;
   grantId: string;
@@ -53,18 +54,7 @@ export async function revokeGrant(input: {
   return runAction(async () => {
     const { employee, grantId } = revokeSchema.parse(input);
     const api = enclave();
-    const grant = (await api.listGrants(employee)).find((g) => g.id === grantId && g.status === "active");
-    if (grant === undefined) throw new EnclaveError("NOT_FOUND", "accord introuvable ou déjà révoqué");
-    const recipient = grant.recipient === undefined ? undefined : EMPLOYEES[grant.recipient];
-    const targetLabel =
-      recipient === undefined
-        ? `${grant.recipientLabel} - ${grant.label}`
-        : `${deviceName(recipient)} - ${grant.label}`;
-    const message = buildContextRevoke(
-      EMPLOYEES[employee],
-      { grantId, targetLabel, ...(recipient === undefined ? {} : { recipient: recipient.address }) },
-      toUnixSeconds(new Date()),
-    );
+    const message = await api.prepareRevocation(employee, { grantId: grantId as Hex });
     const result = await api.revoke(employee, await signOnDevice(employee, "ContextRevoke", message));
     revalidatePath(`/${employee}`, "layout");
     return result;
@@ -75,7 +65,8 @@ const revokeAllSchema = z.object({ employee: employeeIdSchema, recipient: employ
 
 /**
  * Revokes everything the owner shared with one colleague (ContextRevoke with grantId 0x0): every one-off grant to
- * their address and the standing agreements granted to their team. One signature, one key rotation.
+ * their address and the standing agreements granted to their team, as the prepared device label says. One
+ * signature, one key rotation.
  */
 export async function revokeAllFor(input: {
   employee: EmployeeId;
@@ -84,16 +75,9 @@ export async function revokeAllFor(input: {
   return runAction(async () => {
     const { employee, recipient } = revokeAllSchema.parse(input);
     if (employee === recipient) throw new EnclaveError("INVALID_REQUEST", "rien à révoquer pour soi-même");
-    const message = buildContextRevoke(
-      EMPLOYEES[employee],
-      {
-        grantId: zeroHash,
-        recipient: EMPLOYEES[recipient].address,
-        targetLabel: `Tout ce que j'ai partage avec ${EMPLOYEES[recipient].name}`,
-      },
-      toUnixSeconds(new Date()),
-    );
-    const result = await enclave().revoke(employee, await signOnDevice(employee, "ContextRevoke", message));
+    const api = enclave();
+    const message = await api.prepareRevocation(employee, { recipient });
+    const result = await api.revoke(employee, await signOnDevice(employee, "ContextRevoke", message));
     revalidatePath("/", "layout");
     return result;
   });
