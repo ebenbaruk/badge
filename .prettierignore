@@ -1,0 +1,5 @@
+pnpm-lock.yaml
+**/.next/
+**/dist/
+infra/vendor/
+infra/seed/**/*.json

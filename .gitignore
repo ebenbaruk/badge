@@ -1,0 +1,51 @@
+# Dependencies and builds
+node_modules/
+.pnpm-store/
+dist/
+build/
+.next/
+out/
+.turbo/
+coverage/
+*.tsbuildinfo
+next-env.d.ts
+
+# Secrets and local configuration (never commit)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+keys/
+
+# Local state and data
+*.sqlite
+*.sqlite-journal
+*.db
+.data/
+.sim/
+
+# Editors and OS
+.history/
+.vscode/
+.idea/
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Downloaded binaries and artifacts (fetched by infra scripts)
+infra/apps/*.elf
+infra/zk-artifacts/*
+!infra/zk-artifacts/.gitkeep
+infra/vendor/
+
+# Test captures
+**/__screens__/
+*.gif
+
+# Private working notes
+CLAUDE.md
+CLAUDE.local.md
+.claude/
