@@ -166,7 +166,7 @@ services:
     restart: unless-stopped
 
   enclave:
-    image: ghcr.io/ebenbaruk/badge-enclave@sha256:599e1a7234b4df361231b4cde5ef5b0f92b05b2acea5fe0bfe7f3a2be64e617e
+    image: ghcr.io/ebenbaruk/badge-enclave@sha256:7803e6ebd9fb278ff7118bae4b9dd08afd6816efc0f55afe17863e3489525725
     environment: *enclave-env
     volumes:
       # dstack guest agent: quotes, KMS-derived keys, the compose hash (the enclave's measurement).
@@ -193,7 +193,7 @@ services:
   # Ingests the demo dataset (infra/seed/acme.json) and checks recall. Idempotent: on later boots it only re-runs
   # the checks (a few LLM calls). It cannot read the deriver logs from inside the CVM (BADGE_SEED_DERIVER_LOGS).
   seed:
-    image: ghcr.io/ebenbaruk/badge-enclave@sha256:599e1a7234b4df361231b4cde5ef5b0f92b05b2acea5fe0bfe7f3a2be64e617e
+    image: ghcr.io/ebenbaruk/badge-enclave@sha256:7803e6ebd9fb278ff7118bae4b9dd08afd6816efc0f55afe17863e3489525725
     working_dir: /app/apps/enclave
     command: ["node", "--import", "tsx", "../../infra/seed/seed.ts"]
     environment:
