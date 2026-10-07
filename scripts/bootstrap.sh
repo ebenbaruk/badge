@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # One command to get the local Badge stack ready for the demo:
-#   prerequisites -> pnpm install -> infra/setup.sh -> 3 Speculos Ledgers -> dstack simulator
+#   prerequisites -> pnpm install -> infra/setup.sh -> 5 Speculos Ledgers -> dstack simulator
 #   -> memory stack (Postgres, Honcho, egress gateway) -> seed of the demo dataset.
 #
 #   scripts/bootstrap.sh              everything
@@ -20,8 +20,8 @@ PROFILE="${BADGE_LLM_PROFILE:-build}"
 MIN_NODE_MAJOR=24
 MIN_PNPM_MAJOR=11
 DEVELOP_ELF="$INFRA_DIR/apps/app-1.23.0-dev-flex.elf"
-SPECULOS_NAMES=(alice bob chloe)
-SPECULOS_PORTS=(5001 5002 5003)
+SPECULOS_NAMES=(alice bob chloe david emma)
+SPECULOS_PORTS=(5001 5002 5003 5004 5005)
 HONCHO_IMAGE="badge/honcho:3.2.2" # built by infra/stack.sh
 
 SKIP_SEED=false
@@ -104,7 +104,7 @@ speculos_running() {
 }
 
 start_speculos() {
-  step "Ledgers: 3 Speculos Flex (alice :5001, bob :5002, chloe :5003)"
+  step "Ledgers: 5 Speculos Flex (alice :5001, bob :5002, chloe :5003, david :5004, emma :5005)"
   if speculos_running; then
     ok "already running, left untouched (infra/speculos.sh to restart them)"
     return
@@ -138,13 +138,15 @@ start_memory_stack() {
 print_next_steps() {
   step "Ready"
   cat <<EOF
-  Scripted end-to-end demo (starts its own enclave on a fresh database, drives the 3 Ledgers):
+  Scripted end-to-end demo (starts its own enclave on a fresh database, drives the 5 Ledgers):
     pnpm demo
     # if an enclave already listens on :8787 (web walk-through): BADGE_DEMO_ENCLAVE_PORT=8788 pnpm demo
 
   Web walk-through (two terminals), then open http://localhost:3000:
     pnpm --filter @badge/enclave start
+    pnpm desks:seed   # once the enclave is up: David and Emma join the Research desk with their Ledgers
     BADGE_CAL_TEST_KEY=\$PWD/infra/keys/cal-test.pem pnpm --filter @badge/web dev
+    # rehearsals only ("Revue auto" on the device mirror): prefix the web server with BADGE_REHEARSAL=1
 
   Click path and troubleshooting: docs/DEMO.md
   Stop everything: infra/speculos.sh stop && infra/dstack-sim.sh stop && infra/stack.sh down
