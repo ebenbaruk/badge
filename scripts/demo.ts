@@ -153,9 +153,12 @@ async function main(): Promise<void> {
       : `Badge - démonstration de bout en bout (enclave ${process.env["BADGE_ENCLAVE_URL"]}, Ledgers Speculos)`,
   );
   try {
-    const measurement = await narrator.step("Mise en route : TEE simulé, enclave, Ledgers", async () => {
-      const simulator = await ensureDstackSimulator();
-      narrator.say(`Simulateur dstack ${simulator === "running" ? "déjà actif" : "démarré"}.`);
+    const remote = process.env["BADGE_ENCLAVE_URL"] !== undefined;
+    const measurement = await narrator.step("Mise en route : TEE, enclave, Ledgers", async () => {
+      if (!remote) {
+        const simulator = await ensureDstackSimulator();
+        narrator.say(`Simulateur dstack ${simulator === "running" ? "déjà actif" : "démarré"}.`);
+      }
       enclave = await startEnclave();
       narrator.say(
         `Enclave Badge sur ${enclave.url}${enclave.logFile ? ` (journal : ${enclave.logFile})` : ""}.`,
@@ -166,9 +169,15 @@ async function main(): Promise<void> {
       for (const ledger of connected) ledgers[ledger.who] = ledger;
       narrator.say("Ledgers d'Alice, Bob, Chloé, David et Emma connectés, adresses conformes à l'annuaire.");
       const attestation = await client(enclave.url).connect();
-      check(attestation.simulated, "this demo expects the simulated TEE (dstack simulator)");
+      // Local runs use the dstack simulator; a remote enclave must have passed real TDX verification (pinned).
+      check(
+        attestation.simulated !== remote,
+        remote ? "expected a real TDX quote" : "expected the dstack simulator",
+      );
       narrator.say(
-        `Canal attesté ouvert : quote vérifié (mode simulé), mesure ${attestation.enclaveMeasurement}.`,
+        remote
+          ? `Canal attesté ouvert : quote Intel TDX vérifié (TCB ${attestation.tcbStatus}), mesure ${attestation.enclaveMeasurement}.`
+          : `Canal attesté ouvert : quote vérifié (mode simulé), mesure ${attestation.enclaveMeasurement}.`,
       );
       return attestation.enclaveMeasurement;
     });
