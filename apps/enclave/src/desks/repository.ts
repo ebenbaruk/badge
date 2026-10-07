@@ -2,7 +2,7 @@
  * Desk state: registered identity commitments (in registration order, which fixes the group root), desk requests,
  * the per-owner share offers they produce, and the persistent nullifier registry.
  */
-import type { NullifierRegistry } from "@badge/zk";
+import { ZkError } from "@badge/zk";
 import type { Hex } from "viem";
 import { z } from "zod";
 import { isUniqueViolation, parseRow, parseRows, type Database } from "../db";
@@ -14,25 +14,11 @@ export class DeskMemberRepository {
   constructor(private readonly db: Database) {}
 
   /** @throws {EnclaveError} ALREADY_EXISTS when the employee or the commitment is already in the desk. */
-  add(member: {
-    deskId: string;
-    employeeId: string;
-    commitment: bigint;
-    fixture: boolean;
-    nowMs: number;
-  }): void {
+  add(member: { deskId: string; employeeId: string; commitment: bigint; nowMs: number }): void {
     try {
       this.db
-        .prepare(
-          "INSERT INTO desk_members (desk_id, employee_id, commitment, fixture, joined_ms) VALUES (?, ?, ?, ?, ?)",
-        )
-        .run(
-          member.deskId,
-          member.employeeId,
-          member.commitment.toString(10),
-          member.fixture ? 1 : 0,
-          member.nowMs,
-        );
+        .prepare("INSERT INTO desk_members (desk_id, employee_id, commitment, joined_ms) VALUES (?, ?, ?, ?)")
+        .run(member.deskId, member.employeeId, member.commitment.toString(10), member.nowMs);
     } catch (error) {
       if (isUniqueViolation(error)) {
         throw new EnclaveError(
@@ -74,6 +60,11 @@ const DeskRequestRowSchema = z.object({
   source_desk: z.string(),
   task: z.string(),
   created_ms: z.number().int(),
+  /** Decimal root of the source desk at creation; null only for requests older than the snapshot. */
+  source_root: z
+    .string()
+    .regex(/^[0-9]+$/)
+    .nullable(),
 });
 export type DeskRequestRow = z.infer<typeof DeskRequestRowSchema>;
 
@@ -101,9 +92,18 @@ export class DeskRequestRepository {
   insertRequest(row: DeskRequestRow): void {
     this.db
       .prepare(
-        "INSERT INTO desk_requests (id, rule_id, requester_id, from_desk, source_desk, task, created_ms) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO desk_requests (id, rule_id, requester_id, from_desk, source_desk, task, created_ms, source_root) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
       )
-      .run(row.id, row.rule_id, row.requester_id, row.from_desk, row.source_desk, row.task, row.created_ms);
+      .run(
+        row.id,
+        row.rule_id,
+        row.requester_id,
+        row.from_desk,
+        row.source_desk,
+        row.task,
+        row.created_ms,
+        row.source_root,
+      );
   }
 
   getRequest(id: Hex): DeskRequestRow | undefined {
@@ -175,19 +175,20 @@ export class DeskRequestRepository {
 }
 
 /**
- * Persistent nullifier registry: the primary key (scope, nullifier) makes `consume` atomic, so two concurrent
- * verifications of the same proof can never both succeed, and a restart does not forget used nullifiers.
+ * Persistent nullifiers, recorded synchronously so that the delivery, the nonce and the nullifier commit in one
+ * transaction: a failure after the proof check can no longer burn the member's nullifier while the offer stays
+ * pending (they could then never answer). The primary key (scope, nullifier) rejects a second share atomically.
  */
-export class SqliteNullifierRegistry implements NullifierRegistry {
-  constructor(
-    private readonly db: Database,
-    private readonly nowMs: () => number,
-  ) {}
+export class NullifierRepository {
+  constructor(private readonly db: Database) {}
 
-  async consume(scope: bigint, nullifier: bigint): Promise<boolean> {
+  /** @throws {ZkError} NULLIFIER_REUSED when this member already shared for this request. */
+  record(scope: bigint, nullifier: bigint, nowMs: number): void {
     const result = this.db
       .prepare("INSERT OR IGNORE INTO nullifiers (scope, nullifier, used_ms) VALUES (?, ?, ?)")
-      .run(scope.toString(10), nullifier.toString(10), this.nowMs());
-    return result.changes === 1;
+      .run(scope.toString(10), nullifier.toString(10), nowMs);
+    if (result.changes !== 1) {
+      throw new ZkError("NULLIFIER_REUSED", "this member already shared for this request");
+    }
   }
 }

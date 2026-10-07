@@ -34,23 +34,6 @@ export const DirectorySeedSchema = z.object({
       ledgerAddress: AddressSchema.nullable(),
     }),
   ),
-  /**
-   * Demo fixtures: employees without a demo Ledger, listed only so that a desk has enough members for anonymity
-   * (Semaphore warns that groups of 1-2 are not anonymous). Their desk identities are deterministic test
-   * identities derived from `deskIdentityFixtureSeed` and registered at boot; they can never sign anything.
-   */
-  directoryOnlyEmployees: z
-    .array(
-      z.object({
-        id: OwnerIdSchema,
-        name: z.string().min(1),
-        team: z.string().min(1),
-        role: z.enum(EMPLOYEE_ROLES),
-        desks: z.array(OwnerIdSchema).min(1),
-        deskIdentityFixtureSeed: z.string().min(1),
-      }),
-    )
-    .default([]),
   desks: z.array(
     z.object({
       id: OwnerIdSchema,
@@ -82,8 +65,6 @@ export interface Employee {
   /** Ledger address, or null for an employee who cannot sign (no demo Ledger). */
   readonly address: Address | null;
   readonly desks: readonly string[];
-  /** Seed of the deterministic desk identity of a demo fixture; undefined for real employees. */
-  readonly deskIdentityFixtureSeed?: string;
 }
 
 export interface Desk {
@@ -115,13 +96,6 @@ export class Directory {
   private constructor(seed: z.output<typeof DirectorySeedSchema>) {
     this.company = seed.company;
     const deskMembers = new Map(seed.desks.map((desk) => [desk.id, new Set(desk.members)]));
-    for (const fixture of seed.directoryOnlyEmployees) {
-      for (const deskId of fixture.desks) {
-        const members = deskMembers.get(deskId);
-        if (!members) throw new DirectoryError(`${fixture.id}: unknown desk ${deskId}`);
-        members.add(fixture.id);
-      }
-    }
     for (const desk of seed.desks) {
       this.#desks.set(desk.id, {
         id: desk.id,
@@ -131,25 +105,14 @@ export class Directory {
     }
     const desksOf = (employeeId: string) =>
       [...this.#desks.values()].filter((desk) => desk.memberIds.includes(employeeId)).map((desk) => desk.id);
-    const all: Employee[] = [
-      ...seed.employees.map(({ id, name, team, role, ledgerAddress }) => ({
-        id,
-        name,
-        team,
-        role,
-        address: ledgerAddress,
-        desks: desksOf(id),
-      })),
-      ...seed.directoryOnlyEmployees.map(({ id, name, team, role, deskIdentityFixtureSeed }) => ({
-        id,
-        name,
-        team,
-        role,
-        address: null,
-        desks: desksOf(id),
-        deskIdentityFixtureSeed,
-      })),
-    ];
+    const all: Employee[] = seed.employees.map(({ id, name, team, role, ledgerAddress }) => ({
+      id,
+      name,
+      team,
+      role,
+      address: ledgerAddress,
+      desks: desksOf(id),
+    }));
     for (const employee of all) {
       if (this.#employees.has(employee.id)) throw new DirectoryError(`duplicate employee id ${employee.id}`);
       this.#employees.set(employee.id, employee);
@@ -270,11 +233,6 @@ export class Directory {
   /** Rules under which `deskId` may receive context from another desk. */
   rulesForRecipient(deskId: string): ExchangeRule[] {
     return this.#rules.filter((rule) => rule.recipientDesk === deskId);
-  }
-
-  /** Demo fixtures whose desk identities are registered at boot. */
-  deskFixtures(): Employee[] {
-    return this.employees().filter((e) => e.deskIdentityFixtureSeed !== undefined);
   }
 }
 

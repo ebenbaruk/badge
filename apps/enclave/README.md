@@ -16,7 +16,7 @@ pnpm --filter @badge/enclave start         # ou `dev` (rechargement à chaud) ; 
 ```
 
 Au démarrage, l'enclave lit sa mesure auprès de dstack (échec immédiat si l'agent ou le simulateur ne répond pas),
-ouvre sa base SQLite, enregistre les identités de démonstration du desk Research, puis journalise une ligne sans
+ouvre sa base SQLite, puis journalise une ligne sans
 secret : profil LLM (URL et modèles, jamais la clé), mesure, mode TEE (simulé ou CVM), canal exigé ou non, fichier
 de données. `SIGINT` / `SIGTERM` arrêtent proprement le serveur.
 
@@ -89,9 +89,11 @@ propriétaire, nombre de propriétaires par tâche, demandes par propriétaire e
 « tout le contexte de Bob » (`requestFullContextOf`) produit au minimum un avertissement montré à Bob, qu'aucun accord
 permanent ne couvre ; au-delà du plafond (8 000 caractères), la demande est bloquée avant de lui parvenir.
 
-**Données de démonstration** : David et Emma (desk Research) n'ont pas de Ledger ; leurs identités de desk sont
-dérivées d'une graine publique du jeu de données et enregistrées au démarrage, pour que le groupe Research compte au
-moins 3 membres. Elles ne peuvent rien signer et leur contexte ne peut jamais être partagé.
+**Desks** : chaque membre rejoint son desk avec son propre Ledger (`DeskJoin`) ; aucune identité n'est
+préenregistrée. Un desk ne peut être sollicité qu'avec au moins 3 membres ainsi inscrits (`MIN_DESK_ANONYMITY_SET`,
+sinon `ANONYMITY_SET_TOO_SMALL`) : dans la démo, David et Emma (desk Research, Speculos 5004 et 5005) rejoignent
+Research avec leur Ledger (`pnpm demo`, ou `pnpm desks:seed` avant la démo web), puis Bob. La racine du groupe source
+est figée à la création de la demande : toutes les preuves de cette demande s'y rapportent.
 
 ## Couche LLM (`src/llm`)
 

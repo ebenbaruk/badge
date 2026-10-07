@@ -1,13 +1,6 @@
 export * from "./llm";
 export * from "./memory";
-export {
-  createEnclaveApp,
-  createServices,
-  prepareEnclaveState,
-  type AppDeps,
-  type EnclaveApp,
-  type EnclaveServices,
-} from "./api";
+export { createEnclaveApp, createServices, type AppDeps, type EnclaveApp, type EnclaveServices } from "./api";
 export { loadEnclaveConfig, type EnclaveConfig } from "./config";
 export {
   SessionRepository,

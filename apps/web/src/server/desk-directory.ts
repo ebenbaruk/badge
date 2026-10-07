@@ -17,7 +17,6 @@ const directorySchema = z.object({
       allowedTopics: z.array(z.string()),
     }),
   ),
-  directoryOnlyEmployees: z.array(z.object({ id: z.string(), desks: z.array(z.string()) })),
   exchangeRules: z.array(
     z.object({
       id: z.string(),
@@ -31,7 +30,7 @@ const directorySchema = z.object({
 
 export interface DeskDirectoryEntry {
   id: DeskId;
-  /** Everyone the directory lists in the desk, with or without a Ledger. */
+  /** Everyone the directory lists in the desk (each joins its group with their own Ledger). */
   directoryMembers: number;
   allowedTopics: string[];
 }
@@ -49,8 +48,7 @@ const directory = directorySchema.parse(acme);
 
 export const DESK_DIRECTORY: readonly DeskDirectoryEntry[] = directory.desks.map((desk) => ({
   id: desk.id,
-  directoryMembers:
-    desk.members.length + directory.directoryOnlyEmployees.filter((e) => e.desks.includes(desk.id)).length,
+  directoryMembers: desk.members.length,
   allowedTopics: desk.allowedTopics,
 }));
 

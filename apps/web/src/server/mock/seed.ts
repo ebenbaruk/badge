@@ -10,14 +10,15 @@ import type { ContextOwner } from "../enclave/types";
 
 const ownerSchema = z.union([z.literal("company"), z.enum(EMPLOYEE_IDS)]);
 
+const isWebEmployee = (id: string): id is EmployeeId => (EMPLOYEE_IDS as readonly string[]).includes(id);
+
+/** The dataset also lists employees who are not web personas (David, Emma): they only join the Research desk. */
 const seedSchema = z.object({
-  employees: z.array(
-    z.object({ id: z.enum(EMPLOYEE_IDS), ledgerAddress: z.string().regex(/^0x[0-9a-fA-F]{40}$/) }),
-  ),
+  employees: z.array(z.object({ id: z.string(), ledgerAddress: z.string().regex(/^0x[0-9a-fA-F]{40}$/) })),
   desks: z.array(
     z.object({
       id: z.enum(["research", "origination"]),
-      members: z.array(z.enum(EMPLOYEE_IDS)),
+      members: z.array(z.string()),
       allowedTopics: z.array(z.string().min(1)),
     }),
   ),
@@ -74,6 +75,7 @@ export interface SeedData {
 export function loadSeed(): SeedData {
   const seed = seedSchema.parse(acme);
   for (const employee of seed.employees) {
+    if (!isWebEmployee(employee.id)) continue;
     if (!isAddressEqual(employee.ledgerAddress as `0x${string}`, EMPLOYEES[employee.id].address)) {
       throw new Error(`seed address of ${employee.id} differs from the web directory`);
     }
@@ -88,7 +90,7 @@ export function loadSeed(): SeedData {
     })),
     desks: seed.desks.map((desk) => ({
       id: desk.id,
-      directoryMembers: desk.members,
+      directoryMembers: desk.members.filter(isWebEmployee),
       allowedTopics: desk.allowedTopics,
     })),
   };

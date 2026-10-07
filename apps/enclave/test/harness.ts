@@ -19,7 +19,7 @@ import type { z } from "zod";
 import { createEnclaveApp, type EnclaveApp, type EnclaveServices } from "../src/api";
 import type { Clock } from "../src/clock";
 import { IN_MEMORY_DATABASE, openDatabase } from "../src/db";
-import { SqliteNullifierRegistry } from "../src/desks";
+import { NullifierRepository } from "../src/desks";
 import { ContextInventory, Directory, type InventoryNote } from "../src/directory";
 import type { ChatMessage, LlmClient } from "../src/llm/client";
 import { ACME_DATASET_PATH, loadSeedDataset } from "../src/memory/seed-dataset";
@@ -44,11 +44,15 @@ export const ledgers = {
   alice: testKey("ledger:alice"),
   bob: testKey("ledger:bob"),
   chloe: testKey("ledger:chloe"),
+  david: testKey("ledger:david"),
+  emma: testKey("ledger:emma"),
 };
 export const agents = {
   alice: testKey("agent:alice"),
   bob: testKey("agent:bob"),
   chloe: testKey("agent:chloe"),
+  david: testKey("agent:david"),
+  emma: testKey("agent:emma"),
 };
 export type DemoEmployee = keyof typeof ledgers;
 
@@ -150,7 +154,7 @@ export function seedNotes(): InventoryNote[] {
 export interface Harness extends EnclaveApp {
   readonly clock: TestClock;
   readonly llm: FakeLlm;
-  readonly nullifiers: SqliteNullifierRegistry;
+  readonly nullifiers: NullifierRepository;
   readonly notes: InventoryNote[];
   readonly services: EnclaveServices;
 }
@@ -162,7 +166,7 @@ export async function createHarness(
   const clock = new TestClock();
   const notes = options.notes ?? seedNotes();
   const llm = new FakeLlm();
-  const nullifiers = new SqliteNullifierRegistry(db, () => clock.now().getTime());
+  const nullifiers = new NullifierRepository(db);
   const enclave = await createEnclaveApp({
     db,
     directory: testDirectory(),
@@ -173,7 +177,6 @@ export async function createHarness(
     dstack: new FakeDstack((options.measurement ?? MEASUREMENT).slice(2)),
     requireChannel: false,
     countTokens: (text: string) => Math.ceil(text.length / 4),
-    nullifiers,
   });
   return { ...enclave, clock, llm, nullifiers, notes };
 }

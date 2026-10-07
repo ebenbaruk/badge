@@ -51,6 +51,8 @@ const NAMES: Record<DemoEmployee, { name: string; team: string }> = {
   alice: { name: "Alice Martin", team: "Ventes" },
   bob: { name: "Bob Durand", team: "Grands comptes" },
   chloe: { name: "Chloe Bernard", team: "Juridique & conformite" },
+  david: { name: "David Moreau", team: "Strategie" },
+  emma: { name: "Emma Leroy", team: "Strategie" },
 };
 
 export function nowSec(h: Harness): bigint {

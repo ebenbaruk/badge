@@ -7,8 +7,8 @@ import { loadSeedDataset, SeedDatasetError } from "./seed-dataset";
 describe("acme demo dataset", () => {
   const dataset = loadSeedDataset();
 
-  it("has the three demo employees, with Alice's Ledger address", () => {
-    expect(dataset.employees.map((e) => e.id)).toEqual(["alice", "bob", "chloe"]);
+  it("has the five demo employees, with Alice's Ledger address", () => {
+    expect(dataset.employees.map((e) => e.id)).toEqual(["alice", "bob", "chloe", "david", "emma"]);
     expect(dataset.employees[0]?.ledgerAddress).toBe("0x9858EfFD232B4033E47d90003D41EC34EcaEda94");
   });
 

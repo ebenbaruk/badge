@@ -209,7 +209,10 @@ describe("one-off consents", () => {
     ).json;
     expect((await orionTask(h)).allowed.some((e: { via: string }) => e.via === "grant_reused")).toBe(true);
 
-    const foreignPrepare = await call(h, "POST", "/v1/revocations/prepare", { as: "alice", body: { grantId } });
+    const foreignPrepare = await call(h, "POST", "/v1/revocations/prepare", {
+      as: "alice",
+      body: { grantId },
+    });
     expect(foreignPrepare.json.error.code).toBe("NOT_FOUND");
     const message = await preparedRevoke(h, "bob", { grantId });
     expect(message).toMatchObject({

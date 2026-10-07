@@ -18,7 +18,7 @@ import { registerConsentRoutes } from "./routes/consents";
 import { registerDeskRoutes } from "./routes/desks";
 import { registerMeRoute, registerPublicRoutes } from "./routes/identity";
 import { registerTaskRoutes } from "./routes/tasks";
-import { createServices, prepareEnclaveState, type AppDeps, type EnclaveServices } from "./services";
+import { createServices, type AppDeps, type EnclaveServices } from "./services";
 
 function defaultUnexpectedErrorLogger(error: unknown): void {
   // Name only: an unexpected error message could quote internal data (excerpt text, model output).
@@ -62,7 +62,6 @@ export async function createEnclaveApp(deps: AppDeps): Promise<EnclaveApp> {
   });
   const { measurement } = await security.identity.read();
   const services = createServices(deps, { measurement });
-  await prepareEnclaveState(services);
 
   registerPublicRoutes(app, services);
   registerMeRoute(app, services);

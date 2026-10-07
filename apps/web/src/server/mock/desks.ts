@@ -46,8 +46,9 @@ import {
 } from "./state";
 
 /**
- * Research has two extra directory-only members (no demo Ledger) whose identities the seed pre-registers, so the
- * anonymity set is 3 once Bob joins: Semaphore warns that groups of 1 or 2 are not anonymous.
+ * MOCK ONLY (UI development, never a real enclave). Research also has David and Emma, who are not web personas: the
+ * mock stands in for their Ledger joins with fixed identities, so the anonymity set is 3 once Bob joins. With the
+ * real enclave they join with their own Speculos Ledgers (scripts/seed-desks.ts) and no such identity exists.
  */
 const PREREGISTERED_MEMBERS: Readonly<Record<DeskId, readonly string[]>> = {
   research: ["david", "emma"],

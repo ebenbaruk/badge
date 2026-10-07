@@ -1,14 +1,12 @@
 /**
  * Live end-to-end demo of Badge (`pnpm demo`), against the real local stack: dstack simulator (simulated TEE),
- * the enclave (child process, or BADGE_ENCLAVE_URL), Honcho memory, the build LLM profile, and the three Speculos
+ * the enclave (child process, or BADGE_ENCLAVE_URL), Honcho memory, the build LLM profile, and the five Speculos
  * Ledgers driven automatically. Every call goes through the attested channel with the SDK (@badge/client); every
  * consent is a real clear-signed Ledger signature. Each step is asserted: the process exits non-zero on failure.
  *
  * Prerequisites: infra/stack.sh up && infra/stack.sh seed, infra/speculos.sh, infra/setup.sh (ZK artifacts, CAL
  * test key). Costs a few cents of LLM calls (classification, embeddings, briefs).
  */
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import {
   complianceKeyDeriveMessage,
   complianceKeyFromSignature,
@@ -34,25 +32,30 @@ import {
 } from "@badge/consent";
 import {
   buildDeskGroup,
+  checkDeskProof,
   createDeskProof,
   decodeDeskProof,
   deriveDeskIdentity,
   encodeDeskProof,
-  InMemoryNullifierRegistry,
-  verifyDeskProof,
 } from "@badge/zk";
-import { bytesToBigInt, getAddress, type Address, type LocalAccount } from "viem";
+import type { LocalAccount } from "viem";
 import { z } from "zod";
 import {
   check,
   DemoLedger,
   ensureDstackSimulator,
   Narrator,
-  REPO_ROOT,
   startEnclave,
   type DemoEmployee,
   type EnclaveHandle,
 } from "./demo-support";
+import {
+  enrollAndJoinDesk,
+  loadPeople,
+  OTHER_RESEARCH_MEMBERS,
+  randomNonce,
+  RESEARCH_DESK,
+} from "./desk-members";
 
 const EMPLOYEES = ["alice", "bob", "chloe"] as const satisfies readonly DemoEmployee[];
 const AGENT_NAME = "Claude Code";
@@ -83,42 +86,7 @@ const POLICY_TTL_SECONDS = 30n * 24n * 3600n;
 const BOB_ORION_MARKERS = [/12\s?%/, /lef[eè]vre/i, /trimestri/i, /-\s?15\s?%/, /4 entrep[oô]ts/i, /40\s?k/i];
 /** Chloe's confidential HR note: must never reach a brief. */
 const CHLOE_HR_MARKERS = [/prud/i, /julien petit/i, /villeurbanne/i];
-const NONCE_BYTES = 32;
 const BRIEF_PREVIEW_CHARS = 400;
-
-const SeedSchema = z.object({
-  company: z.object({ name: z.string() }),
-  employees: z.array(
-    z.object({ id: z.string(), name: z.string(), team: z.string(), ledgerAddress: z.string().nullable() }),
-  ),
-});
-
-interface Person {
-  readonly id: DemoEmployee;
-  readonly name: string;
-  readonly team: string;
-  readonly address: Address;
-}
-
-function loadDirectory(): { company: string; people: Record<DemoEmployee, Person> } {
-  const seed = SeedSchema.parse(JSON.parse(readFileSync(join(REPO_ROOT, "infra/seed/acme.json"), "utf8")));
-  const people = {} as Record<DemoEmployee, Person>;
-  for (const id of EMPLOYEES) {
-    const employee = seed.employees.find((e) => e.id === id);
-    if (!employee?.ledgerAddress) throw new Error(`the seed has no Ledger address for ${id}`);
-    people[id] = {
-      id,
-      name: employee.name,
-      team: employee.team,
-      address: getAddress(employee.ledgerAddress),
-    };
-  }
-  return { company: seed.company.name, people };
-}
-
-function randomNonce(): bigint {
-  return bytesToBigInt(globalThis.crypto.getRandomValues(new Uint8Array(NONCE_BYTES)));
-}
 
 const nowSeconds = () => toUnixSeconds(new Date());
 
@@ -146,7 +114,7 @@ function describeTask(narrator: Narrator, task: Task): void {
 
 async function main(): Promise<void> {
   const narrator = new Narrator();
-  const { company, people } = loadDirectory();
+  const { company, people } = loadPeople([...EMPLOYEES, ...OTHER_RESEARCH_MEMBERS]);
   const ledgers = {} as Record<DemoEmployee, DemoLedger>;
   const agents = {} as Record<DemoEmployee, BadgeClient>;
   let enclave: EnclaveHandle | undefined;
@@ -178,10 +146,10 @@ async function main(): Promise<void> {
         `Enclave Badge sur ${enclave.url}${enclave.logFile ? ` (journal : ${enclave.logFile})` : ""}.`,
       );
       const connected = await Promise.all(
-        EMPLOYEES.map((who) => DemoLedger.connect(who, people[who].address)),
+        [...EMPLOYEES, ...OTHER_RESEARCH_MEMBERS].map((who) => DemoLedger.connect(who, people[who].address)),
       );
       for (const ledger of connected) ledgers[ledger.who] = ledger;
-      narrator.say("Ledgers d'Alice, Bob et Chloé connectés, adresses conformes à l'annuaire.");
+      narrator.say("Ledgers d'Alice, Bob, Chloé, David et Emma connectés, adresses conformes à l'annuaire.");
       const attestation = await client(enclave.url).connect();
       check(attestation.simulated, "this demo expects the simulated TEE (dstack simulator)");
       narrator.say(
@@ -230,6 +198,28 @@ async function main(): Promise<void> {
         );
       }
     });
+
+    await narrator.step(
+      "David et Emma (desk Research) rejoignent leur desk, chacun avec son Ledger",
+      async () => {
+        for (const who of OTHER_RESEARCH_MEMBERS) {
+          const desk = await enrollAndJoinDesk({
+            client: (sessionKey) => client(url, sessionKey),
+            ledger: ledgers[who],
+            person: people[who],
+            company,
+            measurement,
+            desk: RESEARCH_DESK,
+          });
+          narrator.say(
+            `${people[who].name} a rejoint ${desk.name} : ${desk.members} identité(s) anonyme(s).`,
+          );
+        }
+        narrator.say(
+          "Chaque membre du groupe est un vrai détenteur de Ledger : personne ne peut prouver à sa place.",
+        );
+      },
+    );
 
     const orion = await narrator.step(
       "L'agent d'Alice demande un brief pour le rendez-vous Orion",
@@ -426,7 +416,7 @@ async function main(): Promise<void> {
             nonce: randomNonce(),
           }),
         );
-        check(desk.members >= 3, `the Research anonymity set is too small (${desk.members})`);
+        check(desk.members === 3, `the Research desk should have 3 Ledger members, has ${desk.members}`);
         narrator.say(
           `Desk ${desk.name} : ${desk.members} identités anonymes, racine ${desk.root?.slice(0, 12)}...`,
         );
@@ -482,17 +472,13 @@ async function main(): Promise<void> {
         check(request.status === "delivered" && delivery, `desk request is ${request.status}`);
         check(hashExcerpt(delivery.excerpt) === delivery.excerptHash, "the excerpt does not match its hash");
         check(!/bob|durand|58a57/i.test(JSON.stringify(request)), "the delivery reveals who shared");
-        const root = (await agents.alice.getDesk("research")).root;
-        check(root !== null, "Research has no root");
-        await verifyDeskProof(
-          decodeDeskProof(delivery.proof),
-          {
-            expectedRoot: BigInt(root),
-            expectedExcerptHash: delivery.excerptHash,
-            expectedRequestId: request.id,
-          },
-          new InMemoryNullifierRegistry(),
-        );
+        // Against the Research group snapshotted with the request (the root the share was proven against).
+        check(request.sourceRoot !== null, "the request has no snapshotted Research root");
+        await checkDeskProof(decodeDeskProof(delivery.proof), {
+          expectedRoot: BigInt(request.sourceRoot),
+          expectedExcerptHash: delivery.excerptHash,
+          expectedRequestId: request.id,
+        });
         narrator.say("Preuve vérifiée : un membre du desk Research a partagé cet extrait, sans dire lequel.");
         narrator.detail(delivery.excerpt);
         return request.id;

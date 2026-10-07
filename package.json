@@ -14,7 +14,8 @@
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
     "dev": "pnpm -r --parallel --if-present dev",
-    "demo": "pnpm --filter @badge/scripts demo"
+    "demo": "pnpm --filter @badge/scripts demo",
+    "desks:seed": "pnpm --filter @badge/scripts seed-desks"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

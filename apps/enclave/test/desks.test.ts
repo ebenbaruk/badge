@@ -14,8 +14,8 @@ import {
 import { decodeBadgeMessage } from "@badge/consent";
 import type { Hex } from "viem";
 import { beforeAll, describe, expect, it } from "vitest";
-import { fixtureCommitment } from "../src/desks";
-import { call, onboard } from "./flows";
+import { DeskMemberRepository } from "../src/desks";
+import { call, onboard, refreshSessions } from "./flows";
 import {
   complianceKeyPair,
   createHarness,
@@ -58,11 +58,14 @@ async function registerComplianceKey(h: Harness) {
 async function pendingDeskShare(
   h: Harness,
   who: DemoEmployee,
+  requestId?: Hex,
 ): Promise<{ requestId: Hex; message: DeskShare }> {
   const consents: Array<{ kind: string; id: Hex; message: unknown }> = (
     await call(h, "GET", "/v1/consents", { as: who })
   ).json.consents;
-  const share = consents.find((c) => c.kind === "DeskShare");
+  const share = consents.find(
+    (c) => c.kind === "DeskShare" && (requestId === undefined || c.id === requestId),
+  );
   if (!share) throw new Error(`no desk share for ${who}`);
   return { requestId: share.id, message: decodeBadgeMessage("DeskShare", share.message) };
 }
@@ -85,17 +88,18 @@ async function proofFor(
   );
 }
 
-describe("desk membership", () => {
-  it("registers the demo fixtures at boot so the Research desk starts with an anonymity set", async () => {
-    const h = await createHarness();
-    await onboard(h, "bob");
-    const desk = (await call(h, "GET", "/v1/desks/research", { as: "bob" })).json;
-    expect(desk.members).toBe(2);
-    expect(desk.commitments[0]).toBe(
-      (await fixtureCommitment("badge-demo-desk-fixture:david", "Acme")).toString(),
-    );
-  });
+/** Onboards the given employees and joins each of them to Research with their own (test) Ledger. */
+async function joinResearch(h: Harness, ...who: DemoEmployee[]): Promise<Map<DemoEmployee, Identity>> {
+  const identities = new Map<DemoEmployee, Identity>();
+  for (const employee of who) {
+    const identity = await deskIdentity(employee);
+    expect((await joinDesk(h, employee, "Research", identity)).status).toBe(201);
+    identities.set(employee, identity);
+  }
+  return identities;
+}
 
+describe("desk membership", () => {
   it("lets Bob join Research but refuses a desk he does not belong to, and a second join", async () => {
     const h = await createHarness();
     await onboard(h, "bob");
@@ -103,8 +107,23 @@ describe("desk membership", () => {
     expect((await joinDesk(h, "bob", "Origination", identity)).json.error.code).toBe("FORBIDDEN");
     const joined = await joinDesk(h, "bob", "Research", identity);
     expect(joined.status).toBe(201);
-    expect(joined.json.members).toBe(3);
+    // No identity is pre-registered: every member joins with their own Ledger.
+    expect(joined.json.members).toBe(1);
     expect((await joinDesk(h, "bob", "Research", identity)).json.error.code).toBe("ALREADY_EXISTS");
+  });
+
+  it("refuses desk requests while the source desk has fewer than 3 Ledger-joined members", async () => {
+    const h = await createHarness();
+    await onboard(h, "alice", "bob", "david", "emma");
+    await joinResearch(h, "bob", "david");
+    const tooSmall = await call(h, "POST", "/v1/desk-requests", { as: "alice", body: MARKET_TASK });
+    expect(tooSmall.status).toBe(409);
+    expect(tooSmall.json.error.code).toBe("ANONYMITY_SET_TOO_SMALL");
+    await joinResearch(h, "emma");
+    const created = await call(h, "POST", "/v1/desk-requests", { as: "alice", body: MARKET_TASK });
+    expect(created.status).toBe(201);
+    const desk = (await call(h, "GET", "/v1/desks/research", { as: "alice" })).json;
+    expect(created.json.sourceRoot).toBe(desk.root);
   });
 });
 
@@ -114,7 +133,8 @@ describe("anonymous desk share", () => {
 
   beforeAll(async () => {
     h = await createHarness();
-    await onboard(h, "alice", "bob", "chloe");
+    await onboard(h, "alice", "bob", "chloe", "david", "emma");
+    await joinResearch(h, "david", "emma");
     bob = await deskIdentity("bob");
     expect((await joinDesk(h, "bob", "Research", bob)).status).toBe(201);
     expect((await joinDesk(h, "alice", "Origination", await deskIdentity("alice"))).status).toBe(201);
@@ -233,7 +253,7 @@ describe("anonymous desk share", () => {
       const signature = await signTyped(ledgers.bob, "DeskShare", share.message);
       const proof = await proofFor(h, bob, share);
       // Burn the nullifier as if the same member had already answered this request.
-      expect(await h.nullifiers.consume(BigInt(share.requestId), BigInt(proof.nullifier))).toBe(true);
+      h.nullifiers.record(BigInt(share.requestId), BigInt(proof.nullifier), h.clock.now().getTime());
       const response = await call(h, "POST", `/v1/desk-requests/${share.requestId}/approve`, {
         as: "bob",
         body: { signature, proof },
@@ -243,4 +263,75 @@ describe("anonymous desk share", () => {
     },
     PROOF_TIMEOUT_MS,
   );
+
+  it(
+    "keeps the nullifier free when the delivery fails after the proof check, so the owner can retry",
+    async () => {
+      const created = (await call(h, "POST", "/v1/desk-requests", { as: "alice", body: MARKET_TASK })).json;
+      const share = await pendingDeskShare(h, "bob", created.id);
+      const signature = await signTyped(ledgers.bob, "DeskShare", share.message);
+      const proof = await proofFor(h, bob, share);
+      const audit = h.services.ctx.audit;
+      const append = audit.append.bind(audit);
+      audit.append = () => {
+        throw new Error("disk full");
+      };
+      const failed = await call(h, "POST", `/v1/desk-requests/${share.requestId}/approve`, {
+        as: "bob",
+        body: { signature, proof },
+      });
+      audit.append = append;
+      expect(failed.status).toBe(500);
+      const retried = await call(h, "POST", `/v1/desk-requests/${share.requestId}/approve`, {
+        as: "bob",
+        body: { signature, proof },
+      });
+      expect(retried.json).toEqual({ requestId: share.requestId, status: "delivered" });
+    },
+    PROOF_TIMEOUT_MS,
+  );
+
+  it(
+    "proves against the group snapshotted with the request: a later join changes nothing for it",
+    async () => {
+      const created = (await call(h, "POST", "/v1/desk-requests", { as: "alice", body: MARKET_TASK })).json;
+      const share = await pendingDeskShare(h, "bob", created.id);
+      const proof = await proofFor(h, bob, share);
+      // Someone joins Research after the request (the directory has no 4th member: inserted directly).
+      new DeskMemberRepository(h.services.ctx.db).add({
+        deskId: "research",
+        employeeId: "late-joiner",
+        commitment: 123456789n,
+        nowMs: h.clock.now().getTime(),
+      });
+      const current = (await call(h, "GET", "/v1/desks/research", { as: "alice" })).json;
+      expect(current.root).not.toBe(created.sourceRoot);
+      const approved = await call(h, "POST", `/v1/desk-requests/${share.requestId}/approve`, {
+        as: "bob",
+        body: { signature: await signTyped(ledgers.bob, "DeskShare", share.message), proof },
+      });
+      expect(approved.json.status).toBe("delivered");
+      const delivered = (await call(h, "GET", `/v1/desk-requests/${created.id}`, { as: "alice" })).json;
+      expect(delivered.sourceRoot).toBe(created.sourceRoot);
+      expect(delivered.deliveries[0].proof.merkleTreeRoot).toBe(created.sourceRoot);
+    },
+    PROOF_TIMEOUT_MS,
+  );
+});
+
+describe("expired desk offers", () => {
+  it("are no longer shown to the owner and the request reads expired", async () => {
+    const h = await createHarness();
+    await onboard(h, "alice", "bob", "david", "emma");
+    await joinResearch(h, "bob", "david", "emma");
+    const created = (await call(h, "POST", "/v1/desk-requests", { as: "alice", body: MARKET_TASK })).json;
+    expect(created.status).toBe("waiting_share");
+    h.clock.advance(25 * 3600 * 1000);
+    await refreshSessions(h, "alice", "bob");
+    const consents = (await call(h, "GET", "/v1/consents", { as: "bob" })).json.consents;
+    expect(consents.filter((c: { kind: string }) => c.kind === "DeskShare")).toEqual([]);
+    expect((await call(h, "GET", `/v1/desk-requests/${created.id}`, { as: "alice" })).json.status).toBe(
+      "expired",
+    );
+  });
 });

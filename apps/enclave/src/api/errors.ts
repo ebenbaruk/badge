@@ -31,6 +31,7 @@ const ENCLAVE_STATUS: Record<EnclaveErrorCode, ContentfulStatusCode> = {
   RULE_BLOCKED: 422,
   NO_RULE: 422,
   COMPLIANCE_KEY_MISSING: 409,
+  ANONYMITY_SET_TOO_SMALL: 409,
   UPSTREAM_FAILED: 502,
 };
 

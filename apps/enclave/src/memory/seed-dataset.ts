@@ -4,7 +4,7 @@ import { z } from "zod";
 import { REPO_ROOT } from "../llm/env-file";
 import { COMPANY_OWNER_ID, MemoryNoteSchema, NoteIdSchema, OwnerIdSchema } from "./types";
 
-/** The demo dataset shipped with the repository (company Acme, employees alice, bob, chloe). */
+/** The demo dataset shipped with the repository (company Acme, employees alice, bob, chloe, david, emma). */
 export const ACME_DATASET_PATH = resolve(REPO_ROOT, "infra/seed/acme.json");
 
 const AddressSchema = z.string().regex(/^0x[0-9a-fA-F]{40}$/, "not an Ethereum address");

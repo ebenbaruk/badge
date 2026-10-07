@@ -1,5 +1,5 @@
 /**
- * Plumbing of the live demo (scripts/demo.ts): the dstack simulator, the enclave child process, the three Speculos
+ * Plumbing of the live demo (scripts/demo.ts): the dstack simulator, the enclave child process, the five Speculos
  * Ledgers driven automatically, and the narration. Nothing here knows the scenario.
  */
 import { execFileSync, spawn, type ChildProcess } from "node:child_process";
@@ -28,6 +28,8 @@ export const DEVICE_URLS = {
   alice: process.env["BADGE_SPECULOS_ALICE"] ?? "http://localhost:5001",
   bob: process.env["BADGE_SPECULOS_BOB"] ?? "http://localhost:5002",
   chloe: process.env["BADGE_SPECULOS_CHLOE"] ?? "http://localhost:5003",
+  david: process.env["BADGE_SPECULOS_DAVID"] ?? "http://localhost:5004",
+  emma: process.env["BADGE_SPECULOS_EMMA"] ?? "http://localhost:5005",
 } as const;
 export type DemoEmployee = keyof typeof DEVICE_URLS;
 

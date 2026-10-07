@@ -17,13 +17,7 @@ import {
 } from "@badge/consent";
 import { sealToPublicKey } from "@badge/attest";
 import type { ConsentListWire, Desk as DeskWire, DeskRequest, DeskShareDecision } from "@badge/client";
-import {
-  decodeDeskProof,
-  deskGroupRoot,
-  encodeDeskProof,
-  verifyDeskProof,
-  type NullifierRegistry,
-} from "@badge/zk";
+import { checkDeskProof, decodeDeskProof, deskGroupRoot, encodeDeskProof } from "@badge/zk";
 import type { Hex } from "viem";
 import { z } from "zod";
 import { msToUnixSeconds, nowSeconds } from "../clock";
@@ -36,10 +30,21 @@ import { ComplianceKeyRepository } from "../compliance/repository";
 import type { DomainContext } from "../policy/engine";
 import type { Caller } from "../security/types";
 import { deviceLabel } from "../tasks/labels";
-import { DeskMemberRepository, DeskRequestRepository, type DeskOfferRow } from "./repository";
+import {
+  DeskMemberRepository,
+  DeskRequestRepository,
+  NullifierRepository,
+  type DeskOfferRow,
+} from "./repository";
 
 /** A desk-share request stays answerable for a day, like a one-off consent. */
 export const DESK_SHARE_TTL_SECONDS = 24n * 60n * 60n;
+/**
+ * Fewest Ledger-joined members a source desk needs before it may be asked anything: a proof only hides the sharer
+ * among the group's members, and Semaphore warns that groups of 1 or 2 are not anonymous. Every member counts only
+ * once they joined with their own Ledger (DeskJoin): no identity with a publicly derivable secret is ever a member.
+ */
+export const MIN_DESK_ANONYMITY_SET = 3;
 const MAX_DESK_TASK_CHARS = 2_000;
 /** Who appears as the actor of an anonymous share in the audit log. */
 const ANONYMOUS_ACTOR = "anonymous";
@@ -70,7 +75,6 @@ export interface SealedSignerIdentity {
 export interface DeskServiceDeps {
   readonly ctx: DomainContext;
   readonly memory: MemoryStore;
-  readonly nullifiers: NullifierRegistry;
 }
 
 export class DeskService {
@@ -78,8 +82,10 @@ export class DeskService {
   private readonly requests: DeskRequestRepository;
   private readonly nonces: NonceRepository;
   private readonly complianceKeys: ComplianceKeyRepository;
+  private readonly nullifiers: NullifierRepository;
 
   constructor(private readonly deps: DeskServiceDeps) {
+    this.nullifiers = new NullifierRepository(deps.ctx.db);
     this.members = new DeskMemberRepository(deps.ctx.db);
     this.requests = new DeskRequestRepository(deps.ctx.db);
     this.nonces = new NonceRepository(deps.ctx.db);
@@ -92,12 +98,6 @@ export class DeskService {
 
   private nowMs(): number {
     return this.ctx.clock.now().getTime();
-  }
-
-  /** Root of the desk's group, or null when nobody has joined yet. */
-  private root(deskId: string): bigint | null {
-    const commitments = this.members.commitments(deskId);
-    return commitments.length === 0 ? null : deskGroupRoot(commitments);
   }
 
   /** GET /v1/desks/:desk: what a member needs to build their proof. */
@@ -144,7 +144,6 @@ export class DeskService {
         deskId: desk.id,
         employeeId: employee.id,
         commitment: message.identityCommitment,
-        fixture: false,
         nowMs,
       });
       const commitments = this.members.commitments(desk.id);
@@ -163,15 +162,6 @@ export class DeskService {
     return this.getDesk(desk.id);
   }
 
-  /**
-   * Registers a demo fixture's identity commitment (directory-only employees, see the dataset). Idempotent, and
-   * run at boot before any request so fixtures always come first in the registration order.
-   */
-  registerFixture(deskId: string, employeeId: string, commitment: bigint): void {
-    if (this.members.has(deskId, employeeId)) return;
-    this.members.add({ deskId, employeeId, commitment, fixture: true, nowMs: this.nowMs() });
-  }
-
   private pickRule(fromDesk: Desk, ruleId: string | undefined): ExchangeRule {
     const rules = this.ctx.directory.rulesForRecipient(fromDesk.id);
     const candidates = ruleId === undefined ? rules : rules.filter((rule) => rule.id === ruleId);
@@ -184,7 +174,9 @@ export class DeskService {
   /**
    * POST /v1/desk-requests: finds, under the exchange rule, the best excerpt of each source-desk member whose
    * context matches the rule's topics, and prepares one DeskShare per owner. Owners who have not joined the source
-   * desk are skipped: they could not prove membership.
+   * desk are skipped: they could not prove membership. Refused while the source desk has fewer than
+   * {@link MIN_DESK_ANONYMITY_SET} joined members, and the desk's root is snapshotted: every share of the request
+   * proves membership of that exact group, so later joins neither break the proofs nor narrow them down.
    */
   async createRequest(caller: Caller, input: CreateDeskRequestInput): Promise<DeskRequest> {
     const { directory } = this.ctx;
@@ -194,6 +186,14 @@ export class DeskService {
     }
     const rule = this.pickRule(fromDesk, input.ruleId);
     const sourceDesk = directory.requireDesk(rule.sourceDesk);
+    const commitments = this.members.commitments(sourceDesk.id);
+    if (commitments.length < MIN_DESK_ANONYMITY_SET) {
+      throw new EnclaveError(
+        "ANONYMITY_SET_TOO_SMALL",
+        `desk ${sourceDesk.id} has ${commitments.length} Ledger-joined member(s): at least ${MIN_DESK_ANONYMITY_SET} are needed to hide who shares`,
+      );
+    }
+    const sourceRoot = deskGroupRoot(commitments).toString(10);
     const candidates = await this.deps.memory.findCandidates(input.task, { requesterId: caller.employeeId });
     const bestPerOwner = new Map<string, (typeof candidates)[number]>();
     for (const candidate of candidates) {
@@ -219,6 +219,7 @@ export class DeskService {
         source_desk: sourceDesk.id,
         task: input.task,
         created_ms: nowMs,
+        source_root: sourceRoot,
       });
       for (const candidate of bestPerOwner.values()) {
         const label = deviceLabel(candidate.text);
@@ -272,8 +273,13 @@ export class DeskService {
    * without reading what would leave). The requester is identified by desk only.
    */
   pendingShares(caller: Caller): DeskShareConsentWire[] {
-    return this.requests.pendingForOwner(caller.employeeId).map((offer) => {
-      const message = decodeBadgeMessage("DeskShare", JSON.parse(offer.message));
+    const now = nowSeconds(this.ctx.clock);
+    // An expired DeskShare can no longer be signed (checkDeskShare): it is not shown to the owner any more.
+    const live = this.requests
+      .pendingForOwner(caller.employeeId)
+      .map((offer) => ({ offer, message: decodeBadgeMessage("DeskShare", JSON.parse(offer.message)) }))
+      .filter(({ message }) => message.expiresAt > now);
+    return live.map(({ offer, message }) => {
       return {
         kind: "DeskShare",
         id: offer.request_id,
@@ -298,8 +304,9 @@ export class DeskService {
   /**
    * POST /v1/desk-requests/:id/approve. Checks, in order: the DeskShare signature by the caller's Ledger and their
    * membership of the source desk, the intrinsic checks against the stored excerpt, that a compliance key exists
-   * (no escrow, no anonymous share), the nonce, then the ZK proof (root of the source desk, excerpt, request,
-   * fresh nullifier). Only then is the excerpt delivered and the sealed signer identity logged.
+   * (no escrow, no anonymous share), the nonce, then the ZK proof (root of the source desk snapshotted with the
+   * request, excerpt, request). The excerpt is delivered, the nonce and nullifier consumed and the sealed signer
+   * identity logged in one transaction.
    */
   async approve(
     caller: Caller,
@@ -334,14 +341,15 @@ export class DeskService {
       throw new EnclaveError("NONCE_REUSED", `nonce ${message.nonce} of ${address} was already used`);
     }
     const proof = decodeDeskProof(proofJson);
-    const root = this.root(request.source_desk);
-    if (root === null)
-      throw new EnclaveError("FORBIDDEN", `desk ${request.source_desk} has no registered member`);
-    const { nullifier } = await verifyDeskProof(
-      proof,
-      { expectedRoot: root, expectedExcerptHash: message.excerptHash, expectedRequestId: request.id },
-      this.deps.nullifiers,
-    );
+    if (request.source_root === null) {
+      throw new EnclaveError("FORBIDDEN", `desk request ${request.id} has no snapshotted group: ask again`);
+    }
+    // Against the group snapshotted at creation, never the current one (see createRequest).
+    const { nullifier } = await checkDeskProof(proof, {
+      expectedRoot: BigInt(request.source_root),
+      expectedExcerptHash: message.excerptHash,
+      expectedRequestId: request.id,
+    });
     const signer: SealedSignerIdentity = {
       employeeId: owner.id,
       address,
@@ -358,6 +366,8 @@ export class DeskService {
         throw new EnclaveError("NOT_PENDING", "desk share was decided concurrently");
       }
       this.nonces.consume(address, message.nonce, "DeskShare", nowMs);
+      // In the same transaction as the delivery: if anything fails, the nullifier stays free for a retry.
+      this.nullifiers.record(BigInt(request.id), nullifier, nowMs);
       this.ctx.audit.append({
         type: "desk.share",
         actor: ANONYMOUS_ACTOR,
@@ -386,7 +396,14 @@ export class DeskService {
     return { requestId: offer.request_id, status: "rejected" };
   }
 
-  /** GET /v1/desk-requests/:id (requester only): anonymous deliveries, never the owners. */
+  private isExpired(offer: DeskOfferRow, now: bigint): boolean {
+    return decodeBadgeMessage("DeskShare", JSON.parse(offer.message)).expiresAt <= now;
+  }
+
+  /**
+   * GET /v1/desk-requests/:id (requester only): anonymous deliveries, never the owners, with the snapshotted root
+   * the requester checks every proof against.
+   */
   getRequest(caller: Caller, requestId: Hex): DeskRequest {
     const request = this.requests.getRequest(requestId);
     if (!request || request.requester_id !== caller.employeeId) {
@@ -396,14 +413,19 @@ export class DeskService {
     if (!rule) throw new Error(`desk request references unknown rule ${request.rule_id}`);
     const offers = this.requests.offersOf(request.id);
     const delivered = offers.filter((o) => o.status === "delivered");
+    const now = nowSeconds(this.ctx.clock);
+    const stillPending = offers.filter((o) => o.status === "pending" && !this.isExpired(o, now));
+    const expired = offers.some((o) => o.status === "pending" && this.isExpired(o, now));
     const status: DeskRequestStatus =
       offers.length === 0
         ? "no_match"
         : delivered.length > 0
           ? "delivered"
-          : offers.some((o) => o.status === "pending")
+          : stillPending.length > 0
             ? "waiting_share"
-            : "declined";
+            : expired
+              ? "expired"
+              : "declined";
     const sourceDesk = this.ctx.directory.requireDesk(request.source_desk);
     return {
       id: request.id,
@@ -412,6 +434,7 @@ export class DeskService {
       ruleLabel: rule.label,
       fromDesk: request.from_desk,
       sourceDesk: sourceDesk.id,
+      sourceRoot: request.source_root,
       // Ordered by excerpt hash, not by delivery time: the order must not hint at who answered first.
       deliveries: delivered
         .sort((a, b) => a.excerpt_hash.localeCompare(b.excerpt_hash))

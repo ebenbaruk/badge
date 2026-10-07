@@ -239,7 +239,10 @@ export interface DeskRequestView {
     sourceDesk: DeskId;
     nullifier: string;
     root: string;
-    /** The Semaphore proof was checked by the requester's side against the source desk's current root. */
+    /**
+     * Checked on the requester's side: the excerpt hashes to the proven message, and the Semaphore proof is against
+     * the source desk's group snapshotted with the request.
+     */
     proofVerified: boolean;
     /** Absent when the enclave does not timestamp deliveries (live). */
     deliveredAt?: string;

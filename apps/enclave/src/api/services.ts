@@ -3,12 +3,11 @@
  * connection: tests pass fakes, src/main.ts passes the real implementations.
  */
 import type { DstackAgent } from "@badge/attest/server";
-import type { NullifierRegistry } from "@badge/zk";
 import { AuditLog } from "../audit";
 import type { Clock } from "../clock";
 import { ComplianceService } from "../compliance";
 import type { Database } from "../db";
-import { DeskService, registerDeskFixtures, SqliteNullifierRegistry } from "../desks";
+import { DeskService } from "../desks";
 import type { ContextInventory, Directory } from "../directory";
 import type { LlmClient } from "../llm/client";
 import type { MemoryStore } from "../memory/types";
@@ -32,8 +31,6 @@ export interface AppDeps {
   readonly requireChannel: boolean;
   /** Defaults to the o200k_base tokenizer. */
   readonly countTokens?: TokenCounter;
-  /** Defaults to the SQLite registry in `db`. */
-  readonly nullifiers?: NullifierRegistry;
   /** Receives unexpected errors (the API answers a generic 500). Defaults to logging the error name. */
   readonly onUnexpectedError?: (error: unknown) => void;
 }
@@ -74,16 +71,7 @@ export function createServices(deps: AppDeps, enclave: EnclaveMeasurement): Encl
       inventory: deps.inventory,
       countTokens: deps.countTokens ?? createO200kTokenCounter(),
     }),
-    desks: new DeskService({
-      ctx,
-      memory: deps.memory,
-      nullifiers: deps.nullifiers ?? new SqliteNullifierRegistry(deps.db, () => deps.clock.now().getTime()),
-    }),
+    desks: new DeskService({ ctx, memory: deps.memory }),
     compliance: new ComplianceService(ctx),
   };
-}
-
-/** One-time boot work that needs async crypto: registers the demo desk fixtures. Idempotent. */
-export async function prepareEnclaveState(services: EnclaveServices): Promise<void> {
-  await registerDeskFixtures(services.desks, services.ctx.directory);
 }

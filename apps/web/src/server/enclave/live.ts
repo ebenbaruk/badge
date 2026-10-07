@@ -9,14 +9,8 @@
  * the enclave that was just verified.
  */
 import { BadgeApiError, BadgeClient, type Session } from "@badge/client";
-import type { ContextRevoke, SignedMessage } from "@badge/consent";
-import {
-  decodeDeskProof,
-  InMemoryNullifierRegistry,
-  verifyDeskProof,
-  ZkError,
-  type DeskProofWire,
-} from "@badge/zk";
+import { hashExcerpt, type ContextRevoke, type SignedMessage } from "@badge/consent";
+import { decodeDeskProof, checkDeskProof, ZkError, type DeskProofWire } from "@badge/zk";
 import { isAddressEqual, type Hex, type LocalAccount } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { EMPLOYEE_IDS, EMPLOYEES, type DeskId, type EmployeeId } from "@/lib/directory";
@@ -524,45 +518,54 @@ export class LiveEnclave implements EnclaveApi {
         sourceDesk: toDesk,
         nullifier: proof.nullifier.toString(),
         root: proof.merkleTreeRoot.toString(),
-        proofVerified: await this.verifyDelivery(viewer, request.id, toDesk, delivery),
+        proofVerified: await this.verifyDelivery(viewer, request.id, request.sourceRoot, delivery),
       };
     }
     return view;
   }
 
   /**
-   * The requester checks the anonymous delivery itself: the excerpt hash is the proof's message, the request id its
-   * scope, and the root must be the source desk's root as the enclave publishes it. Done once per request.
+   * The requester checks the anonymous delivery itself (see {@link verifyDeskDelivery}). Done once per request: the
+   * root is the one snapshotted with the request, so the outcome cannot change afterwards.
    */
   private async verifyDelivery(
     viewer: EmployeeId,
     requestId: Hex,
-    sourceDesk: DeskId,
-    delivery: { excerptHash: Hex; proof: DeskProofWire },
+    sourceRoot: string | null,
+    delivery: { excerpt: string; excerptHash: Hex; proof: DeskProofWire },
   ): Promise<boolean> {
     const runtime = this.runtime(viewer);
     const known = runtime.verifiedDeliveries.get(requestId);
     if (known !== undefined) return known;
-    const { root } = await this.call(viewer, (client) => client.getDesk(sourceDesk));
-    let verified = false;
-    if (root !== null) {
-      try {
-        await verifyDeskProof(
-          decodeDeskProof(delivery.proof),
-          {
-            expectedRoot: BigInt(root),
-            expectedExcerptHash: delivery.excerptHash,
-            expectedRequestId: requestId,
-          },
-          new InMemoryNullifierRegistry(),
-        );
-        verified = true;
-      } catch (error) {
-        if (!(error instanceof ZkError)) throw error;
-        console.warn(`[badge/web] desk delivery ${requestId} failed verification: ${error.code}`);
-      }
-    }
+    const verified = await verifyDeskDelivery(requestId, sourceRoot, delivery);
     runtime.verifiedDeliveries.set(requestId, verified);
     return verified;
+  }
+}
+
+/**
+ * What the requester can check on an anonymous delivery without trusting anyone: the delivered text is the one the
+ * proof and the DeskShare signature cover (`hashExcerpt(excerpt) === excerptHash`), and the Semaphore proof binds
+ * that hash and this request to a member of the source desk's group as snapshotted when the request was created
+ * (`sourceRoot`). A later join never invalidates it, and the current root is never used.
+ */
+export async function verifyDeskDelivery(
+  requestId: Hex,
+  sourceRoot: string | null,
+  delivery: { excerpt: string; excerptHash: Hex; proof: DeskProofWire },
+): Promise<boolean> {
+  if (sourceRoot === null || hashExcerpt(delivery.excerpt) !== delivery.excerptHash.toLowerCase())
+    return false;
+  try {
+    await checkDeskProof(decodeDeskProof(delivery.proof), {
+      expectedRoot: BigInt(sourceRoot),
+      expectedExcerptHash: delivery.excerptHash,
+      expectedRequestId: requestId,
+    });
+    return true;
+  } catch (error) {
+    if (!(error instanceof ZkError)) throw error;
+    console.warn(`[badge/web] desk delivery ${requestId} failed verification: ${error.code}`);
+    return false;
   }
 }

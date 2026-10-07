@@ -246,11 +246,17 @@ export type DeskDelivery = z.infer<typeof deskDeliverySchema>;
 /** `POST /v1/desk-requests`, `GET /v1/desk-requests/:id` (requester only). */
 export const deskRequestSchema = z.object({
   id: bytes32,
-  status: z.enum(["waiting_share", "delivered", "no_match", "declined"]),
+  /** `expired`: every owner left the request unanswered past the DeskShare expiry (24 h). */
+  status: z.enum(["waiting_share", "delivered", "no_match", "declined", "expired"]),
   ruleId: z.string(),
   ruleLabel: z.string(),
   fromDesk: z.string(),
   sourceDesk: z.string(),
+  /**
+   * Root of the source desk's group when the request was created (decimal): every delivery's proof is against it.
+   * The requester checks each proof against this root and `hashExcerpt(excerpt) === excerptHash`.
+   */
+  sourceRoot: decimal.nullable(),
   /** Ordered by excerpt hash: the order must not hint at who answered first. */
   deliveries: z.array(deskDeliverySchema),
   createdAt: unixSeconds,

@@ -25,24 +25,20 @@
       "team": "Juridique & conformite",
       "role": "compliance",
       "ledgerAddress": "0x3061750d3dF69ef7B8d4407CB7f3F879Fd9d2398"
-    }
-  ],
-  "directoryOnlyEmployees": [
+    },
     {
       "id": "david",
       "name": "David Moreau",
       "team": "Strategie",
       "role": "employee",
-      "desks": ["research"],
-      "deskIdentityFixtureSeed": "badge-demo-desk-fixture:david"
+      "ledgerAddress": "0xfc2077CA7F403cBECA41B1B0F62D91B5EA631B5E"
     },
     {
       "id": "emma",
       "name": "Emma Leroy",
       "team": "Strategie",
       "role": "employee",
-      "desks": ["research"],
-      "deskIdentityFixtureSeed": "badge-demo-desk-fixture:emma"
+      "ledgerAddress": "0xc70eC8094CCE52B6574A5a2b7bf0c7D8288d77cC"
     }
   ],
   "exchangeRules": [
@@ -59,7 +55,9 @@
       "id": "research",
       "name": "Research",
       "members": [
-        "bob"
+        "bob",
+        "david",
+        "emma"
       ],
       "allowedTopics": [
         "marche-capteurs",

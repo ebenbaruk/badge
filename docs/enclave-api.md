@@ -9,12 +9,14 @@
 
 - **Directory** (seeded by the administrator from `infra/seed/acme.json`, loaded at boot, immutable while running):
   employees `{id, name, team, role: employee | compliance, address, desks[]}` of the company "Acme".
-  Alice (Ventes, desk Origination), Bob (Grands comptes, desk Research), Chloe (Juridique & conformite, compliance).
-  Ledger addresses: alice `0x9858EfFD232B4033E47d90003D41EC34EcaEda94`, bob `0x58A57ed9d8d624cBD12e2C467D34787555bB1b25`,
-  chloe `0x3061750d3dF69ef7B8d4407CB7f3F879Fd9d2398`.
-  The Research desk also lists two directory-only employees (David, Emma) without a Ledger: their desk identities are
-  DEMO FIXTURES derived from a public seed and registered at boot, so the anonymity set is >= 3 (Semaphore warns that
-  groups of 1-2 are not anonymous). They can never sign anything, and their context can never be shared.
+  Alice (Ventes, desk Origination), Bob (Grands comptes, desk Research), Chloe (Juridique & conformite, compliance),
+  David and Emma (Strategie, desk Research). Ledger addresses (Speculos test mnemonics, `infra/speculos.sh`): alice
+  `0x9858EfFD232B4033E47d90003D41EC34EcaEda94`, bob `0x58A57ed9d8d624cBD12e2C467D34787555bB1b25`, chloe
+  `0x3061750d3dF69ef7B8d4407CB7f3F879Fd9d2398`, david `0xfc2077CA7F403cBECA41B1B0F62D91B5EA631B5E`, emma
+  `0xc70eC8094CCE52B6574A5a2b7bf0c7D8288d77cC`. Every desk member joins with their own Ledger (`DeskJoin`): no desk
+  identity is pre-registered, and a desk can be asked only once it has `MIN_DESK_ANONYMITY_SET` (3) joined members
+  (Semaphore warns that groups of 1-2 are not anonymous). `pnpm demo` joins David and Emma; before the web demo,
+  `pnpm desks:seed` does.
   Exchange rules `{id, label (device ASCII, shown on the Ledger), sourceDesk, recipientDesk, allowedTags[]}`; demo:
   `rule-4` "Regle 4 - marche capteurs", research -> origination, tags `marche-capteurs`, `prix-composants`.
 - **Employees** sign EIP-712 messages on their Ledger (`packages/consent`, clear signing) and two EIP-191 personal
@@ -32,7 +34,9 @@ and the caller; domain routes registered after it only see authenticated request
   `sha512(nonce || clientPk || enclavePk)`, event log, app-compose); `POST /v1/channel/:id {sealed} -> {sealed}`.
   The inner payload `{method, path, headers, body} -> {status, contentType, body}` is dispatched in-process to the
   same app. Inner paths must be under `/v1/` (no `..`, never the channel itself); forwarded headers: `content-type`
-  and the three `x-badge-*` headers. Channels live in memory (idle TTL 15 min, cap 10 000, `503 CHANNEL_CAPACITY`);
+  and the three `x-badge-*` headers; the path must be identical once URL-normalised (no encoded dot segment).
+  Channels live in memory (idle TTL 15 min, 30 s for a channel that never carried a message; cap 10 000: when full,
+  the oldest never-used channel is dropped first, `503 CHANNEL_CAPACITY` only when all are in use);
   an unknown or expired id answers `404 CHANNEL_UNKNOWN` (the SDK reopens and retries once: the request was not
   executed); reusing a hello answers `409 CHANNEL_EXISTS`.
 - **Channel required**: with `BADGE_REQUIRE_CHANNEL=true` (default, forced inside a CVM: TLS ends at the Phala
@@ -42,9 +46,10 @@ and the caller; domain routes registered after it only see authenticated request
   `x-badge-ts` (unix ms) and `x-badge-sig` = EIP-191 signature by the session key of
   `BADGE-REQ-V1\n{METHOD}\n{path+query}\n{ts}\n{sha256(body) lowercase hex}` (`canonicalRequest`,
   `packages/client/src/request-auth.ts`; verified by `src/security/auth.ts`). Refusals (401): `AUTH_MISSING`,
-  `AUTH_MALFORMED`, `CLOCK_SKEW` (more than 60 s), `BAD_SIGNATURE`, `REPLAY` (cache keyed on session + signed string,
-  not on the malleable signature bytes; full cache fails closed with `503 REPLAY_CACHE_FULL`), `SESSION_UNKNOWN`
-  (unknown, expired or revoked session, resolved by `SessionRepository.findActiveCaller`). Bodies above 256 KiB: 413.
+  `AUTH_MALFORMED`, `CLOCK_SKEW` (more than 60 s), `BAD_SIGNATURE`, `SESSION_UNKNOWN` (unknown, expired or revoked
+  session, resolved by `SessionRepository.findActiveCaller` BEFORE any replay slot is taken), `REPLAY` (cache keyed
+  on session + signed string, not on the malleable signature bytes, kept 1 ms beyond the skew window; full cache
+  fails closed with `503 REPLAY_CACHE_FULL`). Bodies above 256 KiB: 413.
 - **Public routes**: `GET /health`, `GET /v1/attestation/measurement`, `POST /v1/channel/*`, and the two routes whose
   bodies are Ledger-signed: `POST /v1/enroll`, `POST /v1/sessions`. Any new route is authenticated by default.
 - In code, the middleware sets `c.var.caller: Caller {employeeId, address (Ledger), sessionKey}` (Hono env
@@ -68,7 +73,8 @@ convention everywhere: enclave, `@badge/client` (`NETWORK_ERROR`, `BAD_RESPONSE`
   `CHANNEL_REQUIRED` 403, `CHANNEL_UNKNOWN` 404, `CHANNEL_EXISTS` 409, `BODY_TOO_LARGE` 413, `INVALID_BODY` /
   `CHANNEL_REJECTED` 400, `REPLAY_CACHE_FULL` / `CHANNEL_CAPACITY` / `DSTACK_FAILED` 503;
 - domain: `INVALID_REQUEST` 400, `FORBIDDEN` / `UNKNOWN_EMPLOYEE` / `NOT_ENROLLED` 403, `NOT_FOUND` 404,
-  `NONCE_REUSED` / `ALREADY_EXISTS` / `NOT_PENDING` / `COMPLIANCE_KEY_MISSING` 409, `SESSION_TOO_LONG` / `STALE` /
+  `NONCE_REUSED` / `ALREADY_EXISTS` / `NOT_PENDING` / `COMPLIANCE_KEY_MISSING` / `ANONYMITY_SET_TOO_SMALL` 409,
+  `SESSION_TOO_LONG` / `STALE` /
   `NO_RULE` 422, `UPSTREAM_FAILED` 502 (memory or LLM; never echoes their output), `INTERNAL` 500 (details only in
   the enclave log);
 - `@badge/consent`: `INVALID_MESSAGE` / `NOT_DEVICE_ASCII` / `SIGNATURE_MALFORMED` 400, `SIGNATURE_MISMATCH` 403,
@@ -138,20 +144,25 @@ createdAt, status: active | revoked | expired, uses}`; `GET /v1/policies` lists 
    - `POST /v1/desks/join` (signed `DeskJoin` by the caller's Ledger; the caller is a member of the desk in the
      directory) -> `201 Desk {id, name, members, commitments[] (decimal, registration order), root | null}`;
      `GET /v1/desks/:desk` -> `Desk` (what a member needs to build a proof).
-   - `POST /v1/desk-requests {fromDesk, task, ruleId?}` (requester is a member of `fromDesk`): the exchange rule whose
+   - `POST /v1/desk-requests {fromDesk, task, ruleId?}` (requester is a member of `fromDesk`): refused with
+     `ANONYMITY_SET_TOO_SMALL` while the source desk has fewer than 3 Ledger-joined members. The exchange rule whose
      recipient is `fromDesk` (`ruleId` needed only if several apply) selects, per member of the source desk who joined
-     it, the best candidate excerpt whose tags intersect the rule's tags, and prepares one `DeskShare` per owner ->
-     `201 DeskRequest {id, status: waiting_share | delivered | no_match | declined, ruleId, ruleLabel, fromDesk,
-sourceDesk, deliveries[], createdAt}`.
+     it, the best candidate excerpt whose tags intersect the rule's tags, and prepares one `DeskShare` per owner. The
+     source desk's root is snapshotted (`sourceRoot`): every share of the request proves against it ->
+     `201 DeskRequest {id, status: waiting_share | delivered | no_match | declined | expired, ruleId, ruleLabel,
+fromDesk, sourceDesk, sourceRoot, deliveries[], createdAt}` (`expired`: left unanswered past the DeskShare expiry).
    - The asked owner sees `{kind: "DeskShare", id (= desk request id), recipientDesk, sourceDesk, ruleLabel, excerpt,
 message}` in `GET /v1/consents`, then `POST /v1/desk-requests/:id/approve {signature, proof}`: DeskShare signed by
      the caller's Ledger (member of the source desk), checked against the stored text; a compliance key must be
-     registered (else `COMPLIANCE_KEY_MISSING`); nonce unused; Semaphore proof with root = source desk root, message =
-     `excerptHash`, scope = request id, fresh nullifier -> `{requestId, status: "delivered"}`. The audit entry
-     `desk.share` has actor `anonymous` and the signer identity sealed to the compliance key.
+     registered (else `COMPLIANCE_KEY_MISSING`); nonce unused; Semaphore proof with root = the request's
+     `sourceRoot`, message = `excerptHash`, scope = request id; the delivery, the nonce, the nullifier (fresh, else
+     `NULLIFIER_REUSED`) and the audit entry commit in one transaction -> `{requestId, status: "delivered"}`. The audit
+     entry `desk.share` has actor `anonymous` and the signer identity sealed to the compliance key. Expired offers are
+     no longer listed in `GET /v1/consents`.
      `POST /v1/desk-requests/:id/reject` -> `{requestId, status: "rejected"}`.
    - `GET /v1/desk-requests/:id` (requester only): `deliveries[{excerpt, excerptHash, proof}]`, ordered by excerpt
-     hash, never naming the owner. The requester can verify the proof itself against `GET /v1/desks/:source`.
+     hash, never naming the owner. The requester verifies each delivery itself: `hashExcerpt(excerpt) ===
+excerptHash`, and the proof (`checkDeskProof`) against the request's `sourceRoot`, never the desk's current root.
 9. **Compliance** (role `compliance` only):
    - Key: Chloe signs (EIP-191, Ledger) `complianceKeyDeriveMessage("Acme")`; X25519 secret = keccak256(signature),
      never sent (Ledger signatures are deterministic: the same Ledger re-derives the same key). Registration:

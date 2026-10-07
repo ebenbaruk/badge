@@ -24,12 +24,11 @@ import {
 } from "@badge/consent";
 import {
   buildDeskGroup,
+  checkDeskProof,
   createDeskProof,
   decodeDeskProof,
   deriveDeskIdentity,
   encodeDeskProof,
-  InMemoryNullifierRegistry,
-  verifyDeskProof,
 } from "@badge/zk";
 import { zeroHash, type LocalAccount } from "viem";
 import { beforeAll, describe, expect, it } from "vitest";
@@ -60,6 +59,8 @@ const DIRECTORY: Record<DemoEmployee, { name: string; team: string }> = {
   alice: { name: "Alice Martin", team: "Ventes" },
   bob: { name: "Bob Durand", team: "Grands comptes" },
   chloe: { name: "Chloe Bernard", team: "Juridique & conformite" },
+  david: { name: "David Moreau", team: "Strategie" },
+  emma: { name: "Emma Leroy", team: "Strategie" },
 };
 
 /** The SDK, talking HTTP to the in-process app; its clock follows the harness clock (request freshness). */
@@ -126,9 +127,10 @@ describe("enclave API contract (BadgeClient against the real app)", () => {
     h = await createHarness();
   });
 
-  it("serves the measurement, enrolls the three employees and opens their agent sessions", async () => {
+  it("serves the measurement, enrolls the employees and opens their agent sessions", async () => {
     expect((await sdk(h).measurement()).measurement).toBe(MEASUREMENT);
-    for (const who of ["alice", "bob", "chloe"] as const) agents[who] = await onboard(h, who);
+    for (const who of ["alice", "bob", "chloe", "david", "emma"] as const)
+      agents[who] = await onboard(h, who);
     expect(await agents.chloe.me()).toMatchObject({ id: "chloe", role: "compliance", company: "Acme" });
     expect((await agents.bob.me()).contextTags).toContain("orion");
   });
@@ -238,18 +240,25 @@ describe("enclave API contract (BadgeClient against the real app)", () => {
       expect(key).toMatchObject({ employeeId: "chloe", publicKey });
       expect(await agents.chloe.getComplianceKey()).toEqual(key);
 
-      const identity = deriveDeskIdentity(
-        await ledgers.bob.signMessage({ message: deskIdentityDeriveMessage("Acme") }),
-      );
-      const desk = await agents.bob.joinDesk(
-        await signed("bob", "DeskJoin", {
-          deskName: "Research",
-          company: "Acme",
-          identityCommitment: identity.commitment,
-          employee: ledgers.bob.address,
-          nonce: nextNonce(),
-        }),
-      );
+      // Every member of the anonymity set joins with their own Ledger: David and Emma first, then Bob.
+      const join = async (who: DemoEmployee) => {
+        const identity = deriveDeskIdentity(
+          await ledgers[who].signMessage({ message: deskIdentityDeriveMessage("Acme") }),
+        );
+        const desk = await agents[who].joinDesk(
+          await signed(who, "DeskJoin", {
+            deskName: "Research",
+            company: "Acme",
+            identityCommitment: identity.commitment,
+            employee: ledgers[who].address,
+            nonce: nextNonce(),
+          }),
+        );
+        return { identity, desk };
+      };
+      await join("david");
+      await join("emma");
+      const { identity, desk } = await join("bob");
       expect(desk).toMatchObject({ id: "research", name: "Research", members: 3 });
 
       const request = await agents.alice.createDeskRequest(MARKET_TASK);
@@ -277,17 +286,14 @@ describe("enclave API contract (BadgeClient against the real app)", () => {
       const [delivery] = delivered.deliveries;
       if (!delivery) throw new Error("nothing delivered");
       expect(hashExcerpt(delivery.excerpt)).toBe(delivery.excerptHash);
-      const root = (await agents.alice.getDesk("research")).root;
+      // Checked against the root snapshotted with the request, which is the desk's root when Bob shared.
+      expect(delivered.sourceRoot).toBe(desk.root);
       await expect(
-        verifyDeskProof(
-          decodeDeskProof(delivery.proof),
-          {
-            expectedRoot: BigInt(root ?? -1),
-            expectedExcerptHash: delivery.excerptHash,
-            expectedRequestId: request.id,
-          },
-          new InMemoryNullifierRegistry(),
-        ),
+        checkDeskProof(decodeDeskProof(delivery.proof), {
+          expectedRoot: BigInt(delivered.sourceRoot ?? -1),
+          expectedExcerptHash: delivery.excerptHash,
+          expectedRequestId: request.id,
+        }),
       ).resolves.toMatchObject({ nullifier: BigInt(delivery.proof.nullifier) });
     },
     PROOF_TIMEOUT_MS,

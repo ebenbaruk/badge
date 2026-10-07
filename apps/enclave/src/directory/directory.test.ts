@@ -9,11 +9,11 @@ const raw = () => JSON.parse(readFileSync(ACME_DATASET_PATH, "utf8")) as Record<
 describe("demo directory", () => {
   const directory = loadDirectory();
 
-  it("has the three Ledger holders, Chloe as compliance, and two directory-only fixtures", () => {
+  it("has five Ledger holders, Chloe as compliance, and no identity without a Ledger", () => {
     expect(directory.employees().map((e) => e.id)).toEqual(["alice", "bob", "chloe", "david", "emma"]);
     expect(directory.employee("chloe")?.role).toBe("compliance");
-    expect(directory.employee("david")?.address).toBeNull();
-    expect(directory.deskFixtures().map((e) => e.id)).toEqual(["david", "emma"]);
+    // David and Emma join the Research desk with their own Ledger: no desk identity has a public secret.
+    expect(directory.employees().every((e) => e.address !== null)).toBe(true);
   });
 
   it("puts Bob, David and Emma on the Research desk (anonymity set of 3)", () => {
