@@ -1,4 +1,4 @@
-import { BADGE_AUTH_HEADERS, canonicalRequest } from "@badge/client";
+import { BADGE_AUTH_HEADERS, canonicalRequest, MAX_REQUEST_SKEW_MS } from "@badge/client";
 import { Hono } from "hono";
 import { getAddress, stringToBytes, type Address } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
@@ -15,8 +15,15 @@ const alice: Caller = {
   sessionKey: agent.address,
 };
 
-function setup(options: { now?: number; resolver?: SessionResolver; capacity?: number } = {}) {
-  const clock = { now: () => options.now ?? NOW };
+function setup(
+  options: {
+    now?: number;
+    clock?: { now: () => number };
+    resolver?: SessionResolver;
+    capacity?: number;
+  } = {},
+) {
+  const clock = options.clock ?? { now: () => options.now ?? NOW };
   const resolver: SessionResolver = options.resolver ?? {
     resolve: async (key: Address) => (key === agent.address ? alice : null),
   };
@@ -157,6 +164,26 @@ describe("auth middleware", () => {
     );
     expect(second.status).toBe(503);
     expect(await errorCode(second)).toBe("REPLAY_CACHE_FULL");
+  });
+
+  it("never lets an unknown session key take a replay slot", async () => {
+    const app = setup({ capacity: 1 });
+    const flood = await app.request(
+      "/v1/consents",
+      await signedInit("GET", "/v1/consents", null, { signer: stranger }),
+    );
+    expect(await errorCode(flood)).toBe("SESSION_UNKNOWN");
+    const legit = await app.request("/v1/consents", await signedInit("GET", "/v1/consents", null));
+    expect(legit.status).toBe(200);
+  });
+
+  it("refuses a replay at the very edge of the skew window", async () => {
+    let now = NOW;
+    const app = setup({ clock: { now: () => now } });
+    const init = await signedInit("GET", "/v1/consents", null);
+    expect((await app.request("/v1/consents", init)).status).toBe(200);
+    now = NOW + MAX_REQUEST_SKEW_MS;
+    expect(await errorCode(await app.request("/v1/consents", init))).toBe("REPLAY");
   });
 
   it("refuses a resolver answer for another session", async () => {

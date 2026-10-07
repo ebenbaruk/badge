@@ -104,21 +104,23 @@ async function authenticate(
   if (!isAddressEqual(signer, sessionKey)) {
     throw new SecurityError("BAD_SIGNATURE", 401, "request is not signed by the session key it names");
   }
-  // Keyed on what was signed, not on the signature bytes: ECDSA signatures are malleable (s -> n - s), so a
-  // signature-keyed cache would let an attacker replay a request under a twin signature.
-  const replayKey = sha256(stringToBytes(`${sessionKey}\n${signed}`));
-  // Once the timestamp leaves the window the skew check refuses it, so the entry can be forgotten then.
-  const verdict = replays.checkAndRemember(replayKey, timestamp + MAX_REQUEST_SKEW_MS, now);
-  if (verdict === "replay") throw new SecurityError("REPLAY", 401, "request already processed (replay)");
-  if (verdict === "full")
-    throw new SecurityError("REPLAY_CACHE_FULL", 503, "too many requests, retry shortly");
-
+  // Resolved BEFORE taking a replay slot: only requests signed by an active, Ledger-delegated session key may
+  // occupy the bounded cache, otherwise throwaway keys could fill it and lock every agent out (REPLAY_CACHE_FULL).
   const caller = await resolver.resolve(sessionKey);
   if (!caller) throw new SecurityError("SESSION_UNKNOWN", 401, "session is unknown, expired or revoked");
   if (!isAddressEqual(caller.sessionKey, sessionKey)) {
     // A resolver bug must not let one session act as another.
     throw new SecurityError("SESSION_UNKNOWN", 401, "session resolver returned another session");
   }
+  // Keyed on what was signed, not on the signature bytes: ECDSA signatures are malleable (s -> n - s), so a
+  // signature-keyed cache would let an attacker replay a request under a twin signature.
+  const replayKey = sha256(stringToBytes(`${sessionKey}\n${signed}`));
+  // The entry must outlive the skew window: the skew check still accepts now == timestamp + MAX_REQUEST_SKEW_MS,
+  // and the cache forgets an entry once `now >= expiry`, hence the extra millisecond.
+  const verdict = replays.checkAndRemember(replayKey, timestamp + MAX_REQUEST_SKEW_MS + 1, now);
+  if (verdict === "replay") throw new SecurityError("REPLAY", 401, "request already processed (replay)");
+  if (verdict === "full")
+    throw new SecurityError("REPLAY_CACHE_FULL", 503, "too many requests, retry shortly");
   return caller;
 }
 
