@@ -9,19 +9,49 @@
       "id": "alice",
       "name": "Alice Martin",
       "team": "Ventes",
+      "role": "employee",
       "ledgerAddress": "0x9858EfFD232B4033E47d90003D41EC34EcaEda94"
     },
     {
       "id": "bob",
       "name": "Bob Durand",
       "team": "Grands comptes",
+      "role": "employee",
       "ledgerAddress": "0x58A57ed9d8d624cBD12e2C467D34787555bB1b25"
     },
     {
       "id": "chloe",
       "name": "Chloe Bernard",
       "team": "Juridique & conformite",
+      "role": "compliance",
       "ledgerAddress": "0x3061750d3dF69ef7B8d4407CB7f3F879Fd9d2398"
+    }
+  ],
+  "directoryOnlyEmployees": [
+    {
+      "id": "david",
+      "name": "David Moreau",
+      "team": "Strategie",
+      "role": "employee",
+      "desks": ["research"],
+      "deskIdentityFixtureSeed": "badge-demo-desk-fixture:david"
+    },
+    {
+      "id": "emma",
+      "name": "Emma Leroy",
+      "team": "Strategie",
+      "role": "employee",
+      "desks": ["research"],
+      "deskIdentityFixtureSeed": "badge-demo-desk-fixture:emma"
+    }
+  ],
+  "exchangeRules": [
+    {
+      "id": "rule-4",
+      "label": "Regle 4 - marche capteurs",
+      "sourceDesk": "research",
+      "recipientDesk": "origination",
+      "allowedTags": ["marche-capteurs", "prix-composants"]
     }
   ],
   "desks": [
