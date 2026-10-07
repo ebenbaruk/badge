@@ -16,6 +16,7 @@ conformité, partage anonyme entre desks, couches LLM et mémoire. Le contrat de
 | `src/compliance` | Clé de conformité (X25519, signée EIP-191), lecture du journal, notification de levée d'anonymat.                               |
 | `src/api`        | Application Hono pure (`createApp(deps)`), enveloppe d'erreur unique, middleware d'authentification injecté.                    |
 | `src/server.ts`  | Câblage réel (SQLite, Honcho, profil LLM, mesure dstack) et `startEnclaveServer(sécurité)`, port 8787.                          |
+| `src/main.ts`    | Point d'entrée du processus (`pnpm --filter @badge/enclave start`, image Docker) : assemble la sécurité et gère SIGTERM.        |
 
 Principes : **échec fermé** (toute vérification lève une erreur typée avec un `code`), un message signé n'a d'effet
 que dans **une transaction** qui consomme son nonce, applique l'effet et écrit l'entrée d'audit ; le journal ne
@@ -42,11 +43,19 @@ moins 3 membres. Elles ne peuvent rien signer.
 Variables : `BADGE_DATA_DIR` (défaut `infra/.data/enclave`), `BADGE_ENCLAVE_PORT` (8787), `BADGE_ENCLAVE_HOST`
 (127.0.0.1), `BADGE_SEED_FILE`, `DSTACK_SIMULATOR_ENDPOINT` (hors CVM ; défaut `http://127.0.0.1:8090`).
 
+## Image et déploiement
+
+`apps/enclave/Dockerfile` (à construire depuis la racine, en `linux/amd64`) : dépendances de production filtrées,
+sources TypeScript exécutées par tsx, utilisateur non root, aucun secret. Déploiement dans le CVM Phala :
+`docs/DEPLOY.md`.
+
 ## Couche LLM (`src/llm`)
 
 - **Un seul « profil » compatible OpenAI** : URL de base, clé, modèle de chat, modèle d'embeddings (384 dimensions).
   - `build` : variables `BUILD_LLM_*` / `BUILD_EMBEDDING_*` (OpenAI, `text-embedding-3-small` réduit à 384).
   - `phala` : variables `PHALA_AI_*` (Phala Confidential AI, embeddings `sentence-transformers/all-minilm-l6-v2`).
+  - Dans le CVM, `BADGE_LLM_GATEWAY_URL` remplace l'URL du profil par la passerelle de sortie (HTTP sur le
+    réseau scellé) : c'est elle qui détient la vraie clé.
   - Choix par `BADGE_LLM_PROFILE=build|phala` ; secrets lus dans `BADGE_ENV_FILE` (défaut : `../.env` à côté du
     dépôt) ; `BADGE_LLM_CHAT_MODEL` remplace le modèle de chat sans toucher aux secrets.
 - `createLlmClient(profile)` : `complete`, `structuredCompletion(schemaZod, messages)` (sortie `json_schema`
