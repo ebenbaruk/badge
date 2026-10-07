@@ -1,0 +1,162 @@
+# Badge memory stack: Postgres (pgvector) + Honcho API + Honcho deriver + a single egress gateway.
+# Do not run directly: infra/stack.sh resolves the LLM profile and the secrets, then calls docker compose.
+#
+# Network model (the confidentiality argument):
+#  - `sealed` is an internal network with no default route and no external DNS. Honcho and Postgres live only there.
+#  - `gateway` is the only container also on `egress`. It forwards exactly two routes (chat completions,
+#    embeddings) to the profile's upstream over verified TLS and injects the upstream key itself.
+#  - Honcho holds a dummy LLM key. It must be non-empty: with an empty key Honcho ignores the base URL overrides.
+name: badge
+
+x-honcho-env: &honcho-env
+  LOG_LEVEL: INFO
+  DB_CONNECTION_URI: postgresql+psycopg://postgres:${BADGE_DB_PASSWORD:?run infra/stack.sh}@database:5432/postgres
+  AUTH_USE_AUTH: "true"
+  AUTH_JWT_SECRET: ${BADGE_HONCHO_JWT_SECRET:?run infra/stack.sh}
+  CACHE_ENABLED: "false"
+  TELEMETRY_ENABLED: "false"
+  SENTRY_ENABLED: "false"
+  METRICS_ENABLED: "false"
+  VECTOR_STORE_TYPE: pgvector
+  VECTOR_STORE_MIGRATED: "false"
+  # Safety net for any module we forgot to route: it still lands on the gateway.
+  LLM_OPENAI_API_KEY: dummy-key-the-gateway-injects-the-real-one
+  LLM_OPENAI_BASE_URL: http://gateway:8080/v1
+
+  # Embeddings do not follow LLM_OPENAI_BASE_URL: they need their own override. The dimension is frozen in the
+  # database schema at first boot (entrypoint.sh), so every profile must produce the same size.
+  EMBEDDING_VECTOR_DIMENSIONS: ${BADGE_EMBEDDING_DIMENSIONS:?run infra/stack.sh}
+  EMBEDDING_MAX_INPUT_TOKENS: ${BADGE_EMBEDDING_MAX_INPUT_TOKENS:?run infra/stack.sh}
+  EMBEDDING_MODEL_CONFIG__TRANSPORT: openai
+  EMBEDDING_MODEL_CONFIG__MODEL: ${BADGE_EMBEDDING_MODEL:?run infra/stack.sh}
+  EMBEDDING_MODEL_CONFIG__OVERRIDES__BASE_URL: http://gateway:8080/v1
+  EMBEDDING_MODEL_CONFIG__DIMENSIONS_MODE: ${BADGE_EMBEDDING_DIMENSIONS_MODE:?run infra/stack.sh}
+  EMBEDDING_MODEL_CONFIG__ENCODING_FORMAT_MODE: float
+  EMBEDDING_MODEL_CONFIG__MAX_BATCH_SIZE: "16"
+
+  # Deriver: the only module the demo needs. Instruct behaviour (reasoning off) and strict json_schema output.
+  # A json_schema rejection does not fail: Honcho logs a WARNING and stores empty memory (the seed checks logs).
+  DERIVER_FLUSH_ENABLED: "true"
+  DERIVER_POLLING_STARTUP_JITTER_SECONDS: "0"
+  DERIVER_LOG_OBSERVATIONS: "false"
+  DERIVER_MODEL_CONFIG__TRANSPORT: openai
+  DERIVER_MODEL_CONFIG__MODEL: ${BADGE_CHAT_MODEL:?run infra/stack.sh}
+  DERIVER_MODEL_CONFIG__OVERRIDES__BASE_URL: http://gateway:8080/v1
+  DERIVER_MODEL_CONFIG__THINKING_EFFORT: none
+  DERIVER_MODEL_CONFIG__STRUCTURED_OUTPUT_MODE: json_schema
+  # Caps a runaway generation (observed with small models) instead of letting it burn the default budget.
+  DERIVER_MODEL_CONFIG__MAX_OUTPUT_TOKENS: "2000"
+
+  # Summaries and dreams are not used by Badge: disabled to save calls, but still routed to the gateway.
+  SUMMARY_ENABLED: "false"
+  SUMMARY_MODEL_CONFIG__TRANSPORT: openai
+  SUMMARY_MODEL_CONFIG__MODEL: ${BADGE_CHAT_MODEL}
+  SUMMARY_MODEL_CONFIG__OVERRIDES__BASE_URL: http://gateway:8080/v1
+  SUMMARY_MODEL_CONFIG__THINKING_EFFORT: none
+  DREAM_ENABLED: "false"
+  DREAM_DEDUCTION_MODEL_CONFIG__TRANSPORT: openai
+  DREAM_DEDUCTION_MODEL_CONFIG__MODEL: ${BADGE_CHAT_MODEL}
+  DREAM_DEDUCTION_MODEL_CONFIG__OVERRIDES__BASE_URL: http://gateway:8080/v1
+  DREAM_DEDUCTION_MODEL_CONFIG__THINKING_EFFORT: none
+  DREAM_INDUCTION_MODEL_CONFIG__TRANSPORT: openai
+  DREAM_INDUCTION_MODEL_CONFIG__MODEL: ${BADGE_CHAT_MODEL}
+  DREAM_INDUCTION_MODEL_CONFIG__OVERRIDES__BASE_URL: http://gateway:8080/v1
+  DREAM_INDUCTION_MODEL_CONFIG__THINKING_EFFORT: none
+
+  # Dialectic (peer.chat) is not called by the enclave, but every level is pinned to the gateway and to
+  # non-reasoning mode: reasoning output breaks the dialectic's token budget.
+  DIALECTIC_LEVELS__minimal__MODEL_CONFIG__TRANSPORT: openai
+  DIALECTIC_LEVELS__minimal__MODEL_CONFIG__MODEL: ${BADGE_CHAT_MODEL}
+  DIALECTIC_LEVELS__minimal__MODEL_CONFIG__OVERRIDES__BASE_URL: http://gateway:8080/v1
+  DIALECTIC_LEVELS__minimal__MODEL_CONFIG__THINKING_EFFORT: none
+  DIALECTIC_LEVELS__low__MODEL_CONFIG__TRANSPORT: openai
+  DIALECTIC_LEVELS__low__MODEL_CONFIG__MODEL: ${BADGE_CHAT_MODEL}
+  DIALECTIC_LEVELS__low__MODEL_CONFIG__OVERRIDES__BASE_URL: http://gateway:8080/v1
+  DIALECTIC_LEVELS__low__MODEL_CONFIG__THINKING_EFFORT: none
+  DIALECTIC_LEVELS__medium__MODEL_CONFIG__TRANSPORT: openai
+  DIALECTIC_LEVELS__medium__MODEL_CONFIG__MODEL: ${BADGE_CHAT_MODEL}
+  DIALECTIC_LEVELS__medium__MODEL_CONFIG__OVERRIDES__BASE_URL: http://gateway:8080/v1
+  DIALECTIC_LEVELS__medium__MODEL_CONFIG__THINKING_EFFORT: none
+  DIALECTIC_LEVELS__high__MODEL_CONFIG__TRANSPORT: openai
+  DIALECTIC_LEVELS__high__MODEL_CONFIG__MODEL: ${BADGE_CHAT_MODEL}
+  DIALECTIC_LEVELS__high__MODEL_CONFIG__OVERRIDES__BASE_URL: http://gateway:8080/v1
+  DIALECTIC_LEVELS__high__MODEL_CONFIG__THINKING_EFFORT: none
+  DIALECTIC_LEVELS__max__MODEL_CONFIG__TRANSPORT: openai
+  DIALECTIC_LEVELS__max__MODEL_CONFIG__MODEL: ${BADGE_CHAT_MODEL}
+  DIALECTIC_LEVELS__max__MODEL_CONFIG__OVERRIDES__BASE_URL: http://gateway:8080/v1
+  DIALECTIC_LEVELS__max__MODEL_CONFIG__THINKING_EFFORT: none
+
+services:
+  database:
+    image: pgvector/pgvector:pg15
+    command: ["postgres", "-c", "max_connections=50", "-c", "shared_buffers=64MB"]
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${BADGE_DB_PASSWORD:?run infra/stack.sh}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    networks: [sealed]
+    restart: unless-stopped
+
+  api:
+    image: badge/honcho:3.2.2
+    entrypoint: ["sh", "/app/docker/badge-entrypoint.sh"]
+    environment: *honcho-env
+    depends_on:
+      database: { condition: service_healthy }
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "/app/.venv/bin/python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=2).read()",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 15s
+    networks: [sealed]
+    restart: unless-stopped
+
+  deriver:
+    image: badge/honcho:3.2.2
+    entrypoint: ["/app/.venv/bin/python", "-m", "src.deriver"]
+    environment: *honcho-env
+    depends_on:
+      api: { condition: service_healthy }
+    networks: [sealed]
+    restart: unless-stopped
+
+  gateway:
+    image: nginx:1.27-alpine
+    environment:
+      BADGE_UPSTREAM_BASE_URL: ${BADGE_UPSTREAM_BASE_URL:?run infra/stack.sh}
+      BADGE_UPSTREAM_HOST: ${BADGE_UPSTREAM_HOST:?run infra/stack.sh}
+      BADGE_UPSTREAM_API_KEY: ${BADGE_UPSTREAM_API_KEY:?run infra/stack.sh}
+      # Only our variables are substituted: nginx's own $variables stay untouched.
+      NGINX_ENVSUBST_FILTER: ^BADGE_
+    volumes:
+      - ./gateway/nginx.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - ./gateway/upstream-tls.conf:/etc/nginx/badge-upstream-tls.conf:ro
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      api: { condition: service_started }
+    networks: [sealed, egress]
+    restart: unless-stopped
+
+networks:
+  sealed:
+    internal: true
+  egress: {}
+
+volumes:
+  pgdata:
