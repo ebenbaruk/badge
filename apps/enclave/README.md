@@ -1,8 +1,46 @@
 # @badge/enclave
 
-Service confidentiel de Badge, exécuté dans l'enclave (Phala dstack). Ce dossier contient pour l'instant la couche
-LLM et la couche mémoire ; l'API HTTP, le moteur de politique, le journal de conformité et le stockage viendront
-s'y ajouter.
+Service confidentiel de Badge, exécuté dans l'enclave (Phala dstack) : API HTTP, moteur de politique, journal de
+conformité, partage anonyme entre desks, couches LLM et mémoire. Le contrat de l'API est `docs/enclave-api.md`.
+
+## Domaine et API
+
+| Module           | Rôle                                                                                                                            |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `src/db`         | SQLite (`node:sqlite`), migrations SQL ordonnées, transactions, nonces par signataire (consommation atomique).                  |
+| `src/directory`  | Annuaire chargé depuis `infra/seed/acme.json` (rôles, desks, règles d'échange) et inventaire du contexte.                       |
+| `src/audit`      | Journal append-only chaîné (sha256), `verifyChain`, interface `Sealer` (scellement pour la conformité).                         |
+| `src/policy`     | Moteur de politique (inscription, sessions, consentements, accords, accords permanents, révocations) et règles anti-aspiration. |
+| `src/tasks`      | Orchestration des tâches : candidats, classification, décision par extrait, brief et statistiques de jetons.                    |
+| `src/desks`      | Adhésion aux desks, demandes entre desks, preuves Semaphore, registre de nullifiers persistant.                                 |
+| `src/compliance` | Clé de conformité (X25519, signée EIP-191), lecture du journal, notification de levée d'anonymat.                               |
+| `src/api`        | Application Hono pure (`createApp(deps)`), enveloppe d'erreur unique, middleware d'authentification injecté.                    |
+| `src/server.ts`  | Câblage réel (SQLite, Honcho, profil LLM, mesure dstack) et `startEnclaveServer(sécurité)`, port 8787.                          |
+
+Principes : **échec fermé** (toute vérification lève une erreur typée avec un `code`), un message signé n'a d'effet
+que dans **une transaction** qui consomme son nonce, applique l'effet et écrit l'entrée d'audit ; le journal ne
+contient **jamais** de texte d'extrait (empreintes et longueurs uniquement).
+
+Règles anti-aspiration (`src/policy/rules.ts`, seuils nommés) : longueur de l'extrait, part du contexte du
+propriétaire, nombre de propriétaires par tâche, demandes par propriétaire et par heure. Un agent piégé qui demande
+« tout le contexte de Bob » (`requestFullContextOf`) produit au minimum un avertissement montré à Bob ; au-delà du
+plafond (8 000 caractères), la demande est bloquée avant de lui parvenir.
+
+**Données de démonstration** : David et Emma (desk Research) n'ont pas de Ledger ; leurs identités de desk sont
+dérivées d'une graine publique du jeu de données et enregistrées au démarrage, pour que le groupe Research compte au
+moins 3 membres. Elles ne peuvent rien signer.
+
+### Ce que l'intégrateur fournit
+
+`startEnclaveServer(fabriqueSécurité)` reçoit `{ db, clock, dstack, config }` et attend :
+
+- `authenticate` : middleware Hono qui vérifie la signature de session et fait `c.set("caller", …)` (types dans
+  `src/security/types.ts`) ; la session se résout avec `new SessionRepository(db).findActiveCaller(clé, maintenant)`.
+- `keyRotator` : `rotateOwnerKey(employeeId)`, appelé à chaque révocation.
+- `sealer` : `seal(cléPublique, octets)`, scellement X25519 de `@badge/attest`.
+
+Variables : `BADGE_DATA_DIR` (défaut `infra/.data/enclave`), `BADGE_ENCLAVE_PORT` (8787), `BADGE_ENCLAVE_HOST`
+(127.0.0.1), `BADGE_SEED_FILE`, `DSTACK_SIMULATOR_ENDPOINT` (hors CVM ; défaut `http://127.0.0.1:8090`).
 
 ## Couche LLM (`src/llm`)
 
@@ -43,7 +81,7 @@ Changer de profil LLM impose `reset` puis `up` et `seed` : les embeddings de deu
 ## Tests
 
 ```bash
-pnpm --filter @badge/enclave test        # unitaires, sans réseau
+pnpm --filter @badge/enclave test        # unitaires et API en mémoire, sans réseau (test/desks : artefacts ZK)
 pnpm --filter @badge/enclave test:live   # pile locale + profil build (quelques appels payants)
 BADGE_LIVE_PHALA=1 pnpm --filter @badge/enclave test:live   # + 2 appels Phala Confidential AI
 ```
