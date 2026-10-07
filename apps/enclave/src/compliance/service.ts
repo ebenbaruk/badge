@@ -4,7 +4,12 @@
  * the officer's side, never in the enclave: the enclave cannot read what it sealed.
  */
 import { complianceKeyRegistrationMessage } from "@badge/attest";
-import type { AuditEntry as AuditEntryWire, AuditLog as AuditLogWire, ComplianceKey } from "@badge/client";
+import type {
+  AuditEntry as AuditEntryWire,
+  AuditLog as AuditLogWire,
+  ComplianceKey,
+  CurrentComplianceKey,
+} from "@badge/client";
 import { ConsentError } from "@badge/consent";
 import { verifyMessage, type Hex } from "viem";
 import { z } from "zod";
@@ -69,6 +74,13 @@ export class ComplianceService {
     const employee = this.ctx.directory.requireEmployee(caller.employeeId);
     if (employee.role !== "compliance") throw new EnclaveError("FORBIDDEN", "compliance role required");
     return employee;
+  }
+
+  /** GET /v1/compliance/key: the current sealing key (null before the first registration), officer only. */
+  currentKey(caller: Caller): CurrentComplianceKey {
+    this.requireOfficer(caller);
+    const current = this.keys.latest();
+    return { key: current === undefined ? null : toComplianceKeyWire(current) };
   }
 
   /**

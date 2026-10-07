@@ -12,6 +12,8 @@ export function registerComplianceRoutes(app: Hono<BadgeEnv>, services: EnclaveS
     return c.json(services.compliance.readAudit(c.get("caller"), query.data));
   });
 
+  app.get("/v1/compliance/key", (c) => c.json(services.compliance.currentKey(c.get("caller"))));
+
   app.post("/v1/compliance/key", async (c) => {
     const input = await parseBody(c, RegisterComplianceKeySchema);
     return c.json(await services.compliance.registerKey(c.get("caller"), input), 201);

@@ -230,6 +230,7 @@ describe("enclave API contract (BadgeClient against the real app)", () => {
     "desks: Bob joins Research, shares a market fact anonymously with a ZK proof Alice verifies",
     async () => {
       const { publicKey } = await complianceKeyPair();
+      expect(await agents.chloe.getComplianceKey()).toBeNull();
       const key = await agents.chloe.registerComplianceKey({
         publicKey,
         signature: await ledgers.chloe.signMessage({
@@ -237,6 +238,7 @@ describe("enclave API contract (BadgeClient against the real app)", () => {
         }),
       });
       expect(key).toMatchObject({ employeeId: "chloe", publicKey });
+      expect(await agents.chloe.getComplianceKey()).toEqual(key);
 
       const identity = deriveDeskIdentity(
         await ledgers.bob.signMessage({ message: deskIdentityDeriveMessage("Acme") }),

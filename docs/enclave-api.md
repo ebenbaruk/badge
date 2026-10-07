@@ -147,7 +147,8 @@ message}` in `GET /v1/consents`, then `POST /v1/desk-requests/:id/approve {signa
      `POST /v1/compliance/key {publicKey (hex), signature}` where `signature` is her EIP-191 signature of
      `complianceKeyRegistrationMessage("Acme", publicKey)` (all three in `packages/attest`) ->
      `201 {keyId, employeeId, publicKey, registeredAt}`. Registering the current key again is a no-op; a replaced key
-     can never become current again (`STALE`).
+     can never become current again (`STALE`). `GET /v1/compliance/key -> {key: ComplianceKey | null}` tells her
+     client whether a registration is still needed (no Ledger review when the enclave already holds the key).
    - `GET /v1/audit?afterSeq&limit` -> `{entries[], chain {valid, length, brokenAt}}` (the chain verification covers
      the whole log, the entries are a page of at most 500).
    - De-anonymisation happens on the officer's side: she opens `data.sealedSigner` of a `desk.share` entry with her
@@ -202,6 +203,7 @@ excerpt text, only hashes, lengths and ids. Types: `enroll`, `session.open`, `ta
 | GET /v1/desk-requests/:id          |                                                | `DeskRequest`                                   |
 | POST /v1/desk-requests/:id/approve | `{signature, proof}` (proof: `@badge/zk` wire) | `DeskShareDecision`                             |
 | POST /v1/desk-requests/:id/reject  | `{}`                                           | `DeskShareDecision`                             |
+| GET /v1/compliance/key             |                                                | `{key: ComplianceKey or null}`                  |
 | POST /v1/compliance/key            | `{publicKey, signature}`                       | `ComplianceKey`                                 |
 | GET /v1/audit                      | query `afterSeq`, `limit`                      | `AuditLog`                                      |
 | POST /v1/audit/reveal-notice       | `{seq, reason}`                                | `AuditEntry`                                    |

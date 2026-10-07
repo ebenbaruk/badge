@@ -266,6 +266,13 @@ export const complianceKeySchema = z.object({
 });
 export type ComplianceKey = z.infer<typeof complianceKeySchema>;
 
+/**
+ * `GET /v1/compliance/key` (compliance role): the current sealing key, null before the first registration. Lets the
+ * officer's client skip a registration the enclave already holds (the key is re-derived from her Ledger anyway).
+ */
+export const currentComplianceKeySchema = z.object({ key: complianceKeySchema.nullable() });
+export type CurrentComplianceKey = z.infer<typeof currentComplianceKeySchema>;
+
 /** One hash-chained audit entry. `data` never contains excerpt text, only hashes, lengths and ids. */
 export const auditEntrySchema = z.object({
   seq: count,

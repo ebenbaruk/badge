@@ -50,6 +50,23 @@ describe("compliance key registration", () => {
   });
 });
 
+describe("current compliance key", () => {
+  it("is null before the first registration, then the latest key, for the officer only", async () => {
+    const h = await createHarness();
+    await onboard(h, "alice", "chloe");
+    const current = () => call(h, "GET", "/v1/compliance/key", { as: "chloe" });
+    expect((await current()).json).toEqual({ key: null });
+
+    const { publicKey } = await complianceKeyPair();
+    const registered = await register(h, publicKey);
+    expect((await current()).json).toEqual({ key: registered.json });
+
+    await register(h, OTHER_PUBLIC_KEY);
+    expect((await current()).json.key.publicKey).toBe(OTHER_PUBLIC_KEY);
+    expect((await call(h, "GET", "/v1/compliance/key", { as: "alice" })).json.error.code).toBe("FORBIDDEN");
+  });
+});
+
 describe("SqliteKeyVersionStore", () => {
   it("starts unset and persists the latest version", () => {
     const store = new SqliteKeyVersionStore(openDatabase(IN_MEMORY_DATABASE), systemClock);

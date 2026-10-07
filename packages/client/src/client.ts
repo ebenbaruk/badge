@@ -10,6 +10,7 @@ import {
   auditEntrySchema,
   auditLogSchema,
   complianceKeySchema,
+  currentComplianceKeySchema,
   consentDecisionSchema,
   consentListSchema,
   deskRequestSchema,
@@ -361,6 +362,17 @@ export class BadgeClient {
       authenticated: true,
       schema: complianceKeySchema,
     });
+  }
+
+  /** `GET /v1/compliance/key` (compliance role): the current sealing key, or null before any registration. */
+  async getComplianceKey(): Promise<ComplianceKey | null> {
+    const { key } = await this.call({
+      method: "GET",
+      path: "/v1/compliance/key",
+      authenticated: true,
+      schema: currentComplianceKeySchema,
+    });
+    return key;
   }
 
   /** `GET /v1/audit` (compliance role): a page of entries and the verification of the whole chain. */
