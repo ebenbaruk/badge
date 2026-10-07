@@ -19,5 +19,8 @@
     "@phala/dcap-qvl": "0.6.5",
     "@phala/dstack-sdk": "0.5.8",
     "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "viem": "2.57.3"
   }
 }

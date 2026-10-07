@@ -9,10 +9,12 @@
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run",
-    "test:live": "vitest run --config vitest.live.config.ts"
+    "test:live": "vitest run --config vitest.live.config.ts",
+    "test:sim": "vitest run --config vitest.sim.config.ts"
   },
   "dependencies": {
     "@badge/attest": "workspace:*",
+    "@badge/client": "workspace:*",
     "@badge/consent": "workspace:*",
     "@badge/zk": "workspace:*",
     "@honcho-ai/sdk": "2.5.1",

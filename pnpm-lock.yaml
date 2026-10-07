@@ -41,24 +41,18 @@ importers:
       '@badge/attest':
         specifier: workspace:*
         version: link:../../packages/attest
+      '@badge/client':
+        specifier: workspace:*
+        version: link:../../packages/client
       '@badge/consent':
         specifier: workspace:*
         version: link:../../packages/consent
-      '@badge/zk':
-        specifier: workspace:*
-        version: link:../../packages/zk
       '@honcho-ai/sdk':
         specifier: 2.5.1
         version: 2.5.1
-      '@hono/node-server':
-        specifier: 2.1.3
-        version: 2.1.3(hono@4.13.13)
       hono:
         specifier: 4.13.13
         version: 4.13.13
-      js-tiktoken:
-        specifier: 1.0.21
-        version: 1.0.21
       viem:
         specifier: 2.57.3
         version: 2.57.3(typescript@6.0.3)(zod@4.6.5)
@@ -83,6 +77,28 @@ importers:
       '@phala/dstack-sdk':
         specifier: 0.5.8
         version: 0.5.8(@noble/curves@1.9.1)(@noble/hashes@1.8.0)(viem@2.57.3(typescript@6.0.3)(zod@4.6.5))
+      zod:
+        specifier: 4.6.5
+        version: 4.6.5
+    devDependencies:
+      viem:
+        specifier: 2.57.3
+        version: 2.57.3(typescript@6.0.3)(zod@4.6.5)
+
+  packages/client:
+    dependencies:
+      '@badge/attest':
+        specifier: workspace:*
+        version: link:../attest
+      '@badge/consent':
+        specifier: workspace:*
+        version: link:../consent
+      '@badge/zk':
+        specifier: workspace:*
+        version: link:../zk
+      viem:
+        specifier: 2.57.3
+        version: 2.57.3(typescript@6.0.3)(zod@4.6.5)
       zod:
         specifier: 4.6.5
         version: 4.6.5
@@ -358,12 +374,6 @@ packages:
 
   '@honcho-ai/sdk@2.5.1':
     resolution: {integrity: sha512-CYUy22D4+wnrLMLcuHfhLVhSOvuvv8wBievDfbMkT4B+PMAjuDlPVGdP+3/aWaKd2J+M6ufFD78jyavft9yZXw==}
-
-  '@hono/node-server@2.1.3':
-    resolution: {integrity: sha512-TA//nWMqPhbfdfneACk6t5a9eqbS9lABEPyKn0/xZTah3H3U2XaVg85rJFl0/Fyit0I552YDHgXGVSf3GwqbUw==}
-    engines: {node: '>=20'}
-    peerDependencies:
-      hono: ^4
 
   '@humanfs/core@0.19.2':
     resolution: {integrity: sha512-UhXNm+CFMWcbChXywFwkmhqjs3PRCmcSa/hfBgLIb7oQ5HNb1wS0icWsGtSAUNgefHeI+eBrA8I1fxmbHsGdvA==}
@@ -1386,9 +1396,6 @@ packages:
   js-sha3@0.8.0:
     resolution: {integrity: sha512-gF1cRrHhIzNfToc802P800N8PpXS+evLLXfsVpowqmAFR9uwbi89WvXg2QspOmXL8QL86J4T1EpFu+yUkwJY3Q==}
 
-  js-tiktoken@1.0.21:
-    resolution: {integrity: sha512-biOj/6M5qdgx5TKjDnFT1ymSpM5tbd3ylwDtrQvFQSu0Z7bBYko2dF+W/aUkXUPuk6IVpRxk/3Q2sHOzGlS36g==}
-
   json-schema-traverse@0.4.1:
     resolution: {integrity: sha512-xbbCH5dCYU5T8LcEhhuh7HJ88HXuW3qsI3Y0zOZFKfZEHcpWiHU/Jxzk629Brsab/mMiHQti9wMP+845RPe3Vg==}
 
@@ -2148,10 +2155,6 @@ snapshots:
   '@honcho-ai/sdk@2.5.1':
     dependencies:
       zod: 4.0.0
-
-  '@hono/node-server@2.1.3(hono@4.13.13)':
-    dependencies:
-      hono: 4.13.13
 
   '@humanfs/core@0.19.2':
     dependencies:
@@ -3336,10 +3339,6 @@ snapshots:
       picocolors: 1.1.1
 
   js-sha3@0.8.0: {}
-
-  js-tiktoken@1.0.21:
-    dependencies:
-      base64-js: 1.5.1
 
   json-schema-traverse@0.4.1: {}
 

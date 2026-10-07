@@ -212,6 +212,7 @@ describe("verifyDeskProof", () => {
 describe("decodeDeskProof", () => {
   it.each([
     ["a hex number", { nullifier: "0x01" }],
+    ["a non-numeric string", { merkleTreeRoot: "x" }],
     ["a leading zero", { scope: "007" }],
     ["a value above 2^256", { message: (2n ** 256n).toString() }],
     ["an extra field", { signer: "alice" }],
