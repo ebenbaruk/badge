@@ -46,6 +46,22 @@ export type ChannelMessageRequest = z.infer<typeof channelMessageRequestSchema>;
 export const channelMessageResponseSchema = channelMessageRequestSchema;
 export type ChannelMessageResponse = ChannelMessageRequest;
 
+const NORMALISATION_BASE = "http://inner.invalid";
+
+/**
+ * True when URL parsing leaves the path untouched. WHATWG parsing resolves dot segments, including percent-encoded
+ * ones ("%2e%2e", ".%2E"), so "/v1/%2e%2e/health" would be dispatched as "/health": the prefix checks below only
+ * hold if what they see is exactly what the router will route.
+ */
+function survivesNormalisation(path: string): boolean {
+  const pathname = path.split("?", 1)[0] ?? "";
+  try {
+    return new URL(pathname, NORMALISATION_BASE).pathname === pathname;
+  } catch {
+    return false;
+  }
+}
+
 export const innerRequestSchema = z.strictObject({
   method: z.enum(INNER_METHODS),
   /** Only API routes; the channel routes themselves cannot be reached through the channel (no nesting). */
@@ -55,6 +71,7 @@ export const innerRequestSchema = z.strictObject({
     .regex(/^\/v1\/[A-Za-z0-9/_.~%?=&:-]*$/, "path must be an API path under /v1/")
     // URL parsing resolves dot segments, which would let "/v1/../x" escape the /v1 prefix checked here.
     .refine((path) => !path.includes(".."), "dot segments are not allowed")
+    .refine(survivesNormalisation, "the path must already be normalised (no encoded dot segments)")
     .refine((path) => !path.startsWith(CHANNEL_PATHS.prefix), "the channel cannot be nested"),
   headers: z.partialRecord(z.enum(INNER_REQUEST_HEADERS), z.string().max(512)),
   body: z.string().max(MAX_CHANNEL_BODY_LENGTH).nullable(),
