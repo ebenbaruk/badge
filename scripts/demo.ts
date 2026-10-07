@@ -17,6 +17,7 @@ import {
   BadgeClient,
   checkAuditHead,
   createAgentSession,
+  enclavePinsFromEnv,
   type ConsentRequest,
   type ContextShareConsent,
   type DeskShareConsent,
@@ -39,6 +40,8 @@ import {
   deriveDeskIdentity,
   encodeDeskProof,
 } from "@badge/zk";
+import { readFileSync } from "node:fs";
+import type { AttestationMode } from "@badge/attest";
 import type { LocalAccount } from "viem";
 import { z } from "zod";
 import {
@@ -113,6 +116,8 @@ function describeTask(narrator: Narrator, task: Task): void {
   for (const e of task.refused) narrator.detail(`refusé (${e.reason}) : ${e.ownerName} - ${e.excerptLabel}`);
 }
 
+const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "[::1]"]);
+
 async function main(): Promise<void> {
   const narrator = new Narrator();
   const { company, people } = loadPeople([...EMPLOYEES, ...OTHER_RESEARCH_MEMBERS]);
@@ -120,13 +125,18 @@ async function main(): Promise<void> {
   const agents = {} as Record<DemoEmployee, BadgeClient>;
   let enclave: EnclaveHandle | undefined;
 
-  const client = (url: string, sessionKey?: LocalAccount) =>
-    new BadgeClient({
+  // A loopback enclave runs on the dstack simulator; any other one (a Phala CVM) must present a real TDX quote
+  // matching the pins of BADGE_ENCLAVE_OS_MEASUREMENTS_FILE, or the channel is refused.
+  const client = (url: string, sessionKey?: LocalAccount) => {
+    const attestationMode: AttestationMode = LOOPBACK_HOSTS.has(new URL(url).hostname) ? "simulated" : "tdx";
+    return new BadgeClient({
       baseUrl: url,
       transport: "channel",
-      attestationMode: "simulated",
+      attestationMode,
+      ...enclavePinsFromEnv(process.env, attestationMode, (path) => readFileSync(path, "utf8")),
       ...(sessionKey === undefined ? {} : { sessionKey }),
     });
+  };
   const signed = async <K extends BadgeMessageKind>(
     who: DemoEmployee,
     kind: K,
@@ -137,7 +147,11 @@ async function main(): Promise<void> {
     signature: (await ledgers[who].sign(kind, message)).signature,
   });
 
-  console.log("Badge - démonstration de bout en bout (pile locale, TEE simulé, Ledgers Speculos)");
+  console.log(
+    process.env["BADGE_ENCLAVE_URL"] === undefined
+      ? "Badge - démonstration de bout en bout (pile locale, TEE simulé, Ledgers Speculos)"
+      : `Badge - démonstration de bout en bout (enclave ${process.env["BADGE_ENCLAVE_URL"]}, Ledgers Speculos)`,
+  );
   try {
     const measurement = await narrator.step("Mise en route : TEE simulé, enclave, Ledgers", async () => {
       const simulator = await ensureDstackSimulator();
