@@ -19,7 +19,6 @@ export interface ErrorBody {
 
 const ENCLAVE_STATUS: Record<EnclaveErrorCode, ContentfulStatusCode> = {
   INVALID_REQUEST: 400,
-  UNAUTHENTICATED: 401,
   FORBIDDEN: 403,
   NOT_FOUND: 404,
   UNKNOWN_EMPLOYEE: 403,
