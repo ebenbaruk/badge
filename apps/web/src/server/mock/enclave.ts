@@ -1,0 +1,184 @@
+/**
+ * In-memory enclave for the demo (BADGE_ENCLAVE_MODE=mock). It enforces the same rules as the contract
+ * (signatures, intrinsic checks, nonces, rules, ZK proofs) on scripted data from infra/seed/acme.json, so every
+ * device signature and proof made through the UI is real even though the enclave is not.
+ */
+import type { SignedMessage } from "@badge/consent";
+import type { DeskProofWire } from "@badge/zk";
+import { keccak256, toHex, type Hex } from "viem";
+import { EMPLOYEES, type DeskId, type EmployeeId } from "@/lib/directory";
+import { EnclaveError } from "../errors";
+import type {
+  AttestationView,
+  AuditView,
+  ConsentRequestView,
+  CreateTaskInput,
+  DeskRequestView,
+  DeskRequestsView,
+  DeskView,
+  EnclaveApi,
+  EnrollmentView,
+  GrantView,
+  PolicyView,
+  SealedIdentityView,
+  TaskView,
+} from "../enclave/types";
+import * as access from "./access";
+import { verifyChain } from "./audit";
+import * as desks from "./desks";
+import { createMockState, mockMeasurement, type MockState } from "./state";
+import * as tasks from "./tasks";
+
+const ALERT_TYPES: ReadonlySet<string> = new Set(["rule.warn", "rule.block"]);
+const APP_ID_BYTES = 20;
+
+export class MockEnclave implements EnclaveApi {
+  readonly mode = "mock" as const;
+  private readonly state: MockState;
+  private readonly startedAt = new Date();
+
+  constructor(measurementOverride?: Hex) {
+    this.state = createMockState(mockMeasurement(measurementOverride), desks.initialDeskCommitments());
+  }
+
+  async attestation(): Promise<AttestationView> {
+    return {
+      mode: "simulated",
+      verified: true,
+      measurement: this.state.measurement,
+      tcbStatus: "Simulated",
+      appId: keccak256(toHex("badge/mock-app")).slice(0, 2 + APP_ID_BYTES * 2),
+      warnings: [
+        "Enclave simulée (mode démo) : aucune garantie matérielle.",
+        "Les signatures Ledger et les preuves ZK sont réelles et vérifiées.",
+      ],
+      checkedAt: this.startedAt.toISOString(),
+    };
+  }
+
+  async enrollment(employee: EmployeeId): Promise<EnrollmentView> {
+    return access.enrollmentView(this.state, employee);
+  }
+
+  async enroll(signed: SignedMessage<"EmployeeEnroll">): Promise<EnrollmentView> {
+    return access.enroll(this.state, signed);
+  }
+
+  async openSession(employee: EmployeeId, signed: SignedMessage<"AgentSession">): Promise<EnrollmentView> {
+    return access.openSession(this.state, employee, signed);
+  }
+
+  async createTask(requester: EmployeeId, input: CreateTaskInput): Promise<TaskView> {
+    return tasks.createTask(this.state, requester, input);
+  }
+
+  async getTask(requester: EmployeeId, taskId: Hex): Promise<TaskView> {
+    return tasks.taskView(this.state, tasks.getTaskRecord(this.state, requester, taskId));
+  }
+
+  async listTasks(requester: EmployeeId): Promise<TaskView[]> {
+    return [...this.state.tasks.values()]
+      .filter((t) => t.requester === requester)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      .map((t) => tasks.taskView(this.state, t));
+  }
+
+  async listConsents(owner: EmployeeId): Promise<ConsentRequestView[]> {
+    return [...this.state.consents.values()]
+      .filter((c) => c.owner === owner)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      .map(tasks.consentView);
+  }
+
+  async approveConsent(owner: EmployeeId, consentId: string, signature: Hex): Promise<void> {
+    await tasks.approveConsent(this.state, owner, consentId, signature);
+  }
+
+  async rejectConsent(owner: EmployeeId, consentId: string): Promise<void> {
+    tasks.rejectConsent(this.state, owner, consentId);
+  }
+
+  async listGrants(owner: EmployeeId): Promise<GrantView[]> {
+    return access.listGrants(this.state, owner);
+  }
+
+  async revoke(owner: EmployeeId, signed: SignedMessage<"ContextRevoke">): Promise<{ revoked: number }> {
+    return access.revoke(this.state, owner, signed);
+  }
+
+  async createPolicy(owner: EmployeeId, signed: SignedMessage<"ContextPolicy">): Promise<PolicyView> {
+    return access.createPolicy(this.state, owner, signed);
+  }
+
+  async listPolicies(owner: EmployeeId): Promise<PolicyView[]> {
+    return access.listPolicies(this.state, owner);
+  }
+
+  async contextTags(owner: EmployeeId): Promise<string[]> {
+    return access.contextTags(this.state, owner);
+  }
+
+  async listDesks(viewer: EmployeeId): Promise<DeskView[]> {
+    return desks.listDesks(this.state, viewer);
+  }
+
+  async joinDesk(employee: EmployeeId, signed: SignedMessage<"DeskJoin">): Promise<DeskView> {
+    return desks.joinDesk(this.state, employee, signed);
+  }
+
+  async createDeskRequest(
+    requester: EmployeeId,
+    input: { fromDesk: DeskId; toDesk: DeskId; task: string },
+  ): Promise<DeskRequestView> {
+    return desks.createDeskRequest(this.state, requester, input);
+  }
+
+  async listDeskRequests(viewer: EmployeeId): Promise<DeskRequestsView> {
+    return desks.listDeskRequests(this.state, viewer);
+  }
+
+  async approveDeskRequest(
+    owner: EmployeeId,
+    requestId: Hex,
+    signed: SignedMessage<"DeskShare">,
+    proof: DeskProofWire,
+  ): Promise<void> {
+    await desks.approveDeskRequest(this.state, owner, requestId, signed, proof);
+  }
+
+  async rejectDeskRequest(owner: EmployeeId, requestId: Hex): Promise<void> {
+    desks.rejectDeskRequest(this.state, owner, requestId);
+  }
+
+  async audit(viewer: EmployeeId): Promise<AuditView> {
+    this.assertCompliance(viewer);
+    const entries = [...this.state.audit.entries()];
+    return {
+      entries,
+      chain: verifyChain(entries),
+      alerts: entries.filter((e) => ALERT_TYPES.has(e.type)),
+      sealed: [...this.state.sealed.values()].map(desks.sealedView),
+    };
+  }
+
+  async revealDeskShare(viewer: EmployeeId, seq: number): Promise<SealedIdentityView> {
+    this.assertCompliance(viewer);
+    const record = this.state.sealed.get(seq);
+    if (record === undefined)
+      throw new EnclaveError("NOT_FOUND", `aucune identité scellée à l'entrée ${seq}`);
+    record.revealedAt ??= new Date();
+    this.state.audit.append({
+      type: "compliance.reveal",
+      actor: viewer,
+      subject: String(seq),
+      data: { sourceDesk: record.sourceDesk, sealedSigner: record.sealed },
+    });
+    return desks.sealedView(record);
+  }
+
+  private assertCompliance(viewer: EmployeeId): void {
+    if (EMPLOYEES[viewer].role !== "compliance") {
+      throw new EnclaveError("FORBIDDEN", "réservé au rôle conformité");
+    }
+  }
+}
