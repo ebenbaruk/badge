@@ -1,6 +1,7 @@
 /**
- * Captures the values clients pin (`expectedComposeHash`, `expectedAppId`, `expectedOsMeasurements`) from the TCB
- * info of a fresh deployment, as Phala Cloud reports it (`phala cvms attestation --json`).
+ * Captures the values clients pin (`expectedComposeHash`, `expectedAppId`, `expectedOsMeasurements`, and the KMS
+ * id `expectedKeyProviderId`) from the TCB info of a fresh deployment, as Phala Cloud reports it
+ * (`phala cvms attestation --json`).
  *
  * This is trust on first use by the operator, not a substitute for verifying a quote: the TCB info comes from the
  * platform's API. What it does guarantee is that the pinned values are self-consistent and describe OUR code:
@@ -36,6 +37,53 @@ export interface DeploymentPins {
   appId: string;
   /** dstack OS image measurements: `expectedOsMeasurements` (excludes dev images and OS swaps). */
   osMeasurements: OsMeasurements;
+  /** KMS identity of the deployment (hex): `expectedKeyProviderId`, when the key-provider event carries one. */
+  keyProviderId?: string;
+}
+
+const hexOf = (bytes: number, label: string) =>
+  z.string().regex(new RegExp(`^(0x)?[0-9a-fA-F]{${bytes * 2}}$`), `${label} must be ${bytes} bytes of hex`);
+
+/**
+ * Shape of `infra/cvm/expected-measurements.json` (written by `infra/cvm/pin-measurements.ts`), the file clients
+ * load to pin a deployment. Extra fields (e.g. `capturedAt`) are ignored.
+ */
+export const deploymentPinsSchema = z.object({
+  composeHash: hexOf(32, "composeHash"),
+  appId: hexOf(20, "appId"),
+  osMeasurements: z.object({
+    mrtd: measurement("mrtd"),
+    rtmr0: measurement("rtmr0"),
+    rtmr1: measurement("rtmr1"),
+    rtmr2: measurement("rtmr2"),
+  }),
+  keyProviderId: z
+    .string()
+    .regex(/^(0x)?[0-9a-fA-F]+$/)
+    .optional(),
+});
+
+/**
+ * Validates pins read from a file (JSON already parsed) and normalises their hex.
+ * @throws AttestError("INVALID_INPUT") naming the malformed field.
+ */
+export function parseDeploymentPins(value: unknown): DeploymentPins {
+  const parsed = deploymentPinsSchema.safeParse(value);
+  if (!parsed.success) {
+    throw new AttestError("INVALID_INPUT", `deployment pins are malformed: ${z.prettifyError(parsed.error)}`);
+  }
+  const pins = parsed.data;
+  return {
+    composeHash: normalizeHex(pins.composeHash),
+    appId: normalizeHex(pins.appId),
+    osMeasurements: {
+      mrtd: normalizeHex(pins.osMeasurements.mrtd),
+      rtmr0: normalizeHex(pins.osMeasurements.rtmr0),
+      rtmr1: normalizeHex(pins.osMeasurements.rtmr1),
+      rtmr2: normalizeHex(pins.osMeasurements.rtmr2),
+    },
+    ...(pins.keyProviderId === undefined ? {} : { keyProviderId: normalizeHex(pins.keyProviderId) }),
+  };
 }
 
 /**
@@ -102,5 +150,6 @@ export function captureDeploymentPins(response: unknown, deployedDockerCompose: 
       rtmr1: normalizeHex(tcb.rtmr1),
       rtmr2: normalizeHex(tcb.rtmr2),
     },
+    ...(identity.keyProviderId === undefined ? {} : { keyProviderId: identity.keyProviderId }),
   };
 }

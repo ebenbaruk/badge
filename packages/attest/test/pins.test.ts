@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { composeHashOf } from "../src/compose";
 import { ComposeError, EventLogError } from "../src/errors";
-import { captureDeploymentPins } from "../src/pins";
+import { captureDeploymentPins, parseDeploymentPins } from "../src/pins";
 import { parseEventLog, replayRtmrs } from "../src/rtmr";
 import { COMPLIANT_COMPOSE, flipByte, simulatorFixture, syntheticTdxBundle } from "./helpers";
 
@@ -23,7 +23,15 @@ describe("captureDeploymentPins", () => {
       composeHash: composeHashOf(COMPLIANT_COMPOSE),
       appId: simulatorFixture.appId.replace(/^0x/, "").toLowerCase(),
       osMeasurements: { mrtd: MRTD, rtmr0: tcb.rtmr0, rtmr1: tcb.rtmr1, rtmr2: tcb.rtmr2 },
+      keyProviderId: "00",
     });
+  });
+
+  it("round-trips through the pins file that clients load", () => {
+    const pins = captureDeploymentPins(tcbInfoFor(), DOCKER_COMPOSE);
+    const file = JSON.parse(JSON.stringify({ capturedAt: "2026-10-07T00:00:00Z", ...pins })) as unknown;
+    expect(parseDeploymentPins(file)).toEqual(pins);
+    expect(() => parseDeploymentPins({ ...pins, appId: "zz" })).toThrow(/appId/);
   });
 
   it("accepts tcb_info given as a JSON string, as the guest agent returns it", () => {

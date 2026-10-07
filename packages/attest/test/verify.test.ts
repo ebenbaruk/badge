@@ -103,17 +103,28 @@ describe("verifyAttestation, simulated mode", () => {
   });
 });
 
+/** The OS measurements a quote carries (what a client pins for that deployment). */
+function osOf(quoteHex: string) {
+  const quote = parseTdxQuote(quoteHex);
+  return { mrtd: quote.mrtd, rtmr0: quote.rtmrs[0], rtmr1: quote.rtmrs[1], rtmr2: quote.rtmrs[2] };
+}
+
 describe("verifyAttestation, tdx mode", () => {
   const tdxInput: VerifyAttestationInput = {
     ...simulatedInput,
     mode: "tdx",
     expectedComposeHash: simulatorFixture.composeHash,
+    expectedAppId: simulatorFixture.appId,
+    expectedOsMeasurements: osOf(simulatorFixture.quote),
   };
 
-  it("requires a pinned compose hash", async () => {
-    const result = await verifyAttestation({ ...tdxInput, expectedComposeHash: undefined });
-    expect(result).toMatchObject({ ok: false, code: "INVALID_INPUT", simulated: false });
-  });
+  it.each(["expectedComposeHash", "expectedAppId", "expectedOsMeasurements"] as const)(
+    "requires %s (fail closed: a dev OS or another app id running the same compose would pass)",
+    async (pin) => {
+      const result = await verifyAttestation({ ...tdxInput, [pin]: undefined });
+      expect(result).toMatchObject({ ok: false, code: "INVALID_INPUT", simulated: false });
+    },
+  );
 
   it("rejects the simulator quote when DCAP fails (fail closed)", async () => {
     const failing: DcapVerifier = async () => {
@@ -159,6 +170,8 @@ describe("verifyAttestation, tdx mode", () => {
         nonce: client.hello.nonce,
         clientPk: client.hello.clientPk,
         expectedComposeHash: bundle.composeHash,
+        expectedAppId: simulatorFixture.appId,
+        expectedOsMeasurements: osOf(bundle.quote),
         mode: "tdx",
         dcapVerifier: dcapWithStatus("UpToDate"),
       }),
@@ -168,7 +181,7 @@ describe("verifyAttestation, tdx mode", () => {
       tcbStatus: "UpToDate",
       composeHash: bundle.composeHash,
     });
-    expect(result.warnings).toEqual(["dstack OS image not pinned (MRTD/RTMR0-2 not checked)"]);
+    expect(result.warnings).toEqual([]);
 
     client.establish(result);
     expect(enclave.open(client.seal({ hello: "enclave" }))).toEqual({ hello: "enclave" });
@@ -183,6 +196,8 @@ describe("verifyAttestation, tdx mode", () => {
       clientPk: client.hello.clientPk,
       mode: "tdx" as const,
       dcapVerifier: dcapWithStatus("UpToDate"),
+      expectedAppId: simulatorFixture.appId,
+      expectedOsMeasurements: osOf(simulatorFixture.quote),
     };
     const leaky = syntheticTdxBundle(
       enclave.reportData,
@@ -206,8 +221,7 @@ describe("verifyAttestation, tdx mode", () => {
     const client = ClientChannel.create();
     const enclave = EnclaveChannel.accept(client.hello, generateX25519KeyPair().secretKey);
     const bundle = syntheticTdxBundle(enclave.reportData);
-    const quote = parseTdxQuote(bundle.quote);
-    const os = { mrtd: quote.mrtd, rtmr0: quote.rtmrs[0], rtmr1: quote.rtmrs[1], rtmr2: quote.rtmrs[2] };
+    const os = osOf(bundle.quote);
     const input: VerifyAttestationInput = {
       ...bundle,
       enclavePk: enclave.enclavePk,
@@ -216,6 +230,7 @@ describe("verifyAttestation, tdx mode", () => {
       expectedComposeHash: bundle.composeHash,
       mode: "tdx",
       dcapVerifier: dcapWithStatus("UpToDate"),
+      expectedAppId: simulatorFixture.appId,
       expectedOsMeasurements: os,
     };
     expect(expectOk(await verifyAttestation(input)).warnings).toEqual([]);
@@ -223,6 +238,33 @@ describe("verifyAttestation, tdx mode", () => {
     expect(await verifyAttestation({ ...input, expectedOsMeasurements: wrongOs })).toMatchObject({
       ok: false,
       code: "OS_MEASUREMENT_MISMATCH",
+    });
+    expect(await verifyAttestation({ ...input, expectedAppId: "aa".repeat(20) })).toMatchObject({
+      ok: false,
+      code: "APP_ID_MISMATCH",
+    });
+  });
+
+  it("checks the pinned KMS identity when given", async () => {
+    const client = ClientChannel.create();
+    const enclave = EnclaveChannel.accept(client.hello, generateX25519KeyPair().secretKey);
+    const bundle = syntheticTdxBundle(enclave.reportData);
+    const input: VerifyAttestationInput = {
+      ...bundle,
+      enclavePk: enclave.enclavePk,
+      nonce: client.hello.nonce,
+      clientPk: client.hello.clientPk,
+      expectedComposeHash: bundle.composeHash,
+      expectedAppId: simulatorFixture.appId,
+      expectedOsMeasurements: osOf(bundle.quote),
+      mode: "tdx",
+      dcapVerifier: dcapWithStatus("UpToDate"),
+    };
+    // The synthetic bundle's KMS id is "00".
+    expect(expectOk(await verifyAttestation({ ...input, expectedKeyProviderId: "00" })).ok).toBe(true);
+    expect(await verifyAttestation({ ...input, expectedKeyProviderId: "ff" })).toMatchObject({
+      ok: false,
+      code: "KEY_PROVIDER_MISMATCH",
     });
   });
 });

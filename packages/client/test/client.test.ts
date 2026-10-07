@@ -276,6 +276,41 @@ describe("channel transport", () => {
     expect(badge.attestation?.ok).toBe(false);
   });
 
+  it("forwards every pin to the attestation check and fails closed in tdx mode without them", async () => {
+    const opened = {
+      channelId: "aa".repeat(32),
+      enclavePk: "bb".repeat(32),
+      bundle: { quote: "00".repeat(64), eventLog: "[]", appCompose: "{}", enclavePk: "bb".repeat(32) },
+    };
+    const options = { baseUrl: BASE_URL, transport: "channel", attestationMode: "tdx" } as const;
+    const unpinned = new BadgeClient({
+      ...options,
+      expectedComposeHash: "cd".repeat(32),
+      fetch: mockFetch({ body: opened }).fetchFn,
+    });
+    await expect(unpinned.connect()).rejects.toMatchObject({ code: "ATTESTATION_FAILED" });
+    expect(unpinned.attestation).toMatchObject({ ok: false, code: "INVALID_INPUT" });
+    expect(unpinned.attestation?.ok === false && unpinned.attestation.reason).toMatch(/expectedAppId/);
+
+    const os = {
+      mrtd: "11".repeat(48),
+      rtmr0: "22".repeat(48),
+      rtmr1: "33".repeat(48),
+      rtmr2: "44".repeat(48),
+    };
+    const pinned = new BadgeClient({
+      ...options,
+      expectedComposeHash: "cd".repeat(32),
+      expectedAppId: "ef".repeat(20),
+      expectedOsMeasurements: os,
+      fetch: mockFetch({ body: opened }).fetchFn,
+    });
+    await expect(pinned.connect()).rejects.toMatchObject({ code: "ATTESTATION_FAILED" });
+    // Pins accepted: the check went on to the (bogus) quote itself.
+    expect(pinned.attestation).toMatchObject({ ok: false });
+    expect(pinned.attestation?.ok === false && pinned.attestation.code).not.toBe("INVALID_INPUT");
+  });
+
   it("connect() is only for the channel transport", async () => {
     await expect(client(mockFetch().fetchFn).connect()).rejects.toMatchObject({ code: "INVALID_ARGUMENT" });
   });

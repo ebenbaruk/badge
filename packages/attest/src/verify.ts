@@ -70,10 +70,15 @@ export interface VerifyAttestationInput {
   enclavePk: string;
   /** Compose hash the client trusts (hard-coded or configured). Mandatory in `tdx` mode. */
   expectedComposeHash?: string;
-  /** dstack app id the client trusts. */
+  /** dstack app id the client trusts (binds the KMS-derived keys). Mandatory in `tdx` mode. */
   expectedAppId?: string;
-  /** Pins the dstack OS image (excludes dev images, which have other measurements). */
+  /**
+   * Pins the dstack OS image (excludes dev images, which allow root access to the guest, and OS swaps). Mandatory in
+   * `tdx` mode: the same compose on a dev OS would otherwise pass.
+   */
   expectedOsMeasurements?: OsMeasurements;
+  /** KMS identity (`id` of the key-provider event, hex), checked when given. */
+  expectedKeyProviderId?: string;
   mode: AttestationMode;
   /** Overrides the DCAP verifier (defaults to `@phala/dcap-qvl` with Phala's PCCS). */
   dcapVerifier?: DcapVerifier;
@@ -129,12 +134,24 @@ const inputSchema = z
         rtmr2: hex(MEASUREMENT_LENGTH, "rtmr2"),
       })
       .optional(),
+    expectedKeyProviderId: z
+      .string()
+      .regex(/^(0x)?[0-9a-fA-F]+$/, "expectedKeyProviderId must be hex")
+      .optional(),
     mode: z.enum(["tdx", "simulated"]),
     dcapVerifier: z.custom<DcapVerifier>((value) => typeof value === "function").optional(),
   })
   .refine((input) => input.mode !== "tdx" || input.expectedComposeHash !== undefined, {
     message: "expectedComposeHash is mandatory in tdx mode: without it any deployment would be accepted",
     path: ["expectedComposeHash"],
+  })
+  .refine((input) => input.mode !== "tdx" || input.expectedAppId !== undefined, {
+    message: "expectedAppId is mandatory in tdx mode: the same compose under another app id has other keys",
+    path: ["expectedAppId"],
+  })
+  .refine((input) => input.mode !== "tdx" || input.expectedOsMeasurements !== undefined, {
+    message: "expectedOsMeasurements is mandatory in tdx mode: the same compose on a dev OS image would pass",
+    path: ["expectedOsMeasurements"],
   });
 
 /**
@@ -260,8 +277,11 @@ async function runChecks(input: z.infer<typeof inputSchema>): Promise<VerifiedAt
     throw new AttestationError("APP_ID_MISMATCH", "attested app id is not the expected one");
   }
   if (input.expectedOsMeasurements) checkOsMeasurements(quote, input.expectedOsMeasurements);
-  if (input.mode === "tdx" && !input.expectedOsMeasurements) {
-    policy.warnings.push("dstack OS image not pinned (MRTD/RTMR0-2 not checked)");
+  if (
+    input.expectedKeyProviderId !== undefined &&
+    normalizeHex(input.expectedKeyProviderId) !== identity.keyProviderId
+  ) {
+    throw new EventLogError("KEY_PROVIDER_MISMATCH", "attested KMS is not the expected one");
   }
   for (const advisory of advisoryIds) policy.warnings.push(`Intel advisory ${advisory}`);
 
@@ -289,7 +309,8 @@ async function runChecks(input: z.infer<typeof inputSchema>): Promise<VerifiedAt
  * Checks, in order: Intel DCAP signature + `UpToDate` TCB (tdx only), TD not in debug mode, report_data =
  * sha512(nonce || clientPk || enclavePk), event log replays to RTMR0-3 with RTMR3 event digests recomputed,
  * sha256(appCompose) = attested compose hash, confidentiality flags of app-compose, `kms` key provider, then the
- * pinned compose hash / app id / OS measurements. In simulated mode the platform checks become warnings.
+ * pinned compose hash / app id / OS measurements (all three mandatory in `tdx` mode) and, when given, the KMS id.
+ * In simulated mode the platform checks become warnings.
  *
  * Never throws for a bad attestation: returns `{ ok: false, code, reason }`. Unexpected programming errors
  * (not `AttestError`) are rethrown.

@@ -18,6 +18,7 @@ export type AttestErrorCode =
   | "DCAP_FAILED"
   | "TCB_NOT_UP_TO_DATE"
   | "KEY_PROVIDER_NOT_KMS"
+  | "KEY_PROVIDER_MISMATCH"
   | "DSTACK_FAILED"
   | "CHANNEL_UNVERIFIED"
   | "channel_mismatch"

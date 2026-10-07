@@ -16,6 +16,7 @@ export {
   type RevealNoticeInput,
 } from "./client";
 export { apiErrorBodySchema, BadgeApiError, type ApiErrorBody, type ClientErrorCode } from "./errors";
+export { assertTdxPins, definedPins, ENCLAVE_PIN_ENV, enclavePinsFromEnv, type EnclavePins } from "./pins";
 export {
   BADGE_AUTH_HEADERS,
   bodyBytes,

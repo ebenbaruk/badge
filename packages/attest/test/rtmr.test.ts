@@ -69,6 +69,7 @@ describe("extractAppIdentity", () => {
       appId: simulatorFixture.appId,
       composeHash: simulatorFixture.composeHash,
       keyProvider: "kms",
+      keyProviderId: expect.stringMatching(/^3059[0-9a-f]+$/),
     });
   });
 

@@ -153,6 +153,11 @@ export interface AttestedAppIdentity {
   composeHash: string;
   /** Key provider name from the `key-provider` event (`kms` in production), when present. */
   keyProvider: string | undefined;
+  /**
+   * Key provider id from the same event (for `kms`: the KMS root public key, hex), when present. Pinning it rules
+   * out a deployment of the same compose under an operator's own KMS, which would hand them the derived keys.
+   */
+  keyProviderId: string | undefined;
 }
 
 function singleRuntimeEvent(events: readonly DstackEvent[], name: string): DstackEvent | undefined {
@@ -164,9 +169,9 @@ function singleRuntimeEvent(events: readonly DstackEvent[], name: string): Dstac
   return matches[0];
 }
 
-const keyProviderSchema = z.object({ name: z.string() });
+const keyProviderSchema = z.object({ name: z.string(), id: z.string().optional() });
 
-function parseKeyProvider(payloadHex: string): string {
+function parseKeyProvider(payloadHex: string): { name: string; id: string | undefined } {
   const text = new TextDecoder().decode(decodeHex(payloadHex, "key-provider payload"));
   let json: unknown;
   try {
@@ -180,7 +185,10 @@ function parseKeyProvider(payloadHex: string): string {
   if (!parsed.success) {
     throw new EventLogError("MALFORMED_EVENT_LOG", "key-provider event payload has no name");
   }
-  return parsed.data.name;
+  return {
+    name: parsed.data.name,
+    id: parsed.data.id === undefined ? undefined : normalizeHex(parsed.data.id),
+  };
 }
 
 /**
@@ -206,9 +214,11 @@ export function extractAppIdentity(events: readonly DstackEvent[]): AttestedAppI
       `app-id must be ${APP_ID_LENGTH} bytes and compose-hash ${COMPOSE_HASH_LENGTH} bytes`,
     );
   }
+  const keyProvider = keyProviderEvent ? parseKeyProvider(keyProviderEvent.event_payload) : undefined;
   return {
     appId: toHex(appId),
     composeHash: toHex(composeHash),
-    keyProvider: keyProviderEvent ? parseKeyProvider(keyProviderEvent.event_payload) : undefined,
+    keyProvider: keyProvider?.name,
+    keyProviderId: keyProvider?.id,
   };
 }

@@ -44,6 +44,7 @@ import {
 } from "./api-schemas";
 import type { InnerRequest } from "./channel-wire";
 import { BadgeApiError } from "./errors";
+import { definedPins, type EnclavePins } from "./pins";
 import { BADGE_AUTH_HEADERS, bodyBytes, canonicalRequest } from "./request-auth";
 import {
   ChannelTransport,
@@ -53,7 +54,7 @@ import {
   type Transport,
 } from "./transport";
 
-export interface BadgeClientOptions {
+export interface BadgeClientOptions extends EnclavePins {
   /** Enclave origin, e.g. `http://127.0.0.1:8787` (no trailing slash needed). */
   baseUrl: string;
   /** Agent session key. Only `enroll`, `openSession` and `measurement` work without one. */
@@ -62,8 +63,6 @@ export interface BadgeClientOptions {
   transport: "plain" | "channel";
   /** How to verify the enclave quote (channel transport). */
   attestationMode: AttestationMode;
-  /** Pinned compose hash (hex); mandatory with `attestationMode: "tdx"`. */
-  expectedComposeHash?: string;
   /** Called with every attestation result (also failures), e.g. to render the "TEE verified / simulated" badge. */
   onAttestation?: (result: AttestationResult) => void;
   /** Defaults to the global fetch. */
@@ -154,9 +153,12 @@ export class BadgeClient {
         baseUrl,
         fetchFn,
         attestationMode: options.attestationMode,
-        ...(options.expectedComposeHash === undefined
-          ? {}
-          : { expectedComposeHash: options.expectedComposeHash }),
+        ...definedPins({
+          expectedComposeHash: options.expectedComposeHash,
+          expectedAppId: options.expectedAppId,
+          expectedOsMeasurements: options.expectedOsMeasurements,
+          expectedKeyProviderId: options.expectedKeyProviderId,
+        }),
         ...(options.onAttestation === undefined ? {} : { onAttestation: options.onAttestation }),
       });
       this.transport = this.channel;

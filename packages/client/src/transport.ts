@@ -19,6 +19,7 @@ import {
   type InnerResponse,
 } from "./channel-wire";
 import { apiErrorBodySchema, BadgeApiError } from "./errors";
+import { definedPins, type EnclavePins } from "./pins";
 
 /** The fetch signature the SDK needs (lets tests and in-process callers pass their own). */
 export type FetchLike = (url: string, init: RequestInit) => Promise<Response>;
@@ -94,12 +95,11 @@ export class PlainTransport implements Transport {
   }
 }
 
-export interface ChannelTransportOptions {
+/** Pins are mandatory in `tdx` mode (compose hash, app id, OS measurements) and checked when given otherwise. */
+export interface ChannelTransportOptions extends EnclavePins {
   baseUrl: string;
   fetchFn: FetchLike;
   attestationMode: AttestationMode;
-  /** Pinned compose hash (hex). Mandatory in `tdx` mode, checked when given in `simulated` mode. */
-  expectedComposeHash?: string;
   /** Called with every attestation result, including failures (for the UI badge). */
   onAttestation?: (result: AttestationResult) => void;
 }
@@ -184,9 +184,12 @@ export class ChannelTransport implements Transport {
       ...opened.bundle,
       ...client.hello,
       mode: this.options.attestationMode,
-      ...(this.options.expectedComposeHash === undefined
-        ? {}
-        : { expectedComposeHash: this.options.expectedComposeHash }),
+      ...definedPins({
+        expectedComposeHash: this.options.expectedComposeHash,
+        expectedAppId: this.options.expectedAppId,
+        expectedOsMeasurements: this.options.expectedOsMeasurements,
+        expectedKeyProviderId: this.options.expectedKeyProviderId,
+      }),
     });
     this.lastAttestation = result;
     this.options.onAttestation?.(result);

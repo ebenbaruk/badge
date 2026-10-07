@@ -46,7 +46,12 @@ export {
   sealToPublicKey,
   type SealedBox,
 } from "./sealed";
-export { captureDeploymentPins, type DeploymentPins } from "./pins";
+export {
+  captureDeploymentPins,
+  deploymentPinsSchema,
+  parseDeploymentPins,
+  type DeploymentPins,
+} from "./pins";
 export { parseTdxQuote, type TdxQuote } from "./quote";
 export {
   assertRtmrsMatch,
