@@ -84,7 +84,9 @@ phala deploy --json --wait \
   --disk-size "$DISK_SIZE" \
   --kms phala \
   --no-dev-os --no-public-logs --no-public-sysinfo --public-tcbinfo --no-listed \
-  -e "$secrets_file" >"$STATE_DIR/deploy.json"
+  -e "$secrets_file" >"$STATE_DIR/deploy.raw"
+# The CLI prints progress lines ("Provisioning CVM ...") before the JSON document even with --json.
+sed -n '/^{/,$p' "$STATE_DIR/deploy.raw" >"$STATE_DIR/deploy.json"
 deployed=1
 rm -f "$secrets_file"
 
