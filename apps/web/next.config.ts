@@ -10,8 +10,9 @@ const nextConfig: NextConfig = {
   typedRoutes: true,
   // Do not generate tooling instruction files in the app directory on `next dev`.
   agentRules: false,
-  // Keep the dev badge away from the sidebar footer.
-  devIndicators: { position: "bottom-right" },
+  // The jury demo runs on `next dev`: no dev badge over the Ledger panel or in the recordings. Build errors still
+  // show in the overlay.
+  devIndicators: false,
   poweredByHeader: false,
 };
 
