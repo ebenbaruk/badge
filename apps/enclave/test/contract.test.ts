@@ -130,6 +130,7 @@ describe("enclave API contract (BadgeClient against the real app)", () => {
     expect((await sdk(h).measurement()).measurement).toBe(MEASUREMENT);
     for (const who of ["alice", "bob", "chloe"] as const) agents[who] = await onboard(h, who);
     expect(await agents.chloe.me()).toMatchObject({ id: "chloe", role: "compliance", company: "Acme" });
+    expect((await agents.bob.me()).contextTags).toContain("orion");
   });
 
   it("Orion task: company and own context allowed, Bob's notes wait for his Ledger", async () => {

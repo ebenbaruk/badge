@@ -16,12 +16,15 @@ export function registerPublicRoutes(app: Hono<BadgeEnv>, services: EnclaveServi
   app.post("/v1/sessions", async (c) => c.json(await services.policy.openSession(await jsonBody(c)), 201));
 }
 
-/** GET /v1/me: who the session belongs to, as the directory knows them. */
+/** GET /v1/me: who the session belongs to, as the directory knows them, and the tags of their own notes. */
 export function registerMeRoute(app: Hono<BadgeEnv>, services: EnclaveServices): void {
   app.get("/v1/me", (c) => {
     const { directory } = services.ctx;
     const employee = directory.requireEmployee(c.get("caller").employeeId);
-    const me: Me = { ...directory.profile(employee), company: directory.company.name };
+    const contextTags = [
+      ...new Set(services.inventory.notesOf(employee.id).flatMap((note) => note.tags)),
+    ].sort();
+    const me: Me = { ...directory.profile(employee), company: directory.company.name, contextTags };
     return c.json(me);
   });
 }

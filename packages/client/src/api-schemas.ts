@@ -34,8 +34,11 @@ export type Employee = z.infer<typeof employeeSchema>;
 export const enrollResponseSchema = z.object({ employee: employeeSchema });
 export type EnrollResponse = z.infer<typeof enrollResponseSchema>;
 
-/** `GET /v1/me`: the caller as the directory knows them. */
-export const meSchema = employeeSchema.extend({ company: z.string() });
+/**
+ * `GET /v1/me`: the caller as the directory knows them, plus the tags of their own notes (what a standing agreement
+ * can cover; the enclave is the only one that knows the context it holds).
+ */
+export const meSchema = employeeSchema.extend({ company: z.string(), contextTags: z.array(z.string()) });
 export type Me = z.infer<typeof meSchema>;
 
 /** `POST /v1/sessions`. */

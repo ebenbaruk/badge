@@ -44,6 +44,8 @@ export interface EnclaveServices {
   readonly tasks: TaskService;
   readonly desks: DeskService;
   readonly compliance: ComplianceService;
+  /** What context each owner holds (GET /v1/me lists the caller's own tags from it). */
+  readonly inventory: ContextInventory;
   /** Per-employee data keys, rotated on every revocation. */
   readonly keys: KeyRotator;
 }
@@ -63,6 +65,7 @@ export function createServices(deps: AppDeps, enclave: EnclaveMeasurement): Encl
     ctx,
     policy,
     keys,
+    inventory: deps.inventory,
     tasks: new TaskService({
       ctx,
       policy,

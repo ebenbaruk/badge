@@ -83,7 +83,8 @@ Another employee's resource is reported as `NOT_FOUND`. Signed messages travel a
    `201 {employee}`.
 2. **Agent session** `POST /v1/sessions` (signed `AgentSession`): employee enrolled; `expiresAt` at most 12 h ahead;
    the session key is not a directory Ledger address; the same employee may re-delegate a key whose session ended.
-   `201 {sessionKey, employeeId, agentName, expiresAt}`. `GET /v1/me` returns the caller's directory profile.
+   `201 {sessionKey, employeeId, agentName, expiresAt}`. `GET /v1/me` returns the caller's directory profile and `contextTags`, the sorted tags of their own notes (what a
+   standing agreement can cover).
 3. **Task** `POST /v1/tasks {task (<= 2000 chars), taskLabel, requestFullContextOf?}` by the requester's agent:
    - memory finds candidates across the company context and every personal context; the LLM classifier keeps the
      relevant ones;
@@ -185,7 +186,7 @@ excerpt text, only hashes, lengths and ids. Types: `enroll`, `session.open`, `ta
 | GET /v1/attestation/measurement    |                                                | `Measurement {measurement, composeHash, appId}` |
 | POST /v1/enroll                    | signed EmployeeEnroll                          | `{employee: Employee}`                          |
 | POST /v1/sessions                  | signed AgentSession                            | `Session`                                       |
-| GET /v1/me                         |                                                | `Me` (Employee + company)                       |
+| GET /v1/me                         |                                                | `Me` (Employee + company + contextTags)         |
 | POST /v1/tasks                     | `{task, taskLabel, requestFullContextOf?}`     | `Task`                                          |
 | GET /v1/tasks/:id                  |                                                | `Task`                                          |
 | GET /v1/consents                   |                                                | `{consents: (ContextShare or DeskShare)[]}`     |
