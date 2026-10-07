@@ -56,15 +56,17 @@ règles anti-aspiration…) reviennent comme erreurs d'outil lisibles, pas comme
 
 ## Configuration
 
-| Variable                     | Défaut                  | Rôle                                                                     |
-| ---------------------------- | ----------------------- | ------------------------------------------------------------------------ |
-| `BADGE_SESSION_KEY_FILE`     | (obligatoire)           | Fichier de session ; `--session <fichier>` le remplace.                  |
-| `BADGE_ENCLAVE_URL`          | `http://127.0.0.1:8787` | Origine de l'enclave.                                                    |
-| `BADGE_ENCLAVE_TRANSPORT`    | `channel`               | `channel` (canal attesté) ou `plain` (développement, simulateur requis). |
-| `BADGE_ATTESTATION_MODE`     | `tdx`                   | `tdx` (vrai TEE) ou `simulated` (simulateur dstack).                     |
-| `BADGE_ENCLAVE_COMPOSE_HASH` | —                       | Compose hash épinglé, obligatoire en `tdx`.                              |
-| `BADGE_MCP_TRANSPORT`        | `stdio`                 | `stdio` ou `http` (`--http`).                                            |
-| `BADGE_MCP_HTTP_PORT`        | `8790`                  | Port HTTP local (`--port`).                                              |
+| Variable                             | Défaut                  | Rôle                                                                                                |
+| ------------------------------------ | ----------------------- | --------------------------------------------------------------------------------------------------- |
+| `BADGE_SESSION_KEY_FILE`             | (obligatoire)           | Fichier de session ; `--session <fichier>` le remplace.                                             |
+| `BADGE_ENCLAVE_URL`                  | `http://127.0.0.1:8787` | Origine de l'enclave.                                                                               |
+| `BADGE_ENCLAVE_TRANSPORT`            | `channel`               | `channel` (canal attesté) ou `plain` (développement, simulateur requis).                            |
+| `BADGE_ATTESTATION_MODE`             | `tdx`                   | `tdx` (vrai TEE) ou `simulated` (simulateur dstack).                                                |
+| `BADGE_ENCLAVE_COMPOSE_HASH`         | —                       | Compose hash épinglé (sinon lu dans le fichier d'épingles).                                         |
+| `BADGE_ENCLAVE_APP_ID`               | —                       | App id dstack épinglé (sinon lu dans le fichier d'épingles).                                        |
+| `BADGE_ENCLAVE_OS_MEASUREMENTS_FILE` | —                       | `infra/cvm/expected-measurements.json` ; en `tdx`, compose hash, app id et mesures OS obligatoires. |
+| `BADGE_MCP_TRANSPORT`                | `stdio`                 | `stdio` ou `http` (`--http`).                                                                       |
+| `BADGE_MCP_HTTP_PORT`                | `8790`                  | Port HTTP local (`--port`).                                                                         |
 
 Les journaux vont sur la sortie d'erreur : en stdio, la sortie standard ne porte que le protocole MCP.
 
@@ -82,7 +84,8 @@ claude mcp add badge --scope user \
 ```
 
 En production, remplacer `BADGE_ATTESTATION_MODE=simulated` par `-e BADGE_ATTESTATION_MODE=tdx
--e BADGE_ENCLAVE_COMPOSE_HASH=<compose hash publié> -e BADGE_ENCLAVE_URL=https://<enclave>`.
+-e BADGE_ENCLAVE_OS_MEASUREMENTS_FILE=<badge>/infra/cvm/expected-measurements.json -e BADGE_ENCLAVE_URL=https://<enclave>`
+(le fichier publié épingle compose hash, app id, mesures de l'OS et KMS).
 
 Claude Code en HTTP (serveur lancé à part avec `pnpm --filter @badge/mcp start --http`) :
 

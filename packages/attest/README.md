@@ -12,7 +12,8 @@ l'enclave.
 2. L'enclave fait `EnclaveChannel.accept(hello, cléSecrète)` (clé statique dérivée par `deriveChannelKeyPair`),
    puis `createAttestationBundle(dstack, { ...hello, enclavePk })` : quote dont le `report_data` vaut
    `sha512(nonce || clientPk || enclavePk)`, event log et `app_compose` exact.
-3. Le client appelle `verifyAttestation({ ...bundle, ...client.hello, mode, expectedComposeHash })`, puis
+3. Le client appelle `verifyAttestation({ ...bundle, ...client.hello, mode, expectedComposeHash, expectedAppId,
+expectedOsMeasurements })`, puis
    `client.establish(résultat)`. Aucune clé de session n'existe avant une attestation valide.
 4. Messages : `seal` / `open` (AES-256-GCM, clés HKDF-SHA256 distinctes par sens, numéro de séquence strict :
    rejeu, réordonnancement et altération refusés).
@@ -42,7 +43,9 @@ l'enclave.
 | `public_logs` / `public_sysinfo` à false, KMS actif                 | obligatoire | avertissement |
 | Fournisseur de clés `kms`                                           | obligatoire | avertissement |
 | Compose hash attendu (`expectedComposeHash`)                        | exigé       | si fourni     |
-| App id, mesures de l'OS (`expectedAppId`, `expectedOsMeasurements`) | si fourni   | si fourni     |
+| App id, mesures de l'OS (`expectedAppId`, `expectedOsMeasurements`) | exigés      | si fourni     |
+| Identité du KMS (`expectedKeyProviderId`)                           | si fourni   | si fourni     |
+| `allowed_envs` sans point de terminaison (`*_URL`, `*_HOST`...)     | obligatoire | avertissement |
 
 Le mode `simulated` renvoie `simulated: true` : l'interface doit afficher un badge orange « TEE simulé ».
 

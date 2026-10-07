@@ -29,7 +29,12 @@ const task = await agent.createTask({ task: "Preparer le rendez-vous Durand", ta
   avant la vérification du quote. Les requêtes sont sérialisées (numéros de séquence stricts). Un canal expiré est
   rouvert et la requête rejouée une seule fois (code `CHANNEL_UNKNOWN` : la requête n'a pas été exécutée).
 - `transport: "plain"` : HTTP direct, pour le développement local (refusé par une enclave en `requireChannel`).
-- `attestationMode: "tdx"` exige `expectedComposeHash`.
+- `attestationMode: "tdx"` exige `expectedComposeHash`, `expectedAppId` et `expectedOsMeasurements`
+  (`expectedKeyProviderId` vérifié s'il est fourni) ; `enclavePinsFromEnv` les lit depuis
+  `BADGE_ENCLAVE_COMPOSE_HASH`, `BADGE_ENCLAVE_APP_ID` et `BADGE_ENCLAVE_OS_MEASUREMENTS_FILE`
+  (`infra/cvm/expected-measurements.json`), en échec fermé.
+- `prepareRevocation({ grantId } | { recipient })` renvoie le `ContextRevoke` exact à signer (libellé canonique) ;
+  `checkAuditHead` vérifie la tête signée du journal et sa continuité avec la dernière acceptée.
 - Toutes les erreurs sont des `BadgeApiError { status, code, message }` (`code` de l'enclave ou du SDK :
   `NETWORK_ERROR`, `BAD_RESPONSE`, `ATTESTATION_FAILED`, `CHANNEL_FAILED`, `NO_SESSION_KEY`, `INVALID_ARGUMENT`).
 - Chaque réponse est validée par zod (`api-schemas.ts`) ; les messages signés qu'elle contient sont décodés avec

@@ -22,8 +22,8 @@ sombre, interface en français. Le serveur Next joue deux rôles :
 
 Barre du haut : changement d'employé (démo), badge d'attestation (vert « Enclave attestée » pour une quote TDX
 vérifiée, ambre « TEE simulé » sinon) avec la mesure de l'enclave. Panneau de droite : le Ledger de l'employé
-(miroir en direct, clic = toucher, appui long = « Hold to sign », glisser à gauche = page suivante, « Revue auto »
-pour les répétitions).
+(miroir en direct, clic = toucher, appui long = « Hold to sign », glisser à gauche = page suivante ; « Revue auto »
+uniquement en répétition, avec `BADGE_REHEARSAL=1`).
 
 ## Enclave : `src/server/enclave`
 
@@ -58,21 +58,27 @@ effacée ; seul l'avis de levée (`POST /v1/audit/reveal-notice`) part vers l'en
 - `GET /api/devices/:employé/screen` : capture PNG de l'écran (sondée ~5 fois/s pendant une revue).
 - `POST /api/devices/:employé/input` : `{ kind: "tap" | "hold", x, y }` ou `{ kind: "swipe-next" }`
   (coordonnées de l'écran 480 x 600).
-- `POST /api/devices/:employé/review` : `{ decision: "approve" | "reject" }`, revue automatique (Speculos).
+- `POST /api/devices/:employé/review` : `{ decision: "approve" | "reject" }`, revue automatique (Speculos), seulement
+  avec `BADGE_REHEARSAL=1` (404 sinon).
+- Les deux `POST` refusent toute requête inter-sites (CSRF) : `Origin` étranger ou `Sec-Fetch-Site` autre que
+  `same-origin` (403), corps autre que `application/json` (415), en-tête `x-badge-device: 1` absent (403).
 
 ## Variables d'environnement
 
-| Variable                                   | Défaut                        | Rôle                                                                                           |
-| ------------------------------------------ | ----------------------------- | ---------------------------------------------------------------------------------------------- |
-| `BADGE_ENCLAVE_MODE`                       | `live`                        | `live` (enclave réelle) ou `mock` (développement de l'interface)                               |
-| `BADGE_ENCLAVE_URL`                        | `http://127.0.0.1:8787`       | Origine de l'enclave                                                                           |
-| `BADGE_ATTESTATION_MODE`                   | `simulated`                   | `simulated` (simulateur dstack) ou `tdx` (CVM Phala)                                           |
-| `BADGE_ENCLAVE_COMPOSE_HASH`               | —                             | Compose hash épinglé, **requis** en `tdx`                                                      |
-| `BADGE_SPECULOS_ALICE` / `_BOB` / `_CHLOE` | `http://localhost:5001..5003` | Speculos de chaque employé                                                                     |
-| `BADGE_CAL_TEST_KEY`                       | —                             | Clé CAL de test (PEM), **requise** : le bundle Next ne peut pas retrouver le chemin par défaut |
-| `BADGE_ZK_ARTIFACTS_DIR`                   | `<dépôt>/infra/zk-artifacts`  | Artefacts Semaphore profondeur 16                                                              |
-| `BADGE_WEB_DATA_DIR`                       | `.data` (dans `apps/web`)     | État conservé du runtime d'agent (clés de session, identifiants de tâches), droits `600`       |
-| `BADGE_MOCK_MEASUREMENT`                   | empreinte fixe                | Mesure (bytes32) de l'enclave simulée                                                          |
+| Variable                                   | Défaut                        | Rôle                                                                                             |
+| ------------------------------------------ | ----------------------------- | ------------------------------------------------------------------------------------------------ |
+| `BADGE_ENCLAVE_MODE`                       | `live`                        | `live` (enclave réelle) ou `mock` (développement de l'interface)                                 |
+| `BADGE_ENCLAVE_URL`                        | `http://127.0.0.1:8787`       | Origine de l'enclave                                                                             |
+| `BADGE_ATTESTATION_MODE`                   | selon l'URL                   | `simulated` (simulateur dstack, enclave en loopback uniquement) ou `tdx` (défaut hors loopback)  |
+| `BADGE_ENCLAVE_COMPOSE_HASH`               | —                             | Compose hash épinglé (sinon lu dans le fichier d'épingles)                                       |
+| `BADGE_ENCLAVE_APP_ID`                     | —                             | App id dstack épinglé (sinon lu dans le fichier d'épingles)                                      |
+| `BADGE_ENCLAVE_OS_MEASUREMENTS_FILE`       | —                             | `infra/cvm/expected-measurements.json` ; en `tdx`, compose hash, app id et mesures OS **requis** |
+| `BADGE_REHEARSAL`                          | `0`                           | `1` active la revue automatique sur le Ledger (répétitions seulement)                            |
+| `BADGE_SPECULOS_ALICE` / `_BOB` / `_CHLOE` | `http://localhost:5001..5003` | Speculos de chaque employé                                                                       |
+| `BADGE_CAL_TEST_KEY`                       | —                             | Clé CAL de test (PEM), **requise** : le bundle Next ne peut pas retrouver le chemin par défaut   |
+| `BADGE_ZK_ARTIFACTS_DIR`                   | `<dépôt>/infra/zk-artifacts`  | Artefacts Semaphore profondeur 16                                                                |
+| `BADGE_WEB_DATA_DIR`                       | `.data` (dans `apps/web`)     | État conservé du runtime d'agent (clés de session, identifiants de tâches), droits `600`         |
+| `BADGE_MOCK_MEASUREMENT`                   | empreinte fixe                | Mesure (bytes32) de l'enclave simulée                                                            |
 
 ## Scripts
 

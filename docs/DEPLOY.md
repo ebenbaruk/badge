@@ -24,15 +24,19 @@ mesure que les clients épinglent et que chaque accord signé sur le Ledger port
 - **Un seul port publié** : 8787, servi par la passerelle et routé vers l'enclave. URL publique :
   `https://<app-id>-8787.<cluster>.phala.network` (TLS terminé par la passerelle dstack ; la confidentialité
   jusqu'à l'enclave vient du canal attesté `POST /v1/channel/*`).
-- **Secrets** : seules quatre variables sont transmises, chiffrées sur la machine de l'opérateur vers la clé KMS
+- **Secrets** : seules trois variables sont transmises, chiffrées sur la machine de l'opérateur vers la clé KMS
   du CVM (seuls leurs **noms** entrent dans le compose hash) :
 
   | Variable                   | Contenu                                                    |
   | -------------------------- | ---------------------------------------------------------- |
-  | `PHALA_AI_BASE_URL`        | URL https de Phala Confidential AI (compatible OpenAI)     |
   | `PHALA_AI_API_KEY`         | clé Confidential AI (reçue uniquement par la passerelle)   |
   | `PHALA_AI_MODEL`           | modèle de chat (ex. `qwen/qwen3.6-27b`)                    |
   | `PHALA_AI_EMBEDDING_MODEL` | défaut `sentence-transformers/all-minilm-l6-v2` (384 dim.) |
+
+  Aucune URL parmi elles : la valeur d'une variable chiffrée reste au choix de l'opérateur hors du compose hash.
+  L'hôte LLM (`https://inference.phala.com/v1`) est donc un littéral de `compose.yml` **et** figé dans l'image de la
+  passerelle (`infra/gateway/15-badge-upstream.envsh`), qui s'arrête si on lui en donne un autre ; les clients
+  refusent une app-compose dont `allowed_envs` contient un point de terminaison (`*_URL`, `*_HOST`...).
 
   Le secret JWT Honcho, le mot de passe Postgres et le JWT admin de l'enclave sont **générés dans le CVM** au
   premier démarrage (`infra/honcho/secrets-init.sh`) et ne le quittent jamais : personne, pas même l'opérateur,
@@ -147,25 +151,31 @@ sha256(`app_compose`), le `docker_compose_file` embarqué doit être **octet pou
 `public_logs` / `public_sysinfo` doivent être à `false` avec le KMS actif. C'est une confiance au premier usage de
 l'opérateur sur les données de la plateforme ; la preuve matérielle est vérifiée par chaque client, à chaque canal.
 
-Le client (SDK `@badge/client`) épingle le compose hash :
+Le client (SDK `@badge/client`) épingle le compose hash, l'app id, les mesures de l'OS et le KMS :
 
 ```ts
 import { readFileSync } from "node:fs";
-import { BadgeClient } from "@badge/client";
+import { BadgeClient, enclavePinsFromEnv } from "@badge/client";
 
+const pins = enclavePinsFromEnv(
+  { BADGE_ENCLAVE_OS_MEASUREMENTS_FILE: "infra/cvm/expected-measurements.json" },
+  "tdx",
+  (path) => readFileSync(path, "utf8"),
+);
 const client = new BadgeClient({
   baseUrl: "https://<app-id>-8787.<cluster>.phala.network",
   transport: "channel", // canal attesté : seul accepté par l'enclave en production
   attestationMode: "tdx", // signature Intel DCAP + TCB à jour, rejeu des RTMR, politique de l'app-compose
-  expectedComposeHash: readFileSync("infra/cvm/expected-compose-hash.txt", "utf8").trim(),
+  ...pins,
   sessionKey,
 });
 ```
 
-En mode `tdx`, `expectedComposeHash` est obligatoire. Les mesures de l'OS (`expectedOsMeasurements`) et l'app id
-(`expectedAppId`) se passent à `verifyAttestation` de `@badge/attest` depuis `expected-measurements.json` : elles
-excluent une image OS de développement ou différente. Sans elles, la vérification signale « dstack OS image not
-pinned ». Les accords signés sur le Ledger portent `enclaveMeasurement = 0x<compose hash>` : un accord signé pour
+En mode `tdx`, compose hash, app id (`expectedAppId`) et mesures de l'OS (`expectedOsMeasurements`) sont
+obligatoires (échec fermé) : ils excluent la même compose déployée sur une image OS de développement (accès root
+à l'invité) ou sous un autre app id / KMS. L'application web et le serveur MCP les lisent depuis
+`BADGE_ENCLAVE_OS_MEASUREMENTS_FILE` (et `BADGE_ENCLAVE_COMPOSE_HASH`, `BADGE_ENCLAVE_APP_ID` s'ils sont donnés,
+qui doivent concorder). Les accords signés sur le Ledger portent `enclaveMeasurement = 0x<compose hash>` : un accord signé pour
 une autre version du code est refusé (`ENCLAVE_MISMATCH`).
 
 Toute modification de `infra/cvm/compose.yml` (même un commentaire), d'un digest d'image ou de la liste des
@@ -174,7 +184,7 @@ variables chiffrées change le compose hash : redéployer, puis redistribuer les
 ## Profil LLM Phala et re-seed
 
 - **Dans le CVM**, le profil est toujours `phala` (fixé dans `compose.yml`) : Honcho et l'enclave passent par la
-  passerelle vers `PHALA_AI_BASE_URL`, embeddings MiniLM 384 dimensions.
+  passerelle vers l'hôte épinglé `https://inference.phala.com/v1`, embeddings MiniLM 384 dimensions.
 - **Re-seed dans le CVM** : le service `seed` tourne à chaque démarrage et est idempotent (notes déjà présentes
   ignorées). Pour repartir de zéro (autre modèle d'embeddings, jeu modifié) : `phala-down.sh` puis
   `phala-up.sh` (nouveau disque, nouvelle mémoire). Changer `PHALA_AI_MODEL` n'impose pas de reset ; changer
