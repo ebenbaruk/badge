@@ -1,4 +1,4 @@
-import { Link2, Link2Off, ScrollText, ShieldAlert, ShieldX, VenetianMask } from "lucide-react";
+import { BadgeCheck, Link2, Link2Off, ScrollText, ShieldAlert, ShieldX, VenetianMask } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { z } from "zod";
@@ -33,8 +33,8 @@ const TYPE_TONE: Record<string, string> = {
   "compliance.reveal": "bg-violet-500/12 text-violet-600 dark:text-violet-300",
 };
 
-/** Rule codes as the enclave logs them in `rule.warn` / `rule.block` entries. */
-const ruleReasonsSchema = z.array(z.object({ code: z.string() }));
+/** Rule reasons as the enclave logs them in `rule.warn` / `rule.block` entries (French message, stable code). */
+const ruleReasonsSchema = z.array(z.object({ code: z.string(), message: z.string().optional() }));
 
 function actorLabel(actor: string): string {
   if (isEmployeeId(actor)) return EMPLOYEES[actor].name;
@@ -89,20 +89,36 @@ function Stat({
 
 function AlertRow({ entry }: { entry: AuditEntryView }) {
   const block = entry.type === "rule.block";
-  const reasons = ruleReasonsSchema.safeParse(entry.data.reasons);
-  const rules = reasons.success ? reasons.data.map((r) => r.code).join(", ") : "";
+  const parsed = ruleReasonsSchema.safeParse(entry.data.reasons);
+  const reasons = parsed.success ? parsed.data : [];
   const owner =
     typeof entry.data.owner === "string" && isEmployeeId(entry.data.owner) ? entry.data.owner : null;
   return (
-    <li className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 text-xs">
-      {block ? <ShieldX className="size-4 text-danger" /> : <ShieldAlert className="size-4 text-danger" />}
-      <span className="font-medium">{block ? "Bloqué" : "Signalé"}</span>
-      <span className="text-muted-foreground">
-        {isEmployeeId(entry.actor) ? `Agent de ${EMPLOYEES[entry.actor].name}` : "Demande d'un agent"} →
-        contexte de {owner === null ? "?" : EMPLOYEES[owner].name}
-      </span>
-      <span className="font-mono text-[11px] text-danger">{rules}</span>
-      <time className="ml-auto text-muted-foreground">{formatDateTime(entry.ts)}</time>
+    <li className="flex items-start gap-3 px-4 py-3 text-xs">
+      {block ? (
+        <ShieldX className="size-4 shrink-0 text-danger" />
+      ) : (
+        <ShieldAlert className="size-4 shrink-0 text-danger" />
+      )}
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <span className="font-medium">{block ? "Bloqué" : "Signalé"}</span>
+          <span className="text-muted-foreground">
+            {isEmployeeId(entry.actor) ? `Agent de ${EMPLOYEES[entry.actor].name}` : "Demande d'un agent"} →
+            contexte de {owner === null ? "?" : EMPLOYEES[owner].name}
+          </span>
+          <time className="ml-auto text-muted-foreground">{formatDateTime(entry.ts)}</time>
+        </div>
+        {reasons.length > 0 && (
+          <ul className="mt-1.5 space-y-0.5 text-danger">
+            {reasons.map((reason) => (
+              <li key={reason.code} title={reason.code}>
+                {reason.message ?? reason.code}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </li>
   );
 }
@@ -150,8 +166,17 @@ export default async function CompliancePage({ params }: { params: Promise<{ emp
           value={sealed.length}
         />
       </div>
-      <div className="mt-2 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+      <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
         Tête de chaîne <CopyableHash value={chain.headHash} />
+        {chain.headSigner !== undefined && (
+          <span className="inline-flex items-center gap-1.5">
+            <span className="inline-flex items-center gap-1 text-success">
+              <BadgeCheck className="size-3" />
+              signée par l&apos;enclave attestée
+            </span>
+            · clé d&apos;audit <CopyableHash value={chain.headSigner} />
+          </span>
+        )}
       </div>
 
       <section className="mt-10">

@@ -395,7 +395,7 @@ export class LiveEnclave implements EnclaveApi {
     }
     const view = auditView({ entries, chain: first.chain }, runtime.revealed);
     return anchored.ok
-      ? view
+      ? { ...view, chain: { ...view.chain, headSigner: anchored.record.signer } }
       : { ...view, chain: { ...view.chain, anchorProblem: AUDIT_HEAD_PROBLEMS[anchored.problem] } };
   }
 

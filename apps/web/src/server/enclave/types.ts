@@ -298,6 +298,11 @@ export interface ChainVerification {
    * cannot be checked: a French explanation. The log is then shown as untrusted even if it verifies from genesis.
    */
   anchorProblem?: string;
+  /**
+   * The enclave audit key that signed this head, set only once its signature is verified for the attested
+   * measurement and the head extends the last one this officer accepted.
+   */
+  headSigner?: string;
 }
 
 export interface SealedIdentityView {
