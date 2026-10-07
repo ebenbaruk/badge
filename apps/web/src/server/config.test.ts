@@ -42,4 +42,9 @@ describe("server configuration", () => {
       parseServerConfig({ BADGE_ENCLAVE_URL: REMOTE, BADGE_ATTESTATION_MODE: "simulated" }, readPins),
     ).toThrow(/only allowed for a loopback enclave/);
   });
+
+  it("keeps the automatic device review off unless BADGE_REHEARSAL=1", () => {
+    expect(parseServerConfig({}, readPins).rehearsal).toBe(false);
+    expect(parseServerConfig({ BADGE_REHEARSAL: "1" }, readPins).rehearsal).toBe(true);
+  });
 });

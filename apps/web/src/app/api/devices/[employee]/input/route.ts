@@ -6,7 +6,12 @@ import { HOLD_TO_SIGN_MS } from "@badge/ledger";
 import { z } from "zod";
 import { FLEX_SCREEN_SIZE } from "@/lib/mirror";
 import { deviceScreen } from "@/server/devices";
-import { deviceErrorResponse, employeeFrom, type DeviceRouteContext } from "@/server/device-routes";
+import {
+  crossSiteRefusal,
+  deviceErrorResponse,
+  employeeFrom,
+  type DeviceRouteContext,
+} from "@/server/device-routes";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +24,8 @@ const gestureSchema = z.discriminatedUnion("kind", [
 ]);
 
 export async function POST(request: Request, context: DeviceRouteContext): Promise<Response> {
+  const refusal = crossSiteRefusal(request);
+  if (refusal) return refusal;
   try {
     const device = deviceScreen(await employeeFrom(context));
     const gesture = gestureSchema.parse(await request.json());

@@ -34,7 +34,15 @@ function ActivityBanner() {
  * The employee's Ledger, always at hand: a right-hand panel on wide screens, a dialog elsewhere (opened
  * automatically when a review starts).
  */
-export function LedgerPanel({ employee, deviceLabel }: { employee: EmployeeId; deviceLabel: string }) {
+export function LedgerPanel({
+  employee,
+  deviceLabel,
+  rehearsal,
+}: {
+  employee: EmployeeId;
+  deviceLabel: string;
+  rehearsal: boolean;
+}) {
   const { activity } = useLedgerActivity();
   const [dialogOpen, setDialogOpen] = useState(false);
 
@@ -51,7 +59,7 @@ export function LedgerPanel({ employee, deviceLabel }: { employee: EmployeeId; d
           Ledger
         </div>
         <ActivityBanner />
-        <LedgerMirror employee={employee} deviceLabel={deviceLabel} />
+        <LedgerMirror employee={employee} deviceLabel={deviceLabel} rehearsal={rehearsal} />
       </aside>
 
       <Button
@@ -68,7 +76,7 @@ export function LedgerPanel({ employee, deviceLabel }: { employee: EmployeeId; d
             <DialogDescription>{deviceLabel}</DialogDescription>
           </DialogHeader>
           <ActivityBanner />
-          {dialogOpen && <LedgerMirror employee={employee} deviceLabel={deviceLabel} />}
+          {dialogOpen && <LedgerMirror employee={employee} deviceLabel={deviceLabel} rehearsal={rehearsal} />}
         </DialogContent>
       </Dialog>
     </>

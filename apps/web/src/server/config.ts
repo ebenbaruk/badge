@@ -41,6 +41,11 @@ const envSchema = z.object({
    * `.data` in the working directory (apps/web under `pnpm --filter @badge/web dev`), which git ignores.
    */
   BADGE_WEB_DATA_DIR: z.string().min(1).default(DEFAULT_DATA_DIR),
+  /**
+   * `1` enables the rehearsal helpers: the "Revue auto" button and its route, which walk the review on the device
+   * and hold "Hold to sign" without a human reading it. Off unless set (never in a real deployment).
+   */
+  BADGE_REHEARSAL: z.enum(["0", "1"]).default("0"),
   /** Overrides the measurement the mock enclave pins messages to (e.g. the dstack simulator's compose hash). */
   BADGE_MOCK_MEASUREMENT: z.string().regex(BYTES32_HEX).optional(),
 });
@@ -60,6 +65,8 @@ export interface ServerConfig {
   speculosUrls: Readonly<Record<EmployeeId, string>>;
   calTestKeyPath: string | undefined;
   mockMeasurement: `0x${string}` | undefined;
+  /** Rehearsal helpers (automatic device review) enabled. */
+  rehearsal: boolean;
 }
 
 let cached: ServerConfig | undefined;
@@ -107,6 +114,7 @@ export function parseServerConfig(
     },
     calTestKeyPath: env.BADGE_CAL_TEST_KEY,
     mockMeasurement: env.BADGE_MOCK_MEASUREMENT as `0x${string}` | undefined,
+    rehearsal: env.BADGE_REHEARSAL === "1",
   };
 }
 

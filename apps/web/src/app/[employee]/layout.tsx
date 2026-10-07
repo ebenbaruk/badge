@@ -68,6 +68,7 @@ export default async function EmployeeLayout({
         <LedgerPanel
           employee={employee.id}
           deviceLabel={`Ledger de ${employee.firstName} · Speculos :${speculosPort}`}
+          rehearsal={serverConfig().rehearsal}
         />
       </div>
     </LedgerActivityProvider>

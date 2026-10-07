@@ -8,6 +8,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import type { EmployeeId } from "@/lib/directory";
 import {
   classifyGesture,
+  DEVICE_REQUEST_HEADER,
   FLEX_SCREEN_SIZE,
   LONG_PRESS_MS,
   toDevicePoint,
@@ -31,7 +32,7 @@ type ReviewDecision = "approve" | "reject";
 async function postJson(url: string, body: unknown): Promise<void> {
   const response = await fetch(url, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", [DEVICE_REQUEST_HEADER]: "1" },
     body: JSON.stringify(body),
   });
   if (!response.ok) {
@@ -44,7 +45,16 @@ async function postJson(url: string, body: unknown): Promise<void> {
  * Live mirror of an employee's Speculos Flex. Click to tap, press and hold to "Hold to sign", drag left to turn a
  * review page. The device stays the source of truth: the mirror only forwards touches, it never signs.
  */
-export function LedgerMirror({ employee, deviceLabel }: { employee: EmployeeId; deviceLabel: string }) {
+export function LedgerMirror({
+  employee,
+  deviceLabel,
+  rehearsal,
+}: {
+  employee: EmployeeId;
+  deviceLabel: string;
+  /** Shows the automatic review buttons (BADGE_REHEARSAL=1 only). */
+  rehearsal: boolean;
+}) {
   const { activity } = useLedgerActivity();
   const [frame, setFrame] = useState<string | null>(null);
   const [offline, setOffline] = useState(false);
@@ -234,39 +244,41 @@ export function LedgerMirror({ employee, deviceLabel }: { employee: EmployeeId; 
         Cliquer pour toucher · maintenir pour signer · glisser pour défiler
       </p>
 
-      <div className="flex w-full gap-2">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex-1"
-              disabled={reviewing !== null || offline}
-              onClick={() => void review("approve")}
-            >
-              {reviewing === "approve" ? <Loader2 className="animate-spin" /> : <Wand2 />}
-              Revue auto
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            Répétition : parcourt la revue affichée et maintient « Hold to sign ».
-          </TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={reviewing !== null || offline}
-              onClick={() => void review("reject")}
-            >
-              {reviewing === "reject" ? <Loader2 className="animate-spin" /> : <X />}
-              Refuser
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Répétition : refuse la revue affichée sur l&apos;appareil.</TooltipContent>
-        </Tooltip>
-      </div>
+      {rehearsal && (
+        <div className="flex w-full gap-2">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1"
+                disabled={reviewing !== null || offline}
+                onClick={() => void review("approve")}
+              >
+                {reviewing === "approve" ? <Loader2 className="animate-spin" /> : <Wand2 />}
+                Revue auto
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              Répétition : parcourt la revue affichée et maintient « Hold to sign ».
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={reviewing !== null || offline}
+                onClick={() => void review("reject")}
+              >
+                {reviewing === "reject" ? <Loader2 className="animate-spin" /> : <X />}
+                Refuser
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Répétition : refuse la revue affichée sur l&apos;appareil.</TooltipContent>
+          </Tooltip>
+        </div>
+      )}
     </div>
   );
 }

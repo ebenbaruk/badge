@@ -6,6 +6,12 @@
 /** Ledger Flex screen size in device pixels (same values as `FLEX_SCREEN` in @badge/ledger, which is server-only). */
 export const FLEX_SCREEN_SIZE = { width: 480, height: 600 } as const;
 
+/**
+ * Custom header every device command carries (value "1"): a cross-site page cannot add it without a CORS preflight,
+ * which the app never grants (see `crossSiteRefusal`).
+ */
+export const DEVICE_REQUEST_HEADER = "x-badge-device";
+
 /** A press held at least this long is forwarded as a long press ("Hold to sign"). */
 export const LONG_PRESS_MS = 600;
 /** Horizontal travel (device pixels) beyond which a press becomes a swipe to the next review page. */
