@@ -89,8 +89,12 @@ export class FakeBackend implements MemoryBackend {
   }
 }
 
+/** One queued answer of {@link fakeFetch}: a response, or `networkError` thrown as fetch does on a reset. */
+export type FakeFetchResponse =
+  { status?: number; body: unknown; headers?: Record<string, string> } | { networkError: Error };
+
 /** Builds a fetch stub that answers each call with the next queued response and records requests. */
-export function fakeFetch(responses: Array<{ status?: number; body: unknown }>) {
+export function fakeFetch(responses: FakeFetchResponse[]) {
   const requests: Array<{ url: string; body: Record<string, unknown>; headers: Record<string, string> }> = [];
   const impl: typeof fetch = async (input, init) => {
     const next = responses.shift();
@@ -100,10 +104,11 @@ export function fakeFetch(responses: Array<{ status?: number; body: unknown }>) 
       body: JSON.parse(String(init?.body)) as Record<string, unknown>,
       headers: init?.headers as Record<string, string>,
     });
+    if ("networkError" in next) throw next.networkError;
     const text = typeof next.body === "string" ? next.body : JSON.stringify(next.body);
     return new Response(text, {
       status: next.status ?? 200,
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", ...next.headers },
     });
   };
   return { impl, requests };

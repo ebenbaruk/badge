@@ -28,7 +28,8 @@ describe("classifyExcerpt", () => {
     ["an empty reason", { ...VALID, reason: "" }],
   ])("rejects %s", async (_label, answer) => {
     const { impl } = fakeFetch([{ body: chatResponse(JSON.stringify(answer)) }]);
-    const llm = new OpenAiCompatibleClient(testProfile(), { fetch: impl });
+    // No new sample: the point is that the schema check rejects this answer, not that a retry recovers.
+    const llm = new OpenAiCompatibleClient(testProfile(), { fetch: impl, maxOutputRetries: 0 });
     await expect(classifyExcerpt(llm, "brief Orion", EXCERPT)).rejects.toBeInstanceOf(LlmOutputError);
   });
 

@@ -177,9 +177,20 @@ export class HonchoBackend implements MemoryBackend {
       return await fn();
     } catch (cause) {
       const detail = cause instanceof Error ? cause.message : String(cause);
-      throw new MemoryBackendError(`Honcho: ${operation} failed: ${detail}`, { cause });
+      throw new MemoryBackendError(
+        `Honcho: ${operation} failed: ${detail}`,
+        `Honcho ${operation}: ${describeSdkError(cause)}`,
+        { cause },
+      );
     }
   }
+}
+
+/** The SDK error class and HTTP status (HonchoError carries one), never its message. */
+function describeSdkError(cause: unknown): string {
+  if (!(cause instanceof Error)) return typeof cause;
+  const status = "status" in cause && typeof cause.status === "number" ? `, HTTP ${cause.status}` : "";
+  return `${cause.name}${status}`;
 }
 
 function sessionIdOf(ownerId: OwnerId): string {
