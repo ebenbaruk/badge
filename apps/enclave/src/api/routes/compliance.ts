@@ -6,10 +6,10 @@ import { parseBody } from "../http";
 import type { EnclaveServices } from "../services";
 
 export function registerComplianceRoutes(app: Hono<BadgeEnv>, services: EnclaveServices): void {
-  app.get("/v1/audit", (c) => {
+  app.get("/v1/audit", async (c) => {
     const query = AuditQuerySchema.safeParse(c.req.query());
     if (!query.success) throw new EnclaveError("INVALID_REQUEST", "afterSeq and limit must be integers");
-    return c.json(services.compliance.readAudit(c.get("caller"), query.data));
+    return c.json(await services.compliance.readAudit(c.get("caller"), query.data));
   });
 
   app.get("/v1/compliance/key", (c) => c.json(services.compliance.currentKey(c.get("caller"))));

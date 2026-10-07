@@ -278,6 +278,11 @@ export interface ChainVerification {
   headHash: string;
   /** First entry whose hash does not match, when `ok` is false. */
   brokenAt?: number;
+  /**
+   * Set when the signed head does not extend the last head this officer accepted (truncation, rollback, rewrite) or
+   * cannot be checked: a French explanation. The log is then shown as untrusted even if it verifies from genesis.
+   */
+  anchorProblem?: string;
 }
 
 export interface SealedIdentityView {

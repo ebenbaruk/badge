@@ -2,12 +2,13 @@
  * Compliance key registration (no roll-back to a replaced key) and persistence of data-key versions.
  */
 import { complianceKeyRegistrationMessage, x25519PublicKey } from "@badge/attest";
+import { checkAuditHead, type AuditLog } from "@badge/client";
 import { describe, expect, it } from "vitest";
 import { systemClock } from "../src/clock";
 import { IN_MEMORY_DATABASE, openDatabase } from "../src/db";
 import { SqliteKeyVersionStore } from "../src/policy";
 import { call, onboard } from "./flows";
-import { complianceKeyPair, createHarness, ledgers, type Harness } from "./harness";
+import { complianceKeyPair, createHarness, ledgers, MEASUREMENT, type Harness } from "./harness";
 
 const OTHER_PUBLIC_KEY = Buffer.from(x25519PublicKey(new Uint8Array(32).fill(7))).toString("hex");
 
@@ -75,5 +76,52 @@ describe("SqliteKeyVersionStore", () => {
     store.setVersion("bob", 3);
     expect(store.getVersion("bob")).toBe(3);
     expect(store.getVersion("alice")).toBeNull();
+  });
+});
+
+describe("audit chain anchoring", () => {
+  const readAudit = async (h: Harness): Promise<AuditLog> =>
+    (await call(h, "GET", "/v1/audit", { as: "chloe" })).json as AuditLog;
+
+  /** What an attacker with write access to the database (or a disk snapshot) can do: drop the last entries. */
+  function truncate(h: Harness, keep: number): void {
+    const db = h.services.ctx.db;
+    db.exec("DROP TRIGGER audit_log_no_delete");
+    db.prepare("DELETE FROM audit_log WHERE seq > ?").run(keep);
+  }
+
+  it("signs the head with the enclave key and flags a truncated or rewritten log the officer had seen", async () => {
+    const h = await createHarness();
+    await onboard(h, "alice", "bob", "chloe");
+    const first = await readAudit(h);
+    const accepted = await checkAuditHead(first, MEASUREMENT, undefined);
+    if (!accepted.ok) throw new Error(`first read refused: ${accepted.problem}`);
+    expect(accepted.record).toMatchObject({ length: first.entries.length, head: first.chain.head });
+
+    // Still verifies from genesis, but is shorter than what the officer saw.
+    truncate(h, first.entries.length - 2);
+    const truncated = await readAudit(h);
+    expect(truncated.chain.valid).toBe(true);
+    expect(await checkAuditHead(truncated, MEASUREMENT, accepted.record)).toEqual({
+      ok: false,
+      problem: "shorter",
+    });
+
+    // New entries on top of the truncation: as long again, but another history.
+    await onboard(h, "david", "emma");
+    const rewritten = await readAudit(h);
+    expect(rewritten.chain.length).toBeGreaterThanOrEqual(accepted.record.length);
+    expect(await checkAuditHead(rewritten, MEASUREMENT, accepted.record)).toEqual({
+      ok: false,
+      problem: "diverged",
+    });
+
+    // A forged head (or one signed for another enclave) is refused.
+    const forged = { ...first, chain: { ...first.chain, head: "ab".repeat(32) } };
+    expect((await checkAuditHead(forged, MEASUREMENT, undefined)).ok).toBe(false);
+    expect(await checkAuditHead(first, `0x${"77".repeat(32)}`, undefined)).toEqual({
+      ok: false,
+      problem: "bad_signature",
+    });
   });
 });

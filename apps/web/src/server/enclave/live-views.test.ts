@@ -165,7 +165,7 @@ describe("auditView", () => {
       }),
       entry(3, "compliance.reveal", { auditSeq: 2, reason: "test" }),
     ],
-    chain: { valid: true, length: 3, brokenAt: null },
+    chain: { valid: true, length: 3, brokenAt: null, head: "ab".repeat(32), signedHead: null },
   };
 
   it("lists alerts and sealed shares, and shows a reveal only with what this bridge decrypted", () => {

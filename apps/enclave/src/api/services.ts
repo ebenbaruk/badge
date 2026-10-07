@@ -3,7 +3,7 @@
  * connection: tests pass fakes, src/main.ts passes the real implementations.
  */
 import type { DstackAgent } from "@badge/attest/server";
-import { AuditLog } from "../audit";
+import { AuditHeadSigner, AuditLog } from "../audit";
 import type { Clock } from "../clock";
 import { ComplianceService } from "../compliance";
 import type { Database } from "../db";
@@ -72,6 +72,6 @@ export function createServices(deps: AppDeps, enclave: EnclaveMeasurement): Encl
       countTokens: deps.countTokens ?? createO200kTokenCounter(),
     }),
     desks: new DeskService({ ctx, memory: deps.memory }),
-    compliance: new ComplianceService(ctx),
+    compliance: new ComplianceService(ctx, new AuditHeadSigner(deps.dstack, enclave.measurement)),
   };
 }

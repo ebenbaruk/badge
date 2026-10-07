@@ -37,6 +37,8 @@ export const ENCLAVE_KEY_PATHS = {
   channel: "badge/channel/x25519",
   /** Data-encryption key of one employee's personal context. */
   employeeDek: (employeeId: string) => `badge/dek/${employeeId}`,
+  /** secp256k1 key signing the compliance log head (only this deployment can derive it). */
+  auditHead: "badge/audit/head-signer",
 } as const;
 
 const DERIVED_KEY_LENGTH = 32;

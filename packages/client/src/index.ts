@@ -4,6 +4,14 @@
  * enclave imports so both ends stay in step.
  */
 export * from "./api-schemas";
+export {
+  AUDIT_HEAD_PREFIX,
+  auditHeadMessage,
+  checkAuditHead,
+  type AuditHeadCheck,
+  type AuditHeadProblem,
+  type AuditHeadRecord,
+} from "./audit-head";
 export * from "./channel-wire";
 export {
   BadgeClient,

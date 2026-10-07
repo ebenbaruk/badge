@@ -299,10 +299,28 @@ export const auditEntrySchema = z.object({
 });
 export type AuditEntry = z.infer<typeof auditEntrySchema>;
 
-/** `GET /v1/audit` (compliance role): a page of entries and the verification of the WHOLE chain. */
+/**
+ * `GET /v1/audit` (compliance role): a page of entries and the verification of the WHOLE chain. When valid, `head`
+ * is the hash of entry `length` (genesis hash for an empty log) and `signedHead` its EIP-191 signature of
+ * `auditHeadMessage` by the enclave's KMS-derived audit key (see `checkAuditHead`); both are null on a broken chain.
+ */
 export const auditLogSchema = z.object({
   entries: z.array(auditEntrySchema),
-  chain: z.object({ valid: z.boolean(), length: count, brokenAt: count.nullable() }),
+  chain: z.object({
+    valid: z.boolean(),
+    length: count,
+    brokenAt: count.nullable(),
+    head: z
+      .string()
+      .regex(/^[0-9a-f]{64}$/)
+      .nullable(),
+    signedHead: z
+      .object({
+        signer: address,
+        signature: z.custom<Hex>((v) => typeof v === "string" && /^0x[0-9a-fA-F]{130}$/.test(v)),
+      })
+      .nullable(),
+  }),
 });
 export type AuditLog = z.infer<typeof auditLogSchema>;
 

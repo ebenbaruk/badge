@@ -8,7 +8,14 @@
  * `tdx` in production with the compose hash pinned). Every message the Ledgers sign is pinned to the measurement of
  * the enclave that was just verified.
  */
-import { BadgeApiError, BadgeClient, type Session } from "@badge/client";
+import {
+  BadgeApiError,
+  BadgeClient,
+  checkAuditHead,
+  type AuditHeadProblem,
+  type AuditHeadRecord,
+  type Session,
+} from "@badge/client";
 import { hashExcerpt, type ContextRevoke, type SignedMessage } from "@badge/consent";
 import { decodeDeskProof, checkDeskProof, ZkError, type DeskProofWire } from "@badge/zk";
 import { isAddressEqual, type Hex, type LocalAccount } from "viem";
@@ -51,6 +58,16 @@ import type {
   TaskView,
 } from "./types";
 
+/** What the compliance page says when the audit head does not extend the last one the officer accepted. */
+const AUDIT_HEAD_PROBLEMS: Record<AuditHeadProblem, string> = {
+  broken: "chaîne rompue : aucune tête signée",
+  unsigned: "tête de chaîne non signée par l'enclave",
+  bad_signature: "signature de la tête invalide pour l'enclave attestée",
+  signer_changed: "la clé d'audit de l'enclave a changé depuis la dernière lecture",
+  shorter: "journal plus court que lors de la dernière lecture (troncature ou retour en arrière)",
+  diverged: "historique différent de celui déjà lu (réécriture ou retour en arrière)",
+};
+
 /** Tasks shown in the agent thread (newest first); older ones stay in the enclave and the audit log. */
 const MAX_TASKS_SHOWN = 8;
 /** The enclave caps audit pages at 500 entries. */
@@ -77,8 +94,10 @@ interface EmployeeRuntime {
   complianceKey?: { publicKey: string; registeredAt: Date };
   /** Desk shares this officer de-anonymised (seq -> signer), decrypted on her side and never sent anywhere. */
   revealed: Map<number, EmployeeId>;
-  /** Proof checks of anonymous deliveries, done once (the source desk root may change later). */
+  /** Proof checks of anonymous deliveries, done once (against the root snapshotted with the request). */
   verifiedDeliveries: Map<Hex, boolean>;
+  /** Last signed audit head the compliance officer accepted (persisted: it is what detects a rollback). */
+  auditHead?: AuditHeadRecord;
 }
 
 const newRuntime = (): EmployeeRuntime => ({
@@ -358,7 +377,19 @@ export class LiveEnclave implements EnclaveApi {
         .entries;
       entries.push(...page);
     }
-    return auditView({ entries, chain: first.chain }, this.runtime(viewer).revealed);
+    const runtime = this.runtime(viewer);
+    const { measurement } = await this.attestation();
+    const anchored = await checkAuditHead({ chain: first.chain, entries }, measurement, runtime.auditHead);
+    if (anchored.ok) {
+      if (runtime.auditHead?.head !== anchored.record.head) {
+        runtime.auditHead = anchored.record;
+        this.persist();
+      }
+    }
+    const view = auditView({ entries, chain: first.chain }, runtime.revealed);
+    return anchored.ok
+      ? view
+      : { ...view, chain: { ...view.chain, anchorProblem: AUDIT_HEAD_PROBLEMS[anchored.problem] } };
   }
 
   async revealNotice(viewer: EmployeeId, input: RevealNoticeInput): Promise<SealedIdentityView> {
@@ -400,6 +431,7 @@ export class LiveEnclave implements EnclaveApi {
       }
       runtime.tasks = saved.tasks.map((task) => ({ ...task, requester: employee }));
       runtime.deskRequests = saved.deskRequests;
+      if (saved.auditHead !== undefined) runtime.auditHead = saved.auditHead;
       runtimes.set(employee, runtime);
     }
     return runtimes;
@@ -419,6 +451,7 @@ export class LiveEnclave implements EnclaveApi {
           : { agent: { privateKey: runtime.agent.privateKey, session: runtime.agent.session } }),
         tasks: runtime.tasks.map(({ id, task, trapped }) => ({ id, task, trapped })),
         deskRequests: runtime.deskRequests,
+        ...(runtime.auditHead === undefined ? {} : { auditHead: runtime.auditHead }),
       };
     }
     try {

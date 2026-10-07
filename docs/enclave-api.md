@@ -171,8 +171,12 @@ excerptHash`, and the proof (`checkDeskProof`) against the request's `sourceRoot
      `201 {keyId, employeeId, publicKey, registeredAt}`. Registering the current key again is a no-op; a replaced key
      can never become current again (`STALE`). `GET /v1/compliance/key -> {key: ComplianceKey | null}` tells her
      client whether a registration is still needed (no Ledger review when the enclave already holds the key).
-   - `GET /v1/audit?afterSeq&limit` -> `{entries[], chain {valid, length, brokenAt}}` (the chain verification covers
-     the whole log, the entries are a page of at most 500).
+   - `GET /v1/audit?afterSeq&limit` -> `{entries[], chain {valid, length, brokenAt, head, signedHead}}` (the chain
+     verification covers the whole log, the entries are a page of at most 500). On an intact chain, `head` is the
+     hash of entry `length` and `signedHead {signer, signature}` its EIP-191 signature of
+     `auditHeadMessage(measurement, length, head)` by the enclave's audit key (dstack KMS `badge/audit/head-signer`).
+     The officer's client keeps the last head it accepted and refuses a read that does not extend it
+     (`checkAuditHead`: shorter, diverging, other signer): a truncated or rolled-back log still verifies from genesis.
    - De-anonymisation happens on the officer's side: she opens `data.sealedSigner` of a `desk.share` entry with her
      Ledger-derived key (`openSealed`), then logs it with `POST /v1/audit/reveal-notice {seq, reason}` -> `201`
      the new `compliance.reveal` audit entry.
@@ -197,6 +201,8 @@ excerpt text, only hashes, lengths and ids. Types: `enroll`, `session.open`, `ta
 ## Keys
 
 - Channel key: X25519 derived from the dstack KMS (`badge/channel/x25519`).
+- Audit head key: secp256k1 derived from the dstack KMS (`badge/audit/head-signer`), signs the head of every audit
+  read.
 - Per-employee data key: dstack `getKey("badge/dek/{employeeId}:{version}")`, version persisted in `key_versions`
   (starts at 1). A revocation rotates it (`version + 1`); old versions stay derivable to read old data.
 - Desk-share signer identity in the audit: `sealToPublicKey(compliancePublicKey, json)` (X25519 sealed box,

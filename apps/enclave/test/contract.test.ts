@@ -8,6 +8,7 @@
 import { complianceKeyRegistrationMessage, openSealed } from "@badge/attest";
 import {
   BadgeClient,
+  checkAuditHead,
   createAgentSession,
   type ContextShareConsent,
   type DeskShareConsent,
@@ -302,7 +303,8 @@ describe("enclave API contract (BadgeClient against the real app)", () => {
   it("Chloe reads a valid audit chain and lifts the anonymity of the desk share with her key", async () => {
     await expect(agents.alice.getAudit()).rejects.toMatchObject({ status: 403, code: "FORBIDDEN" });
     const audit = await agents.chloe.getAudit();
-    expect(audit.chain).toEqual({ valid: true, length: audit.entries.length, brokenAt: null });
+    expect(audit.chain).toMatchObject({ valid: true, length: audit.entries.length, brokenAt: null });
+    expect((await checkAuditHead(audit, MEASUREMENT, undefined)).ok).toBe(true);
     const types = new Set(audit.entries.map((e) => e.type));
     for (const type of [
       "enroll",

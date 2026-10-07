@@ -13,7 +13,7 @@ import type {
 import { ConsentError } from "@badge/consent";
 import { verifyMessage, type Hex } from "viem";
 import { z } from "zod";
-import type { AuditEntry } from "../audit";
+import type { AuditEntry, AuditHeadSigner } from "../audit";
 import { msToUnixSeconds } from "../clock";
 import { transaction } from "../db";
 import type { Employee } from "../directory";
@@ -65,7 +65,10 @@ function toComplianceKeyWire(row: ComplianceKeyRow): ComplianceKey {
 export class ComplianceService {
   private readonly keys: ComplianceKeyRepository;
 
-  constructor(private readonly ctx: DomainContext) {
+  constructor(
+    private readonly ctx: DomainContext,
+    private readonly headSigner: AuditHeadSigner,
+  ) {
     this.keys = new ComplianceKeyRepository(ctx.db);
   }
 
@@ -122,16 +125,36 @@ export class ComplianceService {
     });
   }
 
-  /** GET /v1/audit: a page of entries plus the verification of the whole chain. */
-  readAudit(caller: Caller, query: z.infer<typeof AuditQuerySchema>): AuditLogWire {
+  /**
+   * GET /v1/audit: a page of entries plus the verification of the whole chain and, when it is intact, its head
+   * signed by the enclave's audit key (what lets the officer detect a truncation or a rollback later).
+   */
+  async readAudit(caller: Caller, query: z.infer<typeof AuditQuerySchema>): Promise<AuditLogWire> {
     this.requireOfficer(caller);
     const verification = this.ctx.audit.verify();
+    const entries = this.ctx.audit.list(query).map(toAuditEntryWire);
+    if (!verification.valid) {
+      // On a break, `length` is the verified prefix: entries before the first broken one. Nothing is signed.
+      return {
+        entries,
+        chain: {
+          valid: false,
+          length: verification.brokenAt - 1,
+          brokenAt: verification.brokenAt,
+          head: null,
+          signedHead: null,
+        },
+      };
+    }
     return {
-      entries: this.ctx.audit.list(query).map(toAuditEntryWire),
-      chain: verification.valid
-        ? { valid: true, length: verification.length, brokenAt: null }
-        : // On a break, `length` is the verified prefix: entries before the first broken one.
-          { valid: false, length: verification.brokenAt - 1, brokenAt: verification.brokenAt },
+      entries,
+      chain: {
+        valid: true,
+        length: verification.length,
+        brokenAt: null,
+        head: verification.head,
+        signedHead: await this.headSigner.sign(verification.length, verification.head),
+      },
     };
   }
 

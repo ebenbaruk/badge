@@ -28,6 +28,14 @@ const employeeStateSchema = z.object({
   agent: z.object({ privateKey: bytes32, session: sessionSchema }).optional(),
   tasks: z.array(z.object({ id: bytes32, task: z.string(), trapped: z.boolean() })),
   deskRequests: z.array(z.object({ id: bytes32, task: z.string() })),
+  /** Compliance officer only: the last audit head she accepted (detects a truncated or rolled-back log). */
+  auditHead: z
+    .object({
+      length: z.number().int().nonnegative(),
+      head: z.string().regex(/^[0-9a-f]{64}$/),
+      signer: z.string().regex(/^0x[0-9a-fA-F]{40}$/) as z.ZodType<`0x${string}`>,
+    })
+    .optional(),
 });
 export type PersistedEmployee = z.infer<typeof employeeStateSchema>;
 

@@ -113,6 +113,8 @@ export default async function CompliancePage({ params }: { params: Promise<{ emp
   const audit = await load(() => enclave().audit(viewer.id));
   if (!audit.ok) return <EnclaveUnavailable failure={audit} employee={viewer.id} />;
   const { entries, chain, alerts, sealed } = audit.data;
+  // A chain that verifies from genesis but does not extend the head already seen was truncated or rolled back.
+  const trusted = chain.ok && chain.anchorProblem === undefined;
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -122,12 +124,16 @@ export default async function CompliancePage({ params }: { params: Promise<{ emp
       />
       <div className="grid gap-4 sm:grid-cols-3">
         <Stat
-          icon={chain.ok ? <Link2 className="size-3.5" /> : <Link2Off className="size-3.5" />}
+          icon={trusted ? <Link2 className="size-3.5" /> : <Link2Off className="size-3.5" />}
           label="Intégrité de la chaîne"
-          tone={chain.ok ? "text-success" : "text-danger"}
+          tone={trusted ? "text-success" : "text-danger"}
           value={
             <span>
-              {chain.ok ? "Vérifiée" : `Rompue à l'entrée ${chain.brokenAt}`}
+              {!chain.ok
+                ? `Rompue à l'entrée ${chain.brokenAt}`
+                : chain.anchorProblem !== undefined
+                  ? `Non fiable : ${chain.anchorProblem}`
+                  : "Vérifiée"}
               <span className="ml-2 text-xs font-normal text-muted-foreground">{chain.length} entrées</span>
             </span>
           }

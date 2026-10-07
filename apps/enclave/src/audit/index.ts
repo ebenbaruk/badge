@@ -9,3 +9,4 @@ export {
   type AuditEntry,
   type ChainVerification,
 } from "./log";
+export { AuditHeadSigner } from "./head-signer";

@@ -15,6 +15,7 @@ import {
 } from "@badge/attest";
 import {
   BadgeClient,
+  checkAuditHead,
   createAgentSession,
   type ConsentRequest,
   type ContextShareConsent,
@@ -485,23 +486,33 @@ async function main(): Promise<void> {
       },
     );
 
-    await narrator.step("Chloé lit le journal de conformité : chaîne de hachage intacte", async () => {
-      const audit = await agents.chloe.getAudit();
-      check(audit.chain.valid, `audit chain broken at ${audit.chain.brokenAt}`);
-      const types = new Set(audit.entries.map((e) => e.type));
-      for (const type of [
-        "consent.approved",
-        "rule.warn",
-        "consent.rejected",
-        "revoke",
-        "policy.used",
-        "desk.share",
-      ]) {
-        check(types.has(type), `no ${type} entry in the audit log`);
-      }
-      narrator.say(`${audit.chain.length} entrées chaînées et vérifiées (${[...types].join(", ")}).`);
-      narrator.say("Aucun texte d'extrait dans le journal : seulement des empreintes et des longueurs.");
-    });
+    const auditHead = await narrator.step(
+      "Chloé lit le journal de conformité : chaîne de hachage intacte",
+      async () => {
+        const audit = await agents.chloe.getAudit();
+        check(audit.chain.valid, `audit chain broken at ${audit.chain.brokenAt}`);
+        const anchored = await checkAuditHead(audit, measurement, undefined);
+        check(
+          anchored.ok,
+          `the audit head is not signed by the attested enclave (${anchored.ok ? "" : anchored.problem})`,
+        );
+        const types = new Set(audit.entries.map((e) => e.type));
+        for (const type of [
+          "consent.approved",
+          "rule.warn",
+          "consent.rejected",
+          "revoke",
+          "policy.used",
+          "desk.share",
+        ]) {
+          check(types.has(type), `no ${type} entry in the audit log`);
+        }
+        narrator.say(`${audit.chain.length} entrées chaînées et vérifiées (${[...types].join(", ")}).`);
+        narrator.say("Aucun texte d'extrait dans le journal : seulement des empreintes et des longueurs.");
+        narrator.say(`Tête de chaîne signée par l'enclave (${anchored.record.signer}), mémorisée par Chloé.`);
+        return anchored.record;
+      },
+    );
 
     await narrator.step(
       "Chloé lève l'anonymat du partage de desk avec la clé dérivée de son Ledger",
@@ -529,7 +540,14 @@ async function main(): Promise<void> {
         narrator.say(
           `Signataire révélé : ${people.bob.name} (${signer.address}). Levée journalisée (entrée ${notice.seq}).`,
         );
-        check((await agents.chloe.getAudit()).chain.valid, "audit chain broken after the reveal");
+        const after = await agents.chloe.getAudit();
+        check(after.chain.valid, "audit chain broken after the reveal");
+        // The new head must extend the one Chloe accepted before: nothing was truncated or rewritten in between.
+        const extended = await checkAuditHead(after, measurement, auditHead);
+        check(
+          extended.ok,
+          `the audit log does not extend the head seen before (${extended.ok ? "" : extended.problem})`,
+        );
       },
     );
 
