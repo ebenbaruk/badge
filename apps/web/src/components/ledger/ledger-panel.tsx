@@ -59,7 +59,7 @@ export function LedgerPanel({
           Ledger
         </div>
         <ActivityBanner />
-        <LedgerMirror employee={employee} deviceLabel={deviceLabel} rehearsal={rehearsal} />
+        <LedgerMirror key={employee} employee={employee} deviceLabel={deviceLabel} rehearsal={rehearsal} />
       </aside>
 
       <Button
@@ -76,7 +76,14 @@ export function LedgerPanel({
             <DialogDescription>{deviceLabel}</DialogDescription>
           </DialogHeader>
           <ActivityBanner />
-          {dialogOpen && <LedgerMirror employee={employee} deviceLabel={deviceLabel} rehearsal={rehearsal} />}
+          {dialogOpen && (
+            <LedgerMirror
+              key={employee}
+              employee={employee}
+              deviceLabel={deviceLabel}
+              rehearsal={rehearsal}
+            />
+          )}
         </DialogContent>
       </Dialog>
     </>

@@ -22,8 +22,15 @@ import { useLedgerActivity } from "./ledger-activity";
 const LIVE_FRAME_INTERVAL_MS = 200;
 /** Idle refresh: the device still shows its home screen, keep it current without hammering Speculos. */
 const IDLE_FRAME_INTERVAL_MS = 1500;
+/**
+ * Hidden tab (background, or window covered by another one: macOS reports it hidden too) and no review expected:
+ * keep a slow refresh rather than none, so the mirror never stays on its spinner when the window is shown again.
+ */
+const HIDDEN_FRAME_INTERVAL_MS = 5000;
 /** Back-off after a failed frame (device down): avoid a tight error loop. */
 const ERROR_RETRY_MS = 3000;
+/** How long a touch ripple stays on the mirror: `animate-ping` loops forever, so it is removed after one beat. */
+const RIPPLE_MS = 700;
 /** Duration of the hold forwarded to the device (matches HOLD_TO_SIGN_MS of @badge/ledger). */
 const HOLD_FEEDBACK_MS = 3000;
 
@@ -76,27 +83,29 @@ export function LedgerMirror({
     let timer: number | undefined;
     let previousUrl: string | null = null;
     const tick = async (): Promise<void> => {
-      let delay = liveRef.current ? LIVE_FRAME_INTERVAL_MS : IDLE_FRAME_INTERVAL_MS;
-      if (!document.hidden) {
-        try {
-          const response = await fetch(`/api/devices/${employee}/screen?t=${Date.now()}`, {
-            cache: "no-store",
-          });
-          if (!response.ok) throw new Error(`HTTP ${response.status}`);
-          const url = URL.createObjectURL(await response.blob());
-          if (cancelled) {
-            URL.revokeObjectURL(url);
-            return;
-          }
-          setFrame(url);
-          if (previousUrl !== null) URL.revokeObjectURL(previousUrl);
-          previousUrl = url;
-          setOffline(false);
-        } catch {
-          // A missing frame is shown as "device unreachable"; the next tick retries.
-          setOffline(true);
-          delay = ERROR_RETRY_MS;
+      let delay = liveRef.current
+        ? LIVE_FRAME_INTERVAL_MS
+        : document.hidden
+          ? HIDDEN_FRAME_INTERVAL_MS
+          : IDLE_FRAME_INTERVAL_MS;
+      try {
+        const response = await fetch(`/api/devices/${employee}/screen?t=${Date.now()}`, {
+          cache: "no-store",
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const url = URL.createObjectURL(await response.blob());
+        if (cancelled) {
+          URL.revokeObjectURL(url);
+          return;
         }
+        setFrame(url);
+        if (previousUrl !== null) URL.revokeObjectURL(previousUrl);
+        previousUrl = url;
+        setOffline(false);
+      } catch {
+        // A missing frame is shown as "device unreachable"; the next tick retries.
+        setOffline(true);
+        delay = ERROR_RETRY_MS;
       }
       if (!cancelled) timer = window.setTimeout(() => void tick(), delay);
     };
@@ -128,6 +137,11 @@ export function LedgerMirror({
   };
 
   const showRipple = (point: Point): void => setRipple({ ...point, key: Date.now() });
+  useEffect(() => {
+    if (ripple === null) return;
+    const timer = window.setTimeout(() => setRipple(null), RIPPLE_MS);
+    return () => window.clearTimeout(timer);
+  }, [ripple]);
 
   const onPointerDown = (event: PointerEvent<HTMLDivElement>): void => {
     if (event.button !== 0) return;
