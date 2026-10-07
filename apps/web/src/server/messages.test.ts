@@ -49,9 +49,15 @@ describe("device messages", () => {
     expect(decodeBadgeMessage("ContextPolicy", encodeBadgeMessage("ContextPolicy", policy))).toEqual(policy);
   });
 
-  it("caps agent sessions at 12 hours", () => {
-    const session = buildAgentSession(EMPLOYEES.alice, EMPLOYEES.bob.address, MEASUREMENT, NOW);
-    expect(session.expiresAt - NOW).toBe(AGENT_SESSION_TTL_SECONDS);
-    expect(session.agentName).toBe("Agent Badge de Alice");
+  it("delegates a working day to a fresh session key", () => {
+    const { message, sessionKey } = buildAgentSession(
+      EMPLOYEES.alice,
+      MEASUREMENT,
+      new Date(Number(NOW) * 1000),
+    );
+    expect(message.expiresAt - NOW).toBe(AGENT_SESSION_TTL_SECONDS);
+    expect(message.agentName).toBe("Agent Badge de Alice");
+    expect(message.sessionKey).toBe(sessionKey.address);
+    expect(message.employee).toBe(EMPLOYEES.alice.address);
   });
 });

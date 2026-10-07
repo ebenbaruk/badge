@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@badge/attest": "workspace:*",
+    "@badge/client": "workspace:*",
     "@badge/consent": "workspace:*",
     "@badge/ledger": "workspace:*",
     "@badge/zk": "workspace:*",

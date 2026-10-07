@@ -3,7 +3,7 @@
 import { EyeOff, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { toast } from "sonner";
+import { useLedgerActivity } from "@/components/ledger/ledger-activity";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -32,31 +32,36 @@ export function RevealButton({
   sourceDesk: string;
 }) {
   const router = useRouter();
+  const { runOnLedger, activity } = useLedgerActivity();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const reveal = async (): Promise<void> => {
     setBusy(true);
-    const result = await revealDeskShare({ employee, seq });
-    setBusy(false);
+    // The dialog closes so the Ledger mirror (which shows the message to sign) stays in view.
     setOpen(false);
-    if (!result.ok) {
-      toast.error(result.message);
-      return;
-    }
-    const who = result.data.revealed?.employee;
-    toast.success(
-      who === undefined ? "Identité levée." : `Identité levée : ${EMPLOYEES[who].name}. Levée journalisée.`,
+    await runOnLedger(
+      "Dériver ma clé de conformité (lever l'anonymat)",
+      () => revealDeskShare({ employee, seq }),
+      {
+        success: (sealed) => {
+          const who = sealed.revealed?.employee;
+          return who === undefined
+            ? "Identité levée. Levée journalisée."
+            : `Identité levée : ${EMPLOYEES[who].name}. Levée journalisée.`;
+        },
+      },
     );
+    setBusy(false);
     router.refresh();
   };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          <EyeOff />
-          Lever l&apos;anonymat
+        <Button variant="outline" size="sm" disabled={busy || activity !== null}>
+          {busy ? <Loader2 className="animate-spin" /> : <EyeOff />}
+          {busy ? "Vérifiez sur votre Ledger…" : "Lever l'anonymat"}
         </Button>
       </DialogTrigger>
       <DialogContent>
@@ -67,17 +72,17 @@ export function RevealButton({
             scellée pour la conformité. La levée est définitive et inscrite au journal d&apos;audit chaîné.
           </DialogDescription>
         </DialogHeader>
-        <p className="rounded-md bg-warning/10 px-3 py-2 text-xs text-warning">
-          Démo : déchiffrement simulé. En production, la clé de déchiffrement est dérivée d&apos;une signature
-          sur le Ledger de la responsable conformité, et le déchiffrement a lieu dans son navigateur.
+        <p className="rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
+          Votre Ledger va signer le message de dérivation de votre clé de conformité. La clé n&apos;existe que
+          le temps du déchiffrement, de votre côté : l&apos;enclave ne voit jamais l&apos;identité, seulement
+          l&apos;avis de levée.
         </p>
         <DialogFooter>
           <DialogClose asChild>
             <Button variant="ghost">Annuler</Button>
           </DialogClose>
           <Button onClick={() => void reveal()} disabled={busy}>
-            {busy && <Loader2 className="animate-spin" />}
-            Lever l&apos;anonymat
+            Signer sur mon Ledger
           </Button>
         </DialogFooter>
       </DialogContent>

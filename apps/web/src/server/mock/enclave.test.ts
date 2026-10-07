@@ -3,6 +3,12 @@
  * (same addresses as the demo Ledgers, see infra/speculos.sh): every signature is a real EIP-712 signature.
  */
 import { existsSync } from "node:fs";
+import {
+  complianceKeyDeriveMessage,
+  complianceKeyFromSignature,
+  complianceKeyRegistrationMessage,
+  openSealed,
+} from "@badge/attest";
 import { fileURLToPath } from "node:url";
 import {
   badgeTypedData,
@@ -83,13 +89,9 @@ describe("mock enclave demo scenario", () => {
     expect((await enclave.enroll(enroll)).enrolled).toBe(true);
     await expect(enclave.enroll(enroll)).rejects.toMatchObject({ code: "CONFLICT" });
 
-    const agent = mnemonicToAccount(TEST_MNEMONICS.chloe, { addressIndex: 7 });
-    const session = await sign(
-      "alice",
-      "AgentSession",
-      buildAgentSession(EMPLOYEES.alice, agent.address, measurement, now()),
-    );
-    expect((await enclave.openSession("alice", session)).session?.sessionKey).toBe(agent.address);
+    const { message, sessionKey } = buildAgentSession(EMPLOYEES.alice, measurement);
+    const session = await sign("alice", "AgentSession", message);
+    expect((await enclave.openSession("alice", session)).session?.sessionKey).toBe(sessionKey.address);
   });
 
   it("waits for Bob's Ledger consent, then drafts the brief with it", async () => {
@@ -180,6 +182,18 @@ describe("mock enclave demo scenario", () => {
   it.skipIf(!zkArtifactsAvailable)(
     "delivers a desk share with a verified ZK proof and seals the sharer",
     async () => {
+      // Desk shares are sealed to the compliance key: Chloe registers hers first, derived from her "Ledger".
+      const { secretKey, publicKey } = complianceKeyFromSignature(
+        await ACCOUNTS.chloe.signMessage({ message: complianceKeyDeriveMessage("Acme") }),
+      );
+      const publicKeyHex = Buffer.from(publicKey).toString("hex");
+      await enclave.registerComplianceKey("chloe", {
+        publicKey: publicKeyHex,
+        signature: await ACCOUNTS.chloe.signMessage({
+          message: complianceKeyRegistrationMessage("Acme", publicKeyHex),
+        }),
+      });
+
       const derivation = await ACCOUNTS.bob.signMessage({ message: deskIdentityDeriveMessage("Acme") });
       const identity = deriveDeskIdentity(derivation);
       await enclave.joinDesk(
@@ -216,7 +230,13 @@ describe("mock enclave demo scenario", () => {
       const share = audit.entries.find((e) => e.type === "desk.share");
       expect(share?.actor).toBe("desk:research");
       expect(JSON.stringify(share)).not.toContain(EMPLOYEES.bob.address);
-      const revealed = await enclave.revealDeskShare("chloe", share?.seq ?? 0);
+      const signer = JSON.parse(new TextDecoder().decode(openSealed(secretKey, share?.data["sealedSigner"])));
+      expect(signer).toMatchObject({ employeeId: "bob", address: EMPLOYEES.bob.address });
+      const revealed = await enclave.revealNotice("chloe", {
+        seq: share?.seq ?? 0,
+        reason: "test",
+        signer: "bob",
+      });
       expect(revealed.revealed?.employee).toBe("bob");
     },
   );

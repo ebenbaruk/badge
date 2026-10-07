@@ -23,6 +23,7 @@ export type AuditType =
   | "rule.block"
   | "desk.join"
   | "desk.share"
+  | "compliance.key"
   | "compliance.reveal";
 
 type AuditInput = Pick<AuditEntryView, "type" | "actor" | "subject" | "data"> & { type: AuditType };
@@ -39,7 +40,7 @@ export function canonicalJson(value: unknown): string {
   return JSON.stringify(value);
 }
 
-export function entryHash(prevHash: Hex, entry: Omit<AuditEntryView, "prevHash" | "hash">): Hex {
+export function entryHash(prevHash: string, entry: Omit<AuditEntryView, "prevHash" | "hash">): Hex {
   const body = canonicalJson({
     seq: entry.seq,
     ts: entry.ts,

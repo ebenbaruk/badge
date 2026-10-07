@@ -92,7 +92,7 @@ export function AttestationBadge({
             <p className="mb-2 text-xs text-muted-foreground">
               {attestation.mode === "tdx"
                 ? "Quote Intel TDX vérifiée (DCAP), journal d'événements rejoué : l'enclave exécute exactement ce code."
-                : "Simulateur : la chaîne de vérification est la même, mais aucune garantie matérielle."}
+                : "Simulateur dstack : la quote et le journal d'événements sont vérifiés de la même façon, mais sans aucune garantie matérielle."}
             </p>
             <div className="divide-y">
               <Row label="Mesure (compose hash)">
@@ -105,6 +105,11 @@ export function AttestationBadge({
                 <CopyableHash value={attestation.appId} full />
               </Row>
               <Row label="Mode">{attestation.mode === "tdx" ? "Intel TDX (Phala dstack)" : "Simulé"}</Row>
+              {attestation.keyProvider !== undefined && (
+                <Row label="Fournisseur de clés">
+                  <span className="font-mono">{attestation.keyProvider}</span>
+                </Row>
+              )}
               <Row label="Vérifiée le">{formatDateTime(attestation.checkedAt)}</Row>
             </div>
             {attestation.warnings.length > 0 && (

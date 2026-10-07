@@ -53,7 +53,9 @@ function PendingRequest({ request, owner }: { request: ConsentRequestView; owner
               ({requester.team}) demande un extrait de votre contexte
             </span>
           </div>
-          <p className="mt-1 text-[13px] text-muted-foreground">Tâche : « {request.task} »</p>
+          <p className="mt-1 text-[13px] text-muted-foreground">
+            Tâche de son agent : <span className="font-mono text-[12px]">{request.taskLabel}</span>
+          </p>
         </div>
         <time className="shrink-0 text-[11px] text-muted-foreground">
           {formatRelative(request.createdAt)}
@@ -71,14 +73,20 @@ function PendingRequest({ request, owner }: { request: ConsentRequestView; owner
             </Fact>
           </dl>
           <div>
-            <div className="text-[11px] text-muted-foreground">Notes incluses</div>
-            <ul className="mt-1 flex flex-wrap gap-1.5">
-              {request.noteLabels.map((label) => (
-                <li key={label} className="rounded-md border bg-muted/40 px-2 py-0.5 text-xs">
-                  {label}
-                </li>
+            <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+              Ce qui sortirait de votre contexte
+              {request.excerpt.tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="rounded-md border bg-muted/40 px-1.5 py-px font-mono text-[10.5px]"
+                >
+                  {tag}
+                </span>
               ))}
-            </ul>
+            </div>
+            <p className="mt-1.5 max-h-40 overflow-y-auto rounded-lg border bg-muted/30 px-3 py-2.5 text-[12.5px] leading-relaxed whitespace-pre-line">
+              {request.excerpt.text}
+            </p>
           </div>
           <RiskFindings findings={request.findings} />
           <ApproveRejectButtons
@@ -111,7 +119,7 @@ function HistoryRow({ request }: { request: ConsentRequestView }) {
 export default async function ConsentsPage({ params }: { params: Promise<{ employee: string }> }) {
   const owner = await employeeFromParams(params);
   const consents = await load(() => enclave().listConsents(owner.id));
-  if (!consents.ok) return <EnclaveUnavailable failure={consents} />;
+  if (!consents.ok) return <EnclaveUnavailable failure={consents} employee={owner.id} />;
   const pending = consents.data.filter((c) => c.status === "pending");
   const history = consents.data.filter((c) => c.status !== "pending");
   return (

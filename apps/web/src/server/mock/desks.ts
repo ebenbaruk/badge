@@ -14,6 +14,7 @@ import {
   type DeskShare,
   type SignedMessage,
 } from "@badge/consent";
+import { sealToPublicKey, type SealedBox } from "@badge/attest";
 import {
   decodeDeskProof,
   deriveDeskIdentity,
@@ -161,10 +162,10 @@ function requestView(record: DeskRequestRecord): DeskRequestView {
   if (record.delivery !== undefined) {
     view.delivery = {
       excerpt: record.note.text,
-      label: record.note.label,
       sourceDesk: record.toDesk,
       nullifier: record.delivery.nullifier,
       root: record.delivery.root,
+      proofVerified: true,
       deliveredAt: record.delivery.deliveredAt.toISOString(),
     };
   }
@@ -176,7 +177,7 @@ function consentView(record: DeskRequestRecord): DeskConsentView {
     id: record.id,
     owner: record.owner,
     fromDesk: record.fromDesk,
-    task: record.task,
+    ruleLabel: record.ruleLabel,
     createdAt: record.createdAt.toISOString(),
     status: record.status === "delivered" ? "approved" : record.status,
     message: encodeBadgeMessage("DeskShare", record.message),
@@ -265,11 +266,21 @@ function pendingRequest(state: MockState, owner: EmployeeId, requestId: Hex): De
 }
 
 /**
- * Mock sealing of the sharer's identity: an opaque token only. The real enclave encrypts the signer to the
- * compliance officer's X25519 key; the de-anonymisation then happens client-side with a key from her Ledger.
+ * Seals the sharer's identity to the compliance officer's key, as the enclave does: only her Ledger-derived key
+ * opens it (the de-anonymisation happens in her device bridge, not here).
  */
-function sealIdentity(employee: EmployeeId, requestId: Hex): string {
-  return keccak256(toHex(`sealed/${employee}/${requestId}`));
+function sealIdentity(state: MockState, employee: EmployeeId, requestId: Hex, excerptHash: Hex): SealedBox {
+  const key = state.complianceKey;
+  if (key === undefined) {
+    throw new EnclaveError("CONFLICT", "aucune clé de conformité enregistrée : partage anonyme impossible");
+  }
+  const signer = { employeeId: employee, address: EMPLOYEES[employee].address, requestId, excerptHash };
+  return sealToPublicKey(key.publicKey, JSON.stringify(signer));
+}
+
+/** Short, stable fingerprint of a sealed box for display (the ciphertext itself is meaningless to a reader). */
+export function sealedFingerprint(sealed: SealedBox): Hex {
+  return keccak256(toHex(sealed.ciphertext));
 }
 
 export async function approveDeskRequest(
@@ -302,9 +313,9 @@ export async function approveDeskRequest(
   );
   consumeNonce(state, EMPLOYEES[owner].address, record.message.nonce);
 
+  const sealed = sealIdentity(state, owner, record.id, record.message.excerptHash);
   record.status = "delivered";
   record.delivery = { nullifier: String(nullifier), root: String(root), deliveredAt: new Date() };
-  const sealed = sealIdentity(owner, record.id);
   // Actor is the desk, never the person: the audit trail itself must not de-anonymise the sharer.
   const entry = state.audit.append({
     type: "desk.share",
@@ -345,7 +356,7 @@ export function sealedView(record: SealedRecord): SealedIdentityView {
     ts: record.ts.toISOString(),
     sourceDesk: record.sourceDesk,
     label: record.label,
-    sealed: record.sealed,
+    sealed: sealedFingerprint(record.sealed),
   };
   if (record.revealedAt !== undefined) {
     view.revealed = { employee: record.signer, revealedAt: record.revealedAt.toISOString() };

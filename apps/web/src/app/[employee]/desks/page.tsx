@@ -1,4 +1,12 @@
-import { BadgeCheck, Fingerprint, Hourglass, ShieldCheck, Users, VenetianMask } from "lucide-react";
+import {
+  BadgeCheck,
+  Fingerprint,
+  Hourglass,
+  ShieldAlert,
+  ShieldCheck,
+  Users,
+  VenetianMask,
+} from "lucide-react";
 import type { Metadata } from "next";
 import { CopyableHash } from "@/components/copyable-hash";
 import { DeskRequestForm } from "@/components/desks/desk-request-form";
@@ -85,7 +93,9 @@ function IncomingRequest({ request, employee }: { request: DeskConsentView; empl
             demande un extrait à un membre du desk {request.message.sourceDesk}
           </span>
         </div>
-        <p className="mt-1 text-[13px] text-muted-foreground">« {request.task} »</p>
+        <p className="mt-1 text-[13px] text-muted-foreground">
+          Sous la règle d&apos;échange « {request.ruleLabel} »
+        </p>
       </div>
       <div className="grid gap-5 px-5 py-4 lg:grid-cols-2">
         <div className="space-y-3 text-xs">
@@ -98,10 +108,6 @@ function IncomingRequest({ request, employee }: { request: DeskConsentView; empl
             <span className="text-muted-foreground">Extrait : </span>
             <span className="font-medium">{request.message.excerptLabel}</span>
             <span className="text-muted-foreground"> · {formatLength(request.message.excerptLength)}</span>
-          </div>
-          <div>
-            <span className="text-muted-foreground">Règle d&apos;échange : </span>
-            {request.message.ruleLabel}
           </div>
           <ApproveRejectButtons
             approveLabel="Partager anonymement"
@@ -116,6 +122,13 @@ function IncomingRequest({ request, employee }: { request: DeskConsentView; empl
     </article>
   );
 }
+
+/** Outcomes of a desk request that ended without a delivery. */
+const UNDELIVERED_LABEL: Partial<Record<DeskRequestView["status"], string>> = {
+  rejected: "Refusé par le membre sollicité",
+  no_match: "Aucun membre du desk ne détient d'extrait autorisé par la règle",
+  expired: "Demande expirée",
+};
 
 function OutgoingRequest({ request }: { request: DeskRequestView }) {
   const delivery = request.delivery;
@@ -133,20 +146,37 @@ function OutgoingRequest({ request }: { request: DeskRequestView }) {
         <div
           className={cn(
             "mt-3 inline-flex items-center gap-1.5 text-xs",
-            request.status === "rejected" ? "text-danger" : "text-warning",
+            request.status === "pending" ? "text-warning" : "text-danger",
           )}
         >
           <Hourglass className="size-3.5" />
-          {request.status === "rejected" ? "Refusé par le desk" : "En attente d'un membre du desk"}
+          {UNDELIVERED_LABEL[request.status] ?? "En attente d'un membre du desk"}
         </div>
       ) : (
-        <div className="mt-4 rounded-lg border border-success/30 bg-success/5 p-4">
+        <div
+          className={cn(
+            "mt-4 rounded-lg border p-4",
+            delivery.proofVerified ? "border-success/30 bg-success/5" : "border-warning/35 bg-warning/5",
+          )}
+        >
           <p className="text-[13.5px] leading-relaxed">{delivery.excerpt}</p>
-          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-success/20 pt-3 text-xs">
-            <span className="inline-flex items-center gap-1.5 font-medium text-success">
-              <ShieldCheck className="size-3.5" />
-              Source : desk {DESK_NAMES[delivery.sourceDesk]} (membre anonyme, preuve ZK vérifiée)
-            </span>
+          <div
+            className={cn(
+              "mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t pt-3 text-xs",
+              delivery.proofVerified ? "border-success/20" : "border-warning/25",
+            )}
+          >
+            {delivery.proofVerified ? (
+              <span className="inline-flex items-center gap-1.5 font-medium text-success">
+                <ShieldCheck className="size-3.5" />
+                Source : desk {DESK_NAMES[delivery.sourceDesk]} (membre anonyme, preuve ZK vérifiée)
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 font-medium text-warning">
+                <ShieldAlert className="size-3.5" />
+                Preuve ZK non vérifiée : ne vous fiez pas à la provenance de cet extrait
+              </span>
+            )}
             <span className="inline-flex items-center gap-1 text-muted-foreground">
               nullifier <CopyableHash value={delivery.nullifier} />
             </span>
@@ -167,8 +197,8 @@ export default async function DesksPage({ params }: { params: Promise<{ employee
     load(() => api.listDesks(employee.id)),
     load(() => api.listDeskRequests(employee.id)),
   ]);
-  if (!desks.ok) return <EnclaveUnavailable failure={desks} />;
-  if (!requests.ok) return <EnclaveUnavailable failure={requests} />;
+  if (!desks.ok) return <EnclaveUnavailable failure={desks} employee={employee.id} />;
+  if (!requests.ok) return <EnclaveUnavailable failure={requests} employee={employee.id} />;
   const myDesks = desks.data.filter((d) => d.isMember);
   const otherDesks = desks.data.filter((d) => !d.isMember && d.requestable);
   const incoming = requests.data.incoming.filter((r) => r.status === "pending");

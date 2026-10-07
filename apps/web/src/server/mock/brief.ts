@@ -3,7 +3,8 @@
  * excerpts only; the mock does the same with hand-written sentences per seeded note, so a missing consent visibly
  * removes facts from the brief.
  */
-import type { BriefView, SourceView } from "../enclave/types";
+import type { BriefView } from "../enclave/types";
+import type { TaskSource } from "./state";
 
 /** One brief line per seeded note: what an analyst would extract from it. */
 const NOTE_BULLETS: Readonly<Record<string, string>> = {
@@ -41,10 +42,7 @@ function firstSentence(text: string): string {
  * Drafts the brief from `sources` only. A source bundles one or more notes (`noteIds`), so a consent covering
  * several of Bob's notes yields several lines, all citing the same source.
  */
-export function draftBrief(
-  task: string,
-  sources: ReadonlyArray<SourceView & { noteIds: readonly string[]; noteTexts: readonly string[] }>,
-): BriefView {
+export function draftBrief(task: string, sources: readonly TaskSource[]): BriefView {
   const bullets: BriefView["bullets"] = [];
   const allowedNotes = new Set<string>();
   for (const source of sources) {

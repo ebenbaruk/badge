@@ -12,6 +12,7 @@ import {
   type DeskShare,
   type SignedMessage,
 } from "@badge/consent";
+import type { SealedBox } from "@badge/attest";
 import { InMemoryNullifierRegistry } from "@badge/zk";
 import { bytesToHex, keccak256, toHex, type Address, type Hex } from "viem";
 import { EMPLOYEES, type DeskId, type EmployeeId } from "@/lib/directory";
@@ -30,6 +31,8 @@ import { loadSeed, type SeedData, type SeedNote } from "./seed";
 
 /** A source of a task, with the notes it bundles (needed to draft the brief and to count tokens). */
 export interface TaskSource extends SourceView {
+  /** Excerpt text (mock only: the live enclave never discloses it outside the brief). */
+  text: string;
   noteIds: string[];
   noteTexts: string[];
 }
@@ -106,7 +109,7 @@ export interface SealedRecord {
   ts: Date;
   sourceDesk: DeskId;
   label: string;
-  sealed: string;
+  sealed: SealedBox;
   /** The sharer, known to the enclave only (the real one seals it to the compliance X25519 key). */
   signer: EmployeeId;
   revealedAt?: Date;
@@ -130,6 +133,8 @@ export interface MockState {
   deskRequests: Map<Hex, DeskRequestRecord>;
   nullifiers: InMemoryNullifierRegistry;
   sealed: Map<number, SealedRecord>;
+  /** Compliance officer's X25519 public key (hex), registered from her Ledger; desk shares are sealed to it. */
+  complianceKey?: { publicKey: string; registeredAt: Date };
 }
 
 const RANDOM_ID_BYTES = 32;

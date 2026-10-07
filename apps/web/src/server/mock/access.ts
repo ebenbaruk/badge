@@ -3,6 +3,7 @@
  * Every signed message is verified exactly as the enclave does: signature by the directory address, intrinsic
  * checks of @badge/consent, then nonce replay protection.
  */
+import { ENCLAVE_MAX_SESSION_TTL_SECONDS } from "@badge/client";
 import {
   checkAgentSession,
   checkContextPolicy,
@@ -14,8 +15,8 @@ import {
 import { isAddressEqual, zeroAddress } from "viem";
 import { EMPLOYEES, type EmployeeId } from "@/lib/directory";
 import { EnclaveError } from "../errors";
-import { AGENT_SESSION_TTL_SECONDS, deviceName } from "../messages";
-import type { EnrollmentView, GrantView, PolicyView } from "../enclave/types";
+import { deviceName } from "../messages";
+import type { AgreementStatus, EnrollmentView, GrantView, PolicyView } from "../enclave/types";
 import {
   consumeNonce,
   employeeByAddress,
@@ -73,7 +74,7 @@ export async function openSession(
   await verifySignedBy(signed, employee);
   const now = nowSeconds();
   checkAgentSession(signed.message, { now, enclaveMeasurement: state.measurement });
-  if (signed.message.expiresAt - now > AGENT_SESSION_TTL_SECONDS) {
+  if (signed.message.expiresAt - now > ENCLAVE_MAX_SESSION_TTL_SECONDS) {
     throw new EnclaveError("INVALID_REQUEST", "une session d'agent dure au plus 12 h");
   }
   consumeNonce(state, signed.message.employee, signed.message.nonce);
@@ -91,8 +92,13 @@ export async function openSession(
   return enrollmentView(state, employee);
 }
 
+function statusOf(revokedAt: Date | undefined, expiresAt: bigint): AgreementStatus {
+  if (revokedAt !== undefined) return "revoked";
+  return expiresAt <= nowSeconds() ? "expired" : "active";
+}
+
 function policyView(record: PolicyRecord): PolicyView {
-  const view: PolicyView = {
+  return {
     id: record.id,
     owner: record.owner,
     granteeTeam: record.policy.granteeTeam,
@@ -102,9 +108,8 @@ function policyView(record: PolicyRecord): PolicyView {
     createdAt: record.createdAt.toISOString(),
     expiresAt: secondsToIso(record.policy.expiresAt),
     uses: record.uses,
+    status: statusOf(record.revokedAt, record.policy.expiresAt),
   };
-  if (record.revokedAt !== undefined) view.revokedAt = record.revokedAt.toISOString();
-  return view;
 }
 
 export async function createPolicy(
@@ -145,35 +150,29 @@ export function listPolicies(state: MockState, owner: EmployeeId): PolicyView[] 
 export function listGrants(state: MockState, owner: EmployeeId): GrantView[] {
   const shares: GrantView[] = [...state.grants.values()]
     .filter((g) => g.owner === owner)
-    .map((g) => {
-      const view: GrantView = {
-        id: g.id,
-        kind: "share",
-        owner,
-        recipient: g.recipient,
-        recipientLabel: deviceName(EMPLOYEES[g.recipient]),
-        label: `${g.label} · ${g.taskLabel}`,
-        createdAt: g.createdAt.toISOString(),
-        expiresAt: secondsToIso(g.expiresAt),
-        uses: g.uses,
-      };
-      if (g.revokedAt !== undefined) view.revokedAt = g.revokedAt.toISOString();
-      return view;
-    });
-  const policies: GrantView[] = listPolicies(state, owner).map((p) => {
-    const view: GrantView = {
-      id: p.id,
-      kind: "policy",
+    .map((g): GrantView => ({
+      id: g.id,
+      kind: "share",
       owner,
-      recipientLabel: `Équipe ${p.granteeTeam}`,
-      label: `${p.contextTag} · ${p.purpose}`,
-      createdAt: p.createdAt,
-      expiresAt: p.expiresAt,
-      uses: p.uses,
-    };
-    if (p.revokedAt !== undefined) view.revokedAt = p.revokedAt;
-    return view;
-  });
+      recipient: g.recipient,
+      recipientLabel: deviceName(EMPLOYEES[g.recipient]),
+      label: `${g.label} · ${g.taskLabel}`,
+      createdAt: g.createdAt.toISOString(),
+      expiresAt: secondsToIso(g.expiresAt),
+      uses: g.uses,
+      status: statusOf(g.revokedAt, g.expiresAt),
+    }));
+  const policies: GrantView[] = listPolicies(state, owner).map((p): GrantView => ({
+    id: p.id,
+    kind: "policy",
+    owner,
+    recipientLabel: `Équipe ${p.granteeTeam}`,
+    label: `${p.contextTag} · ${p.purpose}`,
+    createdAt: p.createdAt,
+    expiresAt: p.expiresAt,
+    uses: p.uses,
+    status: p.status,
+  }));
   return [...shares, ...policies].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 

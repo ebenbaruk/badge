@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   // Workspace packages ship TypeScript sources (no build step): Next compiles them with the app.
-  transpilePackages: ["@badge/consent", "@badge/ledger", "@badge/zk", "@badge/attest"],
+  transpilePackages: ["@badge/attest", "@badge/client", "@badge/consent", "@badge/ledger", "@badge/zk"],
   // The Groth16 prover loads its wasm/zkey artifacts from disk and spawns workers: it must run unbundled.
   // The Ledger DMK is deliberately NOT listed: its ESM build uses directory imports that Node's native ESM loader
   // rejects (ERR_UNSUPPORTED_DIR_IMPORT), so it only works once bundled.

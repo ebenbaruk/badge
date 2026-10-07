@@ -30,7 +30,11 @@ export default async function EmployeeLayout({
     consents: consents.ok ? consents.data.filter((c) => c.status === "pending").length : 0,
     desks: deskRequests.ok ? deskRequests.data.incoming.filter((r) => r.status === "pending").length : 0,
   };
-  const setupPending = enrollment.ok && (!enrollment.data.enrolled || enrollment.data.session === undefined);
+  const setupPending =
+    enrollment.ok &&
+    (!enrollment.data.enrolled ||
+      enrollment.data.session === undefined ||
+      (employee.role === "compliance" && enrollment.data.complianceKey === undefined));
   const speculosPort = new URL(serverConfig().speculosUrls[employee.id]).port;
 
   return (
@@ -49,7 +53,7 @@ export default async function EmployeeLayout({
             <div className="ml-auto flex items-center gap-2">
               {api.mode === "mock" && (
                 <Badge variant="outline" className="hidden text-muted-foreground sm:inline-flex">
-                  Démo scriptée
+                  Enclave fictive (développement)
                 </Badge>
               )}
               <AttestationBadge

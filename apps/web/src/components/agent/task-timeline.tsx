@@ -55,9 +55,11 @@ export function TaskTimeline({ steps }: { steps: readonly TaskStep[] }) {
             <div className="min-w-0 flex-1 pt-0.5">
               <div className="flex items-baseline justify-between gap-3">
                 <span className="text-[13px] font-medium">{step.title}</span>
-                <time className="shrink-0 font-mono text-[10px] text-muted-foreground tabular-nums">
-                  {formatTime(step.at)}
-                </time>
+                {step.at !== undefined && (
+                  <time className="shrink-0 font-mono text-[10px] text-muted-foreground tabular-nums">
+                    {formatTime(step.at)}
+                  </time>
+                )}
               </div>
               {step.detail !== undefined && (
                 <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{step.detail}</p>

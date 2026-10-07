@@ -24,6 +24,8 @@ export interface AttestationView {
   verified: boolean;
   /** Compose hash as bytes32: the enclave measurement every signed message is pinned to. */
   measurement: Hex;
+  /** Key provider of the CVM (`kms`, `local`...), when the event log names one. */
+  keyProvider?: string;
   tcbStatus: string;
   appId: string;
   /** Relaxed checks or advisories worth showing to a reviewer. */
@@ -35,6 +37,27 @@ export interface EnrollmentView {
   enrolled: boolean;
   enrolledAt?: string;
   session?: { sessionKey: Address; agentName: string; expiresAt: string };
+  /** Compliance role only: the X25519 public key registered for de-anonymisation (derived from the Ledger). */
+  complianceKey?: { publicKey: string; registeredAt: string };
+}
+
+/** Body of a compliance key registration (contract flow 9). */
+export interface ComplianceKeyInput {
+  /** X25519 public key, lowercase hex without prefix. */
+  publicKey: string;
+  /** EIP-191 Ledger signature of `complianceKeyRegistrationMessage(company, publicKey)`. */
+  signature: Hex;
+}
+
+/** A de-anonymisation done on the compliance officer's side, to be logged by the enclave. */
+export interface RevealNoticeInput {
+  seq: number;
+  reason: string;
+  /**
+   * Who the sealed identity named, as decrypted by the officer's device bridge. Kept in the bridge's memory to show
+   * the result; never sent to the enclave (the notice only says that entry `seq` was opened, and why).
+   */
+  signer: EmployeeId;
 }
 
 export interface CreateTaskInput {
@@ -64,8 +87,6 @@ export interface SourceView {
   label: string;
   length: number;
   allowedBy: AllowedBy;
-  /** Excerpt text, only for allowed sources (it already reached the requester's brief). */
-  text: string;
 }
 
 export interface PendingExcerptView {
@@ -80,9 +101,9 @@ export interface BlockedExcerptView {
   owner: ContextOwner;
   label: string;
   length: number;
-  /** Why it never reached the owner: rule blocks, classifier exclusions, refusals. */
+  /** Why it is not used: rule blocks, classifier exclusions, refusals, revocations, expiries. */
   reason: string;
-  kind: "rule" | "classifier" | "rejected" | "revoked";
+  kind: "rule" | "classifier" | "rejected" | "revoked" | "expired";
 }
 
 export type TaskStepKind =
@@ -101,7 +122,8 @@ export type TaskStepKind =
 
 export interface TaskStep {
   kind: TaskStepKind;
-  at: string;
+  /** When the enclave reports it (the live API only timestamps the task itself). */
+  at?: string;
   title: string;
   detail?: string;
 }
@@ -142,17 +164,20 @@ export interface ConsentRequestView {
   taskId: Hex;
   owner: EmployeeId;
   requester: EmployeeId;
-  task: string;
+  /** The task as the owner's device shows it ("Tache"). */
+  taskLabel: string;
   createdAt: string;
   status: RequestStatus;
   findings: RuleFinding[];
   /** Exact ContextShare prepared by the enclave: what the owner's Ledger will display and sign. */
   message: WireMessage<"ContextShare">;
-  /** Notes bundled in the excerpt (labels only: the owner already knows their own notes). */
-  noteLabels: string[];
+  /** The owner's own text that would leave their scope, and its tags (shown to the owner only). */
+  excerpt: { text: string; tags: string[] };
 }
 
 export type GrantKind = "share" | "policy";
+
+export type AgreementStatus = "active" | "revoked" | "expired";
 
 export interface GrantView {
   id: Hex;
@@ -164,8 +189,9 @@ export interface GrantView {
   label: string;
   createdAt: string;
   expiresAt: string;
-  uses: number;
-  revokedAt?: string;
+  /** Logged uses (standing agreements; a one-off grant covers one excerpt). */
+  uses?: number;
+  status: AgreementStatus;
 }
 
 export interface PolicyView {
@@ -178,7 +204,7 @@ export interface PolicyView {
   createdAt: string;
   expiresAt: string;
   uses: number;
-  revokedAt?: string;
+  status: AgreementStatus;
 }
 
 export interface DeskView {
@@ -205,15 +231,18 @@ export interface DeskRequestView {
   task: string;
   ruleLabel: string;
   createdAt: string;
-  status: RequestStatus | "delivered";
-  /** Present once delivered: the excerpt and the proof facts, never the sharer. */
+  /** `no_match`: no member of the source desk holds an excerpt the rule allows. */
+  status: RequestStatus | "delivered" | "no_match";
+  /** Present once delivered: the excerpt and the facts of its verified ZK proof, never the sharer. */
   delivery?: {
     excerpt: string;
-    label: string;
     sourceDesk: DeskId;
     nullifier: string;
     root: string;
-    deliveredAt: string;
+    /** The Semaphore proof was checked by the requester's side against the source desk's current root. */
+    proofVerified: boolean;
+    /** Absent when the enclave does not timestamp deliveries (live). */
+    deliveredAt?: string;
   };
 }
 
@@ -221,7 +250,8 @@ export interface DeskConsentView {
   id: Hex;
   owner: EmployeeId;
   fromDesk: DeskId;
-  task: string;
+  /** The exchange rule the request is made under (the requester's identity is never disclosed). */
+  ruleLabel: string;
   createdAt: string;
   status: RequestStatus;
   message: WireMessage<"DeskShare">;
@@ -234,14 +264,15 @@ export interface AuditEntryView {
   actor: string;
   subject: string;
   data: Record<string, unknown>;
-  prevHash: Hex;
-  hash: Hex;
+  prevHash: string;
+  hash: string;
 }
 
 export interface ChainVerification {
   ok: boolean;
   length: number;
-  headHash: Hex;
+  /** Hash of the last entry (genesis hash for an empty log). */
+  headHash: string;
   /** First entry whose hash does not match, when `ok` is false. */
   brokenAt?: number;
 }
@@ -251,9 +282,10 @@ export interface SealedIdentityView {
   ts: string;
   sourceDesk: DeskId;
   label: string;
-  /** Ciphertext sealed to the compliance key (opaque to the web server). */
+  /** Short fingerprint of the identity sealed to the compliance key (opaque to everyone else). */
   sealed: string;
-  revealed?: { employee: EmployeeId; revealedAt: string };
+  /** Once a reveal notice is logged. `employee` is known only to the bridge that decrypted it. */
+  revealed?: { employee?: EmployeeId; revealedAt: string };
 }
 
 export interface AuditView {
@@ -270,7 +302,10 @@ export interface DeskRequestsView {
   outgoing: DeskRequestView[];
 }
 
-/** The enclave API as used by the web app. Implemented by the mock (demo) and, later, by @badge/client. */
+/**
+ * The enclave API as used by the web app. `live.ts` implements it on @badge/client (the real enclave); the mock
+ * implements it in memory for UI development only.
+ */
 export interface EnclaveApi {
   readonly mode: EnclaveMode;
   attestation(): Promise<AttestationView>;
@@ -311,7 +346,9 @@ export interface EnclaveApi {
   rejectDeskRequest(owner: EmployeeId, requestId: Hex): Promise<void>;
 
   /** Compliance role only. */
+  registerComplianceKey(viewer: EmployeeId, input: ComplianceKeyInput): Promise<EnrollmentView>;
+  /** Compliance role only. */
   audit(viewer: EmployeeId): Promise<AuditView>;
-  /** Compliance role only. Mock: decrypts in place; live: client-side decryption, then a reveal notice. */
-  revealDeskShare(viewer: EmployeeId, seq: number): Promise<SealedIdentityView>;
+  /** Compliance role only: logs a de-anonymisation the officer's bridge already did with her Ledger-derived key. */
+  revealNotice(viewer: EmployeeId, input: RevealNoticeInput): Promise<SealedIdentityView>;
 }

@@ -5,11 +5,14 @@
  */
 import type { SignedMessage } from "@badge/consent";
 import type { DeskProofWire } from "@badge/zk";
-import { keccak256, toHex, type Hex } from "viem";
-import { EMPLOYEES, type DeskId, type EmployeeId } from "@/lib/directory";
+import { complianceKeyRegistrationMessage } from "@badge/attest";
+import { isAddressEqual, keccak256, recoverMessageAddress, toHex, type Hex } from "viem";
+import { COMPANY_NAME, EMPLOYEES, type DeskId, type EmployeeId } from "@/lib/directory";
 import { EnclaveError } from "../errors";
 import type {
   AttestationView,
+  ComplianceKeyInput,
+  RevealNoticeInput,
   AuditView,
   ConsentRequestView,
   CreateTaskInput,
@@ -46,6 +49,7 @@ export class MockEnclave implements EnclaveApi {
       mode: "simulated",
       verified: true,
       measurement: this.state.measurement,
+      keyProvider: "mock",
       tcbStatus: "Simulated",
       appId: keccak256(toHex("badge/mock-app")).slice(0, 2 + APP_ID_BYTES * 2),
       warnings: [
@@ -57,7 +61,12 @@ export class MockEnclave implements EnclaveApi {
   }
 
   async enrollment(employee: EmployeeId): Promise<EnrollmentView> {
-    return access.enrollmentView(this.state, employee);
+    const view = access.enrollmentView(this.state, employee);
+    const key = this.state.complianceKey;
+    if (EMPLOYEES[employee].role === "compliance" && key !== undefined) {
+      view.complianceKey = { publicKey: key.publicKey, registeredAt: key.registeredAt.toISOString() };
+    }
+    return view;
   }
 
   async enroll(signed: SignedMessage<"EmployeeEnroll">): Promise<EnrollmentView> {
@@ -150,6 +159,25 @@ export class MockEnclave implements EnclaveApi {
     desks.rejectDeskRequest(this.state, owner, requestId);
   }
 
+  async registerComplianceKey(viewer: EmployeeId, input: ComplianceKeyInput): Promise<EnrollmentView> {
+    this.assertCompliance(viewer);
+    const recovered = await recoverMessageAddress({
+      message: complianceKeyRegistrationMessage(COMPANY_NAME, input.publicKey),
+      signature: input.signature,
+    });
+    if (!isAddressEqual(recovered, EMPLOYEES[viewer].address)) {
+      throw new EnclaveError("SIGNATURE_REJECTED", "clé de conformité signée par un autre appareil");
+    }
+    this.state.complianceKey = { publicKey: input.publicKey, registeredAt: new Date() };
+    this.state.audit.append({
+      type: "compliance.key",
+      actor: viewer,
+      subject: viewer,
+      data: { publicKey: input.publicKey },
+    });
+    return this.enrollment(viewer);
+  }
+
   async audit(viewer: EmployeeId): Promise<AuditView> {
     this.assertCompliance(viewer);
     const entries = [...this.state.audit.entries()];
@@ -161,17 +189,17 @@ export class MockEnclave implements EnclaveApi {
     };
   }
 
-  async revealDeskShare(viewer: EmployeeId, seq: number): Promise<SealedIdentityView> {
+  async revealNotice(viewer: EmployeeId, input: RevealNoticeInput): Promise<SealedIdentityView> {
     this.assertCompliance(viewer);
-    const record = this.state.sealed.get(seq);
+    const record = this.state.sealed.get(input.seq);
     if (record === undefined)
-      throw new EnclaveError("NOT_FOUND", `aucune identité scellée à l'entrée ${seq}`);
+      throw new EnclaveError("NOT_FOUND", `aucune identité scellée à l'entrée ${input.seq}`);
     record.revealedAt ??= new Date();
     this.state.audit.append({
       type: "compliance.reveal",
       actor: viewer,
-      subject: String(seq),
-      data: { sourceDesk: record.sourceDesk, sealedSigner: record.sealed },
+      subject: String(input.seq),
+      data: { auditSeq: input.seq, reason: input.reason },
     });
     return desks.sealedView(record);
   }

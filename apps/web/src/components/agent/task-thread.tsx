@@ -23,6 +23,7 @@ const BLOCKED_KIND_LABEL: Record<BlockedExcerptView["kind"], string> = {
   classifier: "Écarté",
   rejected: "Refusé",
   revoked: "Révoqué",
+  expired: "Expiré",
 };
 
 function ownerLabel(owner: ContextOwner): string {

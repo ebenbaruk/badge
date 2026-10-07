@@ -4,8 +4,12 @@
  * Consent shares (ContextShare, DeskShare) are NOT built here: the enclave prepares them, the app only signs.
  */
 import {
+  createAgentSession,
+  DEFAULT_AGENT_SESSION_TTL_SECONDS,
+  type CreatedAgentSession,
+} from "@badge/client";
+import {
   toDeviceAscii,
-  type AgentSession,
   type ContextPolicy,
   type ContextRevoke,
   type DeskJoin,
@@ -14,10 +18,12 @@ import {
 import { zeroAddress, type Address, type Hex } from "viem";
 import { COMPANY_NAME, type Employee } from "@/lib/directory";
 
-const SECONDS_PER_HOUR = 3600n;
 const SECONDS_PER_DAY = 86_400n;
-/** The enclave contract caps agent sessions at 12 h (stricter than the 7-day bound of @badge/consent). */
-export const AGENT_SESSION_TTL_SECONDS = 12n * SECONDS_PER_HOUR;
+/**
+ * A working day: the enclave caps sessions at 12 h (ENCLAVE_MAX_SESSION_TTL_SECONDS); staying under it leaves room
+ * for clock drift between this bridge and the enclave.
+ */
+export const AGENT_SESSION_TTL_SECONDS = DEFAULT_AGENT_SESSION_TTL_SECONDS;
 /** Standing agreements are capped at 90 days by @badge/consent (`MAX_POLICY_TTL_SECONDS`). */
 export const MAX_POLICY_DAYS = 90;
 const NONCE_BYTES = 16;
@@ -59,22 +65,22 @@ export function buildEmployeeEnroll(
   };
 }
 
+/**
+ * A fresh agent session key and the AgentSession delegating to it (via @badge/client). The key must be kept by the
+ * agent runtime only; the message is what the employee's Ledger signs.
+ */
 export function buildAgentSession(
   employee: Employee,
-  sessionKey: Address,
   enclaveMeasurement: Hex,
-  now: bigint,
-  nonce: bigint = newNonce(),
-): AgentSession {
-  return {
-    agentName: toDeviceAscii(`Agent Badge de ${employee.firstName}`),
+  now: Date = new Date(),
+): CreatedAgentSession {
+  return createAgentSession(employee.address, {
+    agentName: `Agent Badge de ${employee.firstName}`,
     access: AGENT_ACCESS,
-    expiresAt: now + AGENT_SESSION_TTL_SECONDS,
-    sessionKey,
     enclaveMeasurement,
-    employee: employee.address,
-    nonce,
-  };
+    ttlSeconds: AGENT_SESSION_TTL_SECONDS,
+    now,
+  });
 }
 
 export interface PolicyInput {

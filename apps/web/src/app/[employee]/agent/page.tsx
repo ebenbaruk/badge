@@ -25,7 +25,7 @@ export default async function AgentPage({ params }: { params: Promise<{ employee
       />
       <div className="mt-10 space-y-10">
         {!tasks.ok ? (
-          <EnclaveUnavailable failure={tasks} />
+          <EnclaveUnavailable failure={tasks} employee={employee.id} />
         ) : tasks.data.length === 0 ? (
           <EmptyState icon={<MessageSquareDashed />} title="Aucune tâche pour l'instant">
             Essayez « Prépare-moi le brief du rendez-vous de demain avec le client Orion ».

@@ -20,8 +20,8 @@ export default async function AgreementsPage({ params }: { params: Promise<{ emp
     load(() => api.listPolicies(owner.id)),
     load(() => api.contextTags(owner.id)),
   ]);
-  if (!policies.ok) return <EnclaveUnavailable failure={policies} />;
-  if (!tags.ok) return <EnclaveUnavailable failure={tags} />;
+  if (!policies.ok) return <EnclaveUnavailable failure={policies} employee={owner.id} />;
+  if (!tags.ok) return <EnclaveUnavailable failure={tags} employee={owner.id} />;
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -64,10 +64,7 @@ export default async function AgreementsPage({ params }: { params: Promise<{ emp
               </TableHeader>
               <TableBody>
                 {policies.data.map((policy) => (
-                  <TableRow
-                    key={policy.id}
-                    className={policy.revokedAt !== undefined ? "opacity-55" : undefined}
-                  >
+                  <TableRow key={policy.id} className={policy.status === "active" ? undefined : "opacity-55"}>
                     <TableCell className="pl-4 font-medium">{policy.granteeTeam}</TableCell>
                     <TableCell>
                       <span className="rounded-md border bg-muted/40 px-1.5 py-0.5 font-mono text-[11px]">
@@ -83,8 +80,10 @@ export default async function AgreementsPage({ params }: { params: Promise<{ emp
                     </TableCell>
                     <TableCell className="text-right font-mono tabular-nums">{policy.uses}</TableCell>
                     <TableCell className="pr-4 text-right">
-                      {policy.revokedAt !== undefined ? (
-                        <span className="text-xs text-muted-foreground">Révoqué</span>
+                      {policy.status !== "active" ? (
+                        <span className="text-xs text-muted-foreground">
+                          {policy.status === "revoked" ? "Révoqué" : "Expiré"}
+                        </span>
                       ) : (
                         <LedgerActionButton
                           label="Révoquer"

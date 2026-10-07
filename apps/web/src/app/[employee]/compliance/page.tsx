@@ -1,6 +1,7 @@
 import { Link2, Link2Off, ScrollText, ShieldAlert, ShieldX, VenetianMask } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { z } from "zod";
 import { RevealButton } from "@/components/compliance/reveal-button";
 import { CopyableHash } from "@/components/copyable-hash";
 import { EnclaveUnavailable } from "@/components/enclave-unavailable";
@@ -31,8 +32,13 @@ const TYPE_TONE: Record<string, string> = {
   "compliance.reveal": "bg-violet-500/12 text-violet-600 dark:text-violet-300",
 };
 
+/** Rule codes as the enclave logs them in `rule.warn` / `rule.block` entries. */
+const ruleReasonsSchema = z.array(z.object({ code: z.string() }));
+
 function actorLabel(actor: string): string {
   if (isEmployeeId(actor)) return EMPLOYEES[actor].name;
+  if (actor === "anonymous") return "Membre anonyme d'un desk";
+  if (actor === "enclave") return "Enclave";
   const desk = actor.startsWith("desk:") ? actor.slice("desk:".length) : null;
   if (desk !== null) return `Desk ${isDeskId(desk) ? DESK_NAMES[desk] : desk} (anonyme)`;
   return actor;
@@ -80,7 +86,8 @@ function Stat({
 
 function AlertRow({ entry }: { entry: AuditEntryView }) {
   const block = entry.type === "rule.block";
-  const rules = Array.isArray(entry.data.rules) ? entry.data.rules.join(", ") : "";
+  const reasons = ruleReasonsSchema.safeParse(entry.data.reasons);
+  const rules = reasons.success ? reasons.data.map((r) => r.code).join(", ") : "";
   const owner =
     typeof entry.data.owner === "string" && isEmployeeId(entry.data.owner) ? entry.data.owner : null;
   return (
@@ -100,7 +107,7 @@ export default async function CompliancePage({ params }: { params: Promise<{ emp
   const viewer = await employeeFromParams(params);
   if (viewer.role !== "compliance") notFound();
   const audit = await load(() => enclave().audit(viewer.id));
-  if (!audit.ok) return <EnclaveUnavailable failure={audit} />;
+  if (!audit.ok) return <EnclaveUnavailable failure={audit} employee={viewer.id} />;
   const { entries, chain, alerts, sealed } = audit.data;
 
   return (
@@ -176,8 +183,10 @@ export default async function CompliancePage({ params }: { params: Promise<{ emp
                     />
                   ) : (
                     <span className="font-medium text-violet-600 dark:text-violet-300">
-                      {EMPLOYEES[item.revealed.employee].name} · levée le{" "}
-                      {formatDateTime(item.revealed.revealedAt)}
+                      {item.revealed.employee === undefined
+                        ? "Identité levée"
+                        : EMPLOYEES[item.revealed.employee].name}{" "}
+                      · levée le {formatDateTime(item.revealed.revealedAt)}
                     </span>
                   )}
                 </span>

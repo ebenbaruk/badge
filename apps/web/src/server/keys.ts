@@ -6,12 +6,12 @@
  */
 import { deskIdentityDeriveMessage } from "@badge/consent";
 import { deriveDeskIdentity, type Identity } from "@badge/zk";
-import { generatePrivateKey, privateKeyToAccount, type PrivateKeyAccount } from "viem/accounts";
+import type { LocalAccount } from "viem";
 import { COMPANY_NAME, type EmployeeId } from "@/lib/directory";
 import { signPersonalOnDevice } from "./signing";
 
 interface KeyStore {
-  agentKeys: Map<EmployeeId, PrivateKeyAccount>;
+  agentKeys: Map<EmployeeId, LocalAccount>;
   deskIdentities: Map<EmployeeId, Identity>;
 }
 
@@ -20,20 +20,17 @@ const STORE_KEY = Symbol.for("badge.web.keys");
 const globalStore = globalThis as typeof globalThis & { [STORE_KEY]?: KeyStore };
 const store: KeyStore = (globalStore[STORE_KEY] ??= { agentKeys: new Map(), deskIdentities: new Map() });
 
-/** The agent's session key for `employee`, created on first use. */
-export function agentSessionAccount(employee: EmployeeId): PrivateKeyAccount {
-  let account = store.agentKeys.get(employee);
-  if (account === undefined) {
-    account = privateKeyToAccount(generatePrivateKey());
-    store.agentKeys.set(employee, account);
-  }
-  return account;
+/** The key of the employee's latest delegation, if any. */
+export function agentSessionAccount(employee: EmployeeId): LocalAccount | undefined {
+  return store.agentKeys.get(employee);
 }
 
-/** Replaces the session key (a new AgentSession is about to be signed, the old key must not be reused). */
-export function rotateAgentSessionAccount(employee: EmployeeId): PrivateKeyAccount {
-  store.agentKeys.delete(employee);
-  return agentSessionAccount(employee);
+/**
+ * Adopts the key of a new delegation, just before its AgentSession is signed: a new signature never revalidates an
+ * old key. The previous session stays usable by the enclave client until the new one is registered.
+ */
+export function adoptAgentSessionAccount(employee: EmployeeId, account: LocalAccount): void {
+  store.agentKeys.set(employee, account);
 }
 
 /**

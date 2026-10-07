@@ -27,8 +27,12 @@ export async function joinDesk(input: {
     const { employee, desk } = joinSchema.parse(input);
     // First device review: the identity derivation message (EIP-191). Second: the DeskJoin itself (EIP-712).
     const identity = await deskIdentity(employee);
+    const api = enclave();
+    // The identity is deterministic: after a bridge restart it may already be registered, nothing more to sign.
+    const registered = (await api.listDesks(employee)).find((d) => d.id === desk);
+    if (registered?.commitments.includes(identity.commitment.toString())) return registered;
     const message = buildDeskJoin(EMPLOYEES[employee], DESK_NAMES[desk], identity.commitment);
-    const view = await enclave().joinDesk(employee, await signOnDevice(employee, "DeskJoin", message));
+    const view = await api.joinDesk(employee, await signOnDevice(employee, "DeskJoin", message));
     revalidatePath(`/${employee}`, "layout");
     return view;
   });

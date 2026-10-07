@@ -23,6 +23,7 @@ import type {
   ConsentRequestView,
   ContextOwner,
   CreateTaskInput,
+  RuleFinding,
   TaskStatus,
   TaskView,
 } from "../enclave/types";
@@ -138,6 +139,11 @@ interface ForeignRequest {
   fullContextRequest: boolean;
 }
 
+/** Rule findings as the enclave logs them (`reasons`), so the compliance view reads one format. */
+function auditReasons(findings: readonly RuleFinding[]) {
+  return findings.map((f) => ({ code: f.rule, severity: f.outcome, message: f.message }));
+}
+
 /** Grant reuse, else rules, else a pending consent prepared with the exact ContextShare to sign. */
 function requestForeignExcerpt(state: MockState, task: TaskRecord, request: ForeignRequest): void {
   const { owner, notes, label } = request;
@@ -181,7 +187,7 @@ function requestForeignExcerpt(state: MockState, task: TaskRecord, request: Fore
       type: "rule.block",
       actor: task.requester,
       subject: task.id,
-      data: { owner, rules: evaluation.findings.map((f) => f.rule), excerptHash },
+      data: { owner, reasons: auditReasons(evaluation.findings), excerptHash },
     });
     addStep(task, {
       kind: "rule_block",
@@ -195,7 +201,7 @@ function requestForeignExcerpt(state: MockState, task: TaskRecord, request: Fore
       type: "rule.warn",
       actor: task.requester,
       subject: task.id,
-      data: { owner, rules: evaluation.findings.map((f) => f.rule), excerptHash },
+      data: { owner, reasons: auditReasons(evaluation.findings), excerptHash },
     });
     addStep(task, {
       kind: "rule_warn",
@@ -386,7 +392,7 @@ export function taskView(state: MockState, task: TaskRecord): TaskView {
     status,
     trapped: task.trapped,
     steps: task.steps,
-    allowed: task.allowed.map(({ noteIds: _ids, noteTexts: _texts, ...source }) => source),
+    allowed: task.allowed.map(({ noteIds: _ids, noteTexts: _texts, text: _text, ...source }) => source),
     pending: task.pending,
     blocked: task.blocked,
   };
@@ -535,11 +541,11 @@ export function consentView(consent: ConsentRecord): ConsentRequestView {
     taskId: consent.taskId,
     owner: consent.owner,
     requester: consent.requester,
-    task: consent.task,
+    taskLabel: consent.message.taskLabel,
     createdAt: consent.createdAt.toISOString(),
     status: expired ? "expired" : consent.status,
     findings: consent.findings,
     message: encodeBadgeMessage("ContextShare", consent.message),
-    noteLabels: consent.notes.map((n) => n.label),
+    excerpt: { text: consent.excerptText, tags: [...new Set(consent.notes.flatMap((n) => n.tags))] },
   };
 }

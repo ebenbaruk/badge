@@ -1,5 +1,5 @@
 import type { Route } from "next";
-import { Bot, CheckCircle2, Circle, Fingerprint, RefreshCw, VenetianMask } from "lucide-react";
+import { Bot, CheckCircle2, Circle, Fingerprint, KeyRound, RefreshCw, VenetianMask } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
@@ -10,6 +10,7 @@ import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { formatDateTime, formatRelative } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { registerComplianceKey } from "@/server/actions/compliance";
 import { authorizeAgent, enrollEmployee } from "@/server/actions/onboarding";
 import { enclave } from "@/server/enclave";
 import { employeeFromParams, load } from "@/server/load";
@@ -67,9 +68,9 @@ export default async function OnboardingPage({ params }: { params: Promise<{ emp
     load(() => api.attestation()),
     load(() => api.listDesks(employee.id)),
   ]);
-  if (!enrollment.ok) return <EnclaveUnavailable failure={enrollment} />;
-  if (!attestation.ok) return <EnclaveUnavailable failure={attestation} />;
-  const { enrolled, session } = enrollment.data;
+  if (!enrollment.ok) return <EnclaveUnavailable failure={enrollment} employee={employee.id} />;
+  if (!attestation.ok) return <EnclaveUnavailable failure={attestation} employee={employee.id} />;
+  const { enrolled, session, complianceKey } = enrollment.data;
   const memberDesks = desks.ok ? desks.data.filter((d) => d.isMember) : [];
   const desksJoined = memberDesks.length > 0 && memberDesks.every((d) => d.joined);
 
@@ -116,7 +117,7 @@ export default async function OnboardingPage({ params }: { params: Promise<{ emp
           done={session !== undefined}
           icon={<Bot className="size-4" />}
           title="Autoriser mon agent"
-          description="Une clé de session est générée pour votre agent ; votre Ledger lui délègue le droit de faire des demandes pendant 12 heures."
+          description="Une clé de session est générée pour votre agent ; votre Ledger lui délègue le droit de faire des demandes pendant une journée de travail (8 heures)."
         >
           {session !== undefined ? (
             <div className="space-y-3">
@@ -154,12 +155,46 @@ export default async function OnboardingPage({ params }: { params: Promise<{ emp
               label="Signer sur mon Ledger"
               reviewLabel="Autoriser mon agent (AgentSession)"
               action={authorizeAgent.bind(null, { employee: employee.id })}
-              successMessage="Agent autorisé pour 12 heures."
+              successMessage="Agent autorisé pour 8 heures."
             />
           ) : (
             <p className="text-xs text-muted-foreground">Associez d&apos;abord votre Ledger.</p>
           )}
         </Step>
+        {employee.role === "compliance" && (
+          <Step
+            index={3}
+            done={complianceKey !== undefined}
+            icon={<KeyRound className="size-4" />}
+            title="Enregistrer ma clé de conformité"
+            description="Les identités des partages anonymes entre desks sont scellées pour vous seule. Votre clé est dérivée d'une signature de votre Ledger : elle n'est stockée nulle part et se recalcule à chaque levée d'anonymat."
+          >
+            {complianceKey !== undefined ? (
+              <dl className="grid gap-2 text-xs sm:grid-cols-2">
+                <div className="sm:col-span-2">
+                  <dt className="text-muted-foreground">Clé publique X25519</dt>
+                  <dd className="mt-0.5">
+                    <CopyableHash value={complianceKey.publicKey} full />
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">Enregistrée</dt>
+                  <dd className="mt-0.5">{formatRelative(complianceKey.registeredAt)}</dd>
+                </div>
+              </dl>
+            ) : session !== undefined ? (
+              <LedgerActionButton
+                label="Dériver et enregistrer sur mon Ledger"
+                icon={<KeyRound />}
+                reviewLabel="Clé de conformité : dérivation puis enregistrement (2 messages)"
+                action={registerComplianceKey.bind(null, { employee: employee.id })}
+                successMessage="Clé de conformité enregistrée : les partages anonymes peuvent commencer."
+              />
+            ) : (
+              <p className="text-xs text-muted-foreground">Autorisez d&apos;abord votre agent.</p>
+            )}
+          </Step>
+        )}
         {employee.desks.length > 0 && (
           <Step
             index={3}

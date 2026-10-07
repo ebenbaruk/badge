@@ -15,7 +15,7 @@ import { employeeFromParams, load } from "@/server/load";
 export const metadata: Metadata = { title: "Accès et révocation" };
 
 function isActive(grant: GrantView, now: Date): boolean {
-  return grant.revokedAt === undefined && new Date(grant.expiresAt) > now;
+  return grant.status === "active" && new Date(grant.expiresAt) > now;
 }
 
 function GrantsTable({ grants, owner, active }: { grants: GrantView[]; owner: EmployeeId; active: boolean }) {
@@ -47,11 +47,13 @@ function GrantsTable({ grants, owner, active }: { grants: GrantView[]; owner: Em
               <TableCell className="text-muted-foreground">
                 {active
                   ? formatRelative(grant.expiresAt)
-                  : grant.revokedAt !== undefined
-                    ? `Révoqué ${formatRelative(grant.revokedAt)}`
+                  : grant.status === "revoked"
+                    ? "Révoqué"
                     : `Expiré le ${formatDateTime(grant.expiresAt)}`}
               </TableCell>
-              <TableCell className="text-right font-mono tabular-nums">{grant.uses}</TableCell>
+              <TableCell className="text-right font-mono tabular-nums">
+                {grant.uses ?? <span className="text-muted-foreground">—</span>}
+              </TableCell>
               <TableCell>
                 <CopyableHash value={grant.id} />
               </TableCell>
@@ -79,7 +81,7 @@ function GrantsTable({ grants, owner, active }: { grants: GrantView[]; owner: Em
 export default async function AccessPage({ params }: { params: Promise<{ employee: string }> }) {
   const owner = await employeeFromParams(params);
   const grants = await load(() => enclave().listGrants(owner.id));
-  if (!grants.ok) return <EnclaveUnavailable failure={grants} />;
+  if (!grants.ok) return <EnclaveUnavailable failure={grants} employee={owner.id} />;
   const now = new Date();
   const active = grants.data.filter((g) => isActive(g, now));
   const ended = grants.data.filter((g) => !isActive(g, now));

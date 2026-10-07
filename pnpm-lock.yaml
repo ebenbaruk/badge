@@ -74,6 +74,9 @@ importers:
       '@badge/attest':
         specifier: workspace:*
         version: link:../../packages/attest
+      '@badge/client':
+        specifier: workspace:*
+        version: link:../../packages/client
       '@badge/consent':
         specifier: workspace:*
         version: link:../../packages/consent

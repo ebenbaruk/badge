@@ -2,6 +2,7 @@
  * Typed errors of the web server and their mapping to UI messages. Server actions never throw to the client:
  * they return an {@link ActionResult} whose `code` the UI can branch on and whose `message` is French UI copy.
  */
+import { BadgeApiError } from "@badge/client";
 import { ConsentError } from "@badge/consent";
 import {
   DeviceActionAbortedError,
@@ -36,12 +37,15 @@ export class EnclaveError extends Error {
   }
 }
 
-/** Live mode is selected but the integrator has not wired @badge/client yet. */
-export class NotWiredError extends Error {
-  override readonly name = "NotWiredError";
-  readonly code = "NOT_WIRED";
-  constructor(readonly method: string) {
-    super(`Live enclave method "${method}" is not wired yet (set BADGE_ENCLAVE_MODE=mock for the demo)`);
+/**
+ * The employee's agent has no usable session key in this bridge (never delegated, expired, or forgotten when the
+ * server restarted: session keys live in memory only). Fixed by a new AgentSession signed on the Ledger.
+ */
+export class AgentSessionMissingError extends Error {
+  override readonly name = "AgentSessionMissingError";
+  readonly code = "NO_SESSION";
+  constructor(readonly employee: string) {
+    super(`no active agent session for ${employee}`);
   }
 }
 
@@ -58,7 +62,9 @@ export const ACTION_ERROR_CODES = [
   "CONSENT_INVALID",
   "ZK_ERROR",
   "ENCLAVE_REJECTED",
-  "NOT_WIRED",
+  "ENCLAVE_UNREACHABLE",
+  "ATTESTATION_FAILED",
+  "NO_SESSION",
   "INVALID_INPUT",
   "INTERNAL",
 ] as const;
@@ -108,12 +114,70 @@ export function toActionFailure(error: unknown): Extract<ActionResult, { ok: fal
       message: `L'enclave a refusé la demande : ${error.message}`,
       detail: error.code,
     };
-  if (error instanceof NotWiredError)
-    return { ok: false, code: "NOT_WIRED", message: "Mode enclave réel pas encore branché.", detail };
+  if (error instanceof AgentSessionMissingError)
+    return {
+      ok: false,
+      code: "NO_SESSION",
+      message: "Votre agent n'a pas de session active : autorisez-le dans Configuration.",
+    };
+  if (error instanceof BadgeApiError) return enclaveFailure(error);
   if (error instanceof z.ZodError)
     return { ok: false, code: "INVALID_INPUT", message: "Saisie invalide.", detail: z.prettifyError(error) };
   return { ok: false, code: "INTERNAL", message: "Erreur inattendue du serveur.", detail };
 }
+
+/** Failures reported by @badge/client: transport and attestation problems first, then enclave refusals. */
+function enclaveFailure(error: BadgeApiError): Extract<ActionResult, { ok: false }> {
+  const detail = `${error.code}: ${error.message}`;
+  switch (error.code) {
+    case "network_error":
+      return {
+        ok: false,
+        code: "ENCLAVE_UNREACHABLE",
+        message: "Enclave injoignable : vérifiez qu'elle est démarrée.",
+        detail,
+      };
+    case "attestation_failed":
+      return {
+        ok: false,
+        code: "ATTESTATION_FAILED",
+        message: "Attestation de l'enclave refusée : aucune donnée n'a été envoyée.",
+        detail,
+      };
+    case "session_unknown":
+      return {
+        ok: false,
+        code: "NO_SESSION",
+        message: "La session de votre agent a expiré : renouvelez-la dans Configuration.",
+        detail,
+      };
+    default:
+      return {
+        ok: false,
+        code: "ENCLAVE_REJECTED",
+        message: ENCLAVE_REFUSALS[error.code] ?? "L'enclave a refusé la demande.",
+        detail,
+      };
+  }
+}
+
+/** French explanations of the enclave refusals a user can run into (docs/enclave-api.md, "Errors"). */
+const ENCLAVE_REFUSALS: Readonly<Record<string, string>> = {
+  NOT_ENROLLED: "Associez d'abord votre Ledger (Configuration).",
+  COMPLIANCE_KEY_MISSING:
+    "Aucune clé de conformité n'est enregistrée : la responsable conformité doit l'enregistrer avant tout partage anonyme.",
+  NOT_FOUND: "Demande introuvable ou déjà traitée.",
+  NOT_PENDING: "Cette demande a déjà été traitée.",
+  NONCE_REUSED: "Ce message signé a déjà été utilisé.",
+  SIGNATURE_MISMATCH: "La signature ne correspond pas au Ledger attendu.",
+  ENCLAVE_MISMATCH: "Le message signé vise une autre enclave (mesure différente).",
+  EXPIRED: "Le message signé a expiré.",
+  STALE: "Message trop ancien : recommencez.",
+  FORBIDDEN: "Action non autorisée pour cet employé.",
+  NO_RULE: "Aucune règle d'échange ne permet cette demande entre desks.",
+  UPSTREAM_FAILED: "La mémoire ou le modèle de l'enclave n'a pas répondu : réessayez.",
+  INVALID_REQUEST: "Requête refusée par l'enclave.",
+};
 
 /** Runs `work` and wraps its outcome in an {@link ActionResult}. */
 export async function runAction<T>(work: () => Promise<T>): Promise<ActionResult<T>> {

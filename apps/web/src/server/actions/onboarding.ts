@@ -9,7 +9,7 @@ import { z } from "zod";
 import { EMPLOYEES, type EmployeeId } from "@/lib/directory";
 import { enclave, type EnrollmentView } from "../enclave";
 import { runAction, type ActionResult } from "../errors";
-import { rotateAgentSessionAccount } from "../keys";
+import { adoptAgentSessionAccount } from "../keys";
 import { buildAgentSession, buildEmployeeEnroll } from "../messages";
 import { signOnDevice } from "../signing";
 import { employeeIdSchema } from "./schemas";
@@ -34,13 +34,8 @@ export async function authorizeAgent(input: { employee: EmployeeId }): Promise<A
     const api = enclave();
     const { measurement } = await api.attestation();
     // A fresh key per delegation: an old session key must never be revalidated by a new signature.
-    const sessionKey = rotateAgentSessionAccount(employee).address;
-    const message = buildAgentSession(
-      EMPLOYEES[employee],
-      sessionKey,
-      measurement,
-      toUnixSeconds(new Date()),
-    );
+    const { message, sessionKey } = buildAgentSession(EMPLOYEES[employee], measurement);
+    adoptAgentSessionAccount(employee, sessionKey);
     const view = await api.openSession(employee, await signOnDevice(employee, "AgentSession", message));
     revalidatePath(`/${employee}`, "layout");
     return view;

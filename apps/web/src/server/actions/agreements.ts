@@ -52,7 +52,7 @@ export async function revokeGrant(input: {
   return runAction(async () => {
     const { employee, grantId } = revokeSchema.parse(input);
     const api = enclave();
-    const grant = (await api.listGrants(employee)).find((g) => g.id === grantId && g.revokedAt === undefined);
+    const grant = (await api.listGrants(employee)).find((g) => g.id === grantId && g.status === "active");
     if (grant === undefined) throw new EnclaveError("NOT_FOUND", "accord introuvable ou déjà révoqué");
     const recipient = grant.recipient === undefined ? undefined : EMPLOYEES[grant.recipient];
     const targetLabel =
