@@ -87,39 +87,46 @@ que celle affichée sur chaque Ledger.
 
 On change d'employé avec le sélecteur du haut. Dans **Configuration** :
 
-| Employé | Actions                                                                                                                |
-| ------- | ---------------------------------------------------------------------------------------------------------------------- |
-| Alice   | « Rejoindre Badge (EmployeeEnroll) », puis « Autoriser mon agent (AgentSession) »                                      |
-| Bob     | les deux mêmes, puis « Rejoindre mon desk », requis pour l'étape 7 : dérivation, puis `DeskJoin` Research |
-| Chloé   | les deux mêmes, puis « Dériver et enregistrer sur mon Ledger » (clé de conformité, deux messages)                      |
+| Employé | Actions                                                                                                                                                            |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Alice   | Étape 1 « Associer mon Ledger à mon identité » (`EmployeeEnroll`), puis étape 2 « Autoriser mon agent » (`AgentSession`) : « Signer sur mon Ledger » à chaque fois |
+| Bob     | les deux mêmes, puis **Desks** → « Rejoindre Research », requis pour l'étape 7 : dérivation de l'identité anonyme, puis `DeskJoin` (deux messages)                 |
+| Chloé   | les deux mêmes, puis étape 3 « Dériver et enregistrer sur mon Ledger » (clé de conformité, deux messages)                                                          |
 
-Les clés de session durent 8 h et survivent à un redémarrage du serveur web.
+Les clés de session durent 8 h ; elles survivent à un redémarrage du serveur web, comme l'historique des demandes
+d'accord. L'identité anonyme de desk, elle, n'est jamais écrite sur disque : après un redémarrage, le premier partage
+anonyme de Bob la re-dérive sur son Ledger (un message de plus), sans le faire rejoindre à nouveau.
 
 ### Parcours devant le jury
 
 1. **Alice → Agent.** Choisir la suggestion « Prépare-moi le brief du rendez-vous de demain avec le client Orion »,
    Envoyer. Le fil montre les étapes dans l'enclave : contexte global et notes d'Alice autorisés, « Contexte personnel
-   de Bob Durand » en attente de son accord, sans aucun texte.
-2. **Bob → Demandes d'accord.** La demande d'Alice, l'extrait (Bob voit son propre texte), le risque, et l'aperçu
-   exact de l'écran du Ledger. « Approuver sur mon Ledger » : le miroir s'anime. Faire défiler les champs (Partager
-   avec, Extrait, Longueur, Tâche, Expire le, Empreinte, Enclave) en les lisant, puis appui long sur « Hold to sign ».
+   de Bob Durand » en attente de son accord, sans aucun texte (« En attente de Bob Durand · 3 extraits »).
+2. **Bob → Demandes d'accord.** Une demande par extrait (trois pour le brief Orion) : l'extrait (Bob voit son propre
+   texte), le risque, et l'aperçu exact de l'écran du Ledger. « Approuver sur mon Ledger » : le miroir s'anime. Faire
+   défiler les champs (Partager avec, Extrait, Longueur, Tâche, Expire le, Empreinte, Enclave) en les lisant, puis
+   appui long sur « Hold to sign ». Même geste pour les deux autres extraits ; ils passent dans l'« Historique ».
 3. **Alice → Agent.** Le brief est prêt : sources et provenance de chaque extrait (« Accord signé sur Ledger »), et
    le compteur de jetons envoyés au modèle par rapport à tout le contexte.
 4. **Alice → Agent, interrupteur « Agent compromis ».** Envoyer n'importe quelle tâche : l'agent demande tout le
    contexte de Bob. **Bob → Demandes d'accord** : alerte rouge « Signalé par les règles de l'enclave ». « Approuver
-   sur mon Ledger », faire défiler jusqu'au bout, toucher **Reject** sur l'appareil : « Refusé sur le Ledger ».
-   Côté Alice, rien n'est livré.
-5. **Bob → Accès et révocation.** Révoquer tout ce qui est partagé avec Alice Martin, signer sur le Ledger, qui nomme
-   la portée réelle (« Tout ce que j'ai partage avec Alice Martin + accords equipe Ventes » si un accord d'équipe la
-   couvre). Message : la clé des données de Bob a été renouvelée ; une nouvelle demande d'Alice redemandera son accord.
-6. **Bob → Accords permanents.** Équipe autorisée « Ventes », étiquette `orion`, usage « Briefs clients », 500 car.,
-   30 jours ; « Signer l'accord sur mon Ledger ». **Alice → Agent** : relancer le brief Orion, il passe sans solliciter
+   sur mon Ledger », toucher **Reject** sur l'appareil puis « Yes, reject » : « Refusé sur le Ledger ». Côté Alice, le
+   contexte complet de Bob reste dans l'enclave (« Restés dans l'enclave · Refusé ») ; seul un extrait qu'il lui a
+   déjà accordé à l'étape 2 peut être réutilisé (« Accord réutilisé »), le même texte, rien de plus. Chloé verra
+   l'alerte au journal.
+5. **Bob → Accès et révocation.** « Tout révoquer pour Alice », signer sur le Ledger, qui nomme la portée réelle
+   (« Tout ce que j'ai partage avec Alice Martin + accords equipe Ventes » : la révocation couvre aussi les accords
+   permanents de son équipe). Message : la clé des données de Bob a été renouvelée ; une nouvelle demande d'Alice redemandera son accord.
+6. **Bob → Accords permanents.** Le formulaire est prérempli : équipe « Ventes », étiquette `orion`, usage « briefs
+   clients », 800 car., 30 jours ; « Signer l'accord sur mon Ledger ». **Alice → Agent** : relancer le brief Orion, il passe sans solliciter
    Bob (« Accord permanent »), et l'usage s'affiche dans la liste de Bob.
 7. **Alice → Desks.** « Demander à un autre desk » avec la suggestion « Tendances du marché des capteurs industriels
    et prix des composants ». **Bob → Desks** : la demande de partage sous « Regle 4 - marche capteurs » ; « Partager
    anonymement » génère la preuve ZK puis la revue du Ledger. **Alice → Desks** : l'extrait livré, « Membre anonyme
-   d'un desk » (un parmi Bob, David et Emma), empreinte et preuve vérifiées contre la racine figée à la demande.
-8. **Chloé → Conformité.** Intégrité de la chaîne vérifiée, alertes des règles (l'agent piégé), partages anonymes
+   d'un desk » (un parmi Bob, David et Emma) : « Source : desk Research (membre anonyme, preuve ZK vérifiée) », avec le
+   nullifier et la racine figée à la demande.
+8. **Chloé → Conformité.** Intégrité de la chaîne vérifiée, tête de chaîne « signée par l'enclave attestée » (clé
+   d'audit vérifiée pour la mesure attestée), alertes des règles en clair (l'agent piégé), partages anonymes
    scellés. « Lever l'anonymat » : Chloé signe le message de dérivation sur son Ledger, l'identité de Bob apparaît, et
    la levée elle-même entre au journal.
 
@@ -129,7 +136,7 @@ Les clés de session durent 8 h et survivent à un redémarrage du serveur web.
 | ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | « Hold to sign » ne signe pas                           | Il faut un appui **long** (environ 3 s réelles) : un clic simple ne fait rien. En secours (répétition), « Revue auto » avec `BADGE_REHEARSAL=1`.                                                                                                                      |
 | Demande au desk : `ANONYMITY_SET_TOO_SMALL`             | Moins de trois membres de Research inscrits : `pnpm desks:seed` (enclave lancée, Speculos de David :5004 et Emma :5005 actifs), et Bob doit avoir rejoint son desk dans Configuration.                                                                                |
-| Le miroir ne bouge plus                                 | Un onglet en arrière-plan suspend le miroir : revenir sur l'onglet. Après un refus, l'écran « rejected » se ferme seul en quelques secondes.                                                                                                                          |
+| Le miroir ne bouge plus                                 | Un onglet masqué (arrière-plan, fenêtre recouverte) ralentit le miroir et le rafraîchissement : revenir sur l'onglet, tout se remet à jour aussitôt. Après un refus, l'écran « rejected » se ferme seul en quelques secondes.                                         |
 | Erreur `6a80` à la signature                            | Les filtres de clear signing ne sont pas acceptés : clé CAL de test absente ou chemin relatif. `BADGE_CAL_TEST_KEY` doit être un chemin **absolu** vers `infra/keys/cal-test.pem` (`infra/setup.sh` la télécharge). Un vrai Ledger refuse toujours cette clé de test. |
 | Un Speculos est bloqué                                  | `infra/speculos.sh` les redémarre tous les cinq ; les graines sont fixes, les adresses ne changent pas et rien n'est à refaire côté enclave.                                                                                                                          |
 | « La session de votre agent a expiré : renouvelez-la… » | Session de plus de 8 h, ou enclave relancée sur une autre base que celle qui connaît la session. Configuration → « Renouveler la session ».                                                                                                                           |

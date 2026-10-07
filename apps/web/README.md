@@ -39,12 +39,14 @@ uniquement en répétition, avec `BADGE_REHEARSAL=1`).
 
 Le serveur Next est le **runtime d'agent** de chaque employé : une clé de session par employé (déléguée par
 `AgentSession`) et la mémoire de ses propres demandes (identifiants de tâches et de demandes entre desks), car
-l'enclave répond par identifiant. Les deux sont conservés dans `BADGE_WEB_DATA_DIR/agent-runtime.json`
+l'enclave répond par identifiant, ainsi que l'historique des demandes d'accord tranchées (libellé, demandeur,
+décision ; jamais le texte des extraits). Le tout est conservé dans `BADGE_WEB_DATA_DIR/agent-runtime.json`
 (`src/server/agent-store.ts`) : fichier `600` dans un dossier `700`, écrit de façon atomique, ignoré par git. Un
 redémarrage du serveur ne demande donc aucune nouvelle signature tant que la session n'a pas expiré (8 h). Un
 fichier lisible par d'autres utilisateurs ou mal formé est ignoré (avertissement dans le journal) : il faut alors
 déléguer à nouveau, ce qui est sûr, plutôt que de faire confiance à une clé peut-être divulguée. L'identité de desk
-n'est pas conservée : c'est un secret Semaphore, re-dérivé d'une signature Ledger quand il le faut.
+n'est pas conservée : c'est un secret Semaphore, re-dérivé d'une signature Ledger quand il le faut
+(au premier partage anonyme après un redémarrage, sans nouvelle adhésion).
 
 La clé de conformité est lue dans l'enclave (`GET /v1/compliance/key`) : après un redémarrage, l'écran
 Configuration de Chloé la montre déjà enregistrée et ne redemande pas de signature.
@@ -98,4 +100,6 @@ Le scénario de test signe avec les mnémoniques **publiques** de test des Specu
 
 - Le DMK Ledger doit être **bundlé** par Next (son build ESM fait des imports de dossier refusés par Node) ;
   seuls `@semaphore-protocol/core` et `snarkjs` sont externes.
-- Un onglet en arrière-plan suspend le miroir et le rafraîchissement automatique (`document.hidden`).
+- Un onglet masqué (`document.hidden`, y compris une fenêtre simplement recouverte sur macOS) ralentit le miroir
+  (une image toutes les 5 s hors revue) et le rafraîchissement automatique (10 s) sans les arrêter ; au retour sur
+  l'onglet, la page se rafraîchit aussitôt. Chrome peut encore espacer ces minuteries dans un onglet masqué.
