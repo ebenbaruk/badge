@@ -15,10 +15,10 @@ sombre, interface en français. Le serveur Next joue deux rôles :
 | `agent`      | Tâche, étapes dans l'enclave, attente d'accord, brief avec sources et provenance, compteur de tokens, agent compromis |
 | `consents`   | Demandes reçues, alertes des règles en rouge, aperçu exact de l'écran du Ledger, « Approuver sur mon Ledger »         |
 | `agreements` | Accords permanents (`ContextPolicy`) : création signée, usages, révocation                                            |
-| `access`     | Accès actifs et révoqués, révocation signée (`ContextRevoke`)                                                         |
+| `access`     | Accès actifs, révocation signée (`ContextRevoke`) d'un accord ou de tout ce qui est partagé avec un collègue          |
 | `desks`      | Adhésion anonyme (`DeskJoin` + dérivation), demandes entre desks, partage avec preuve ZK                              |
 | `compliance` | Chloé uniquement : journal chaîné et sa vérification, alertes, identités scellées, « Lever l'anonymat »               |
-| `onboarding` | `EmployeeEnroll` puis `AgentSession` (12 h)                                                                           |
+| `onboarding` | `EmployeeEnroll`, `AgentSession` (8 h) et, pour la conformité, l'enregistrement de la clé dérivée du Ledger           |
 
 Barre du haut : changement d'employé (démo), badge d'attestation (vert « Enclave attestée » pour une quote TDX
 vérifiée, ambre « TEE simulé » sinon) avec la mesure de l'enclave. Panneau de droite : le Ledger de l'employé
@@ -27,14 +27,24 @@ pour les répétitions).
 
 ## Enclave : `src/server/enclave`
 
-`enclave()` renvoie un `EnclaveApi` (types dans `types.ts`, calqués sur `docs/enclave-api.md`) selon
-`BADGE_ENCLAVE_MODE` :
+`enclave()` renvoie un `EnclaveApi` (vues dans `types.ts`) selon `BADGE_ENCLAVE_MODE` :
 
-- `mock` (défaut) : enclave en mémoire sur `infra/seed/acme.json` (`src/server/mock`). Elle applique les mêmes
-  contrôles que le contrat : signatures, contrôles de `@badge/consent`, nonces, règles anti-aspiration, preuves
-  Semaphore réelles, journal chaîné SHA-256. **Les signatures Ledger et les preuves ZK sont réelles même en mock.**
-- `live` : `src/server/enclave/live.ts`, chaque méthode rejette `NotWiredError` en attendant `@badge/client`
-  (l'interface à brancher est `EnclaveApi`, la clé de session est `agentSessionAccount(employé)`).
+- `live` (défaut) : `live.ts`, l'enclave réelle via `@badge/client`, **canal attesté** obligatoire. La quote est
+  vérifiée avant tout échange (`simulated` en local contre le simulateur dstack, `tdx` en production avec le compose
+  hash épinglé). Le badge du haut est vert seulement pour une quote TDX vérifiée, ambre « TEE simulé » sinon ; sa
+  fenêtre de détails montre la mesure (compose hash) signée dans chaque message Ledger. `live-views.ts` traduit les
+  réponses de l'enclave en vues : niveaux de risque, raisons et statuts sont **ceux de l'enclave**, jamais recalculés.
+- `mock` : enclave fictive en mémoire (`src/server/mock`) sur `infra/seed/acme.json`, **pour le développement de
+  l'interface uniquement** (sans enclave, mémoire ni LLM). Signatures Ledger et preuves ZK y restent réelles.
+
+Le serveur Next est le **runtime d'agent** de chaque employé : une clé de session par employé (déléguée par
+`AgentSession`, en mémoire seulement), et la mémoire de ses propres demandes (identifiants de tâches et de demandes
+entre desks), car l'enclave répond par identifiant. Un redémarrage du serveur oblige donc à rouvrir les sessions
+(Configuration) ; l'inscription est idempotente côté enclave.
+
+Levée d'anonymat : le Ledger de Chloé signe le message de dérivation (`complianceKeyDeriveMessage`), la clé X25519
+est dérivée **dans le pont**, ouvre l'identité scellée du journal (`openSealed`), est vérifiée contre l'annuaire puis
+effacée ; seul l'avis de levée (`POST /v1/audit/reveal-notice`) part vers l'enclave.
 
 ## Routes du pont Ledger
 
@@ -47,7 +57,10 @@ pour les répétitions).
 
 | Variable                                   | Défaut                        | Rôle                                                                                           |
 | ------------------------------------------ | ----------------------------- | ---------------------------------------------------------------------------------------------- |
-| `BADGE_ENCLAVE_MODE`                       | `mock`                        | `mock` ou `live`                                                                               |
+| `BADGE_ENCLAVE_MODE`                       | `live`                        | `live` (enclave réelle) ou `mock` (développement de l'interface)                               |
+| `BADGE_ENCLAVE_URL`                        | `http://127.0.0.1:8787`       | Origine de l'enclave                                                                           |
+| `BADGE_ATTESTATION_MODE`                   | `simulated`                   | `simulated` (simulateur dstack) ou `tdx` (CVM Phala)                                           |
+| `BADGE_ENCLAVE_COMPOSE_HASH`               | —                             | Compose hash épinglé, **requis** en `tdx`                                                      |
 | `BADGE_SPECULOS_ALICE` / `_BOB` / `_CHLOE` | `http://localhost:5001..5003` | Speculos de chaque employé                                                                     |
 | `BADGE_CAL_TEST_KEY`                       | —                             | Clé CAL de test (PEM), **requise** : le bundle Next ne peut pas retrouver le chemin par défaut |
 | `BADGE_ZK_ARTIFACTS_DIR`                   | `<dépôt>/infra/zk-artifacts`  | Artefacts Semaphore profondeur 16                                                              |
@@ -56,10 +69,13 @@ pour les répétitions).
 ## Scripts
 
 ```bash
-pnpm --filter @badge/web dev        # http://localhost:3000
+infra/dstack-sim.sh start && infra/stack.sh up      # TEE simulé et mémoire
+pnpm --filter @badge/enclave start                  # enclave sur :8787
+BADGE_CAL_TEST_KEY=$PWD/infra/keys/cal-test.pem pnpm --filter @badge/web dev   # http://localhost:3000
+BADGE_ENCLAVE_MODE=mock pnpm --filter @badge/web dev  # interface seule, enclave fictive
 pnpm --filter @badge/web build
 pnpm --filter @badge/web typecheck
-pnpm vitest run --project web       # helpers + scénario complet sur l'enclave simulée
+pnpm vitest run --project web       # vues de l'enclave réelle, helpers, scénario complet sur l'enclave fictive
 ```
 
 Le scénario de test signe avec les mnémoniques **publiques** de test des Speculos (mêmes adresses que la démo).
