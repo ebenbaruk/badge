@@ -7,7 +7,7 @@ sans état. Paquet pur (aucune E/S), partagé par l'application web, le pont Led
 
 | Module          | Rôle                                                                                                                         |
 | --------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `messages.ts`   | Domaine, structures EIP-712, descripteurs d'affichage (clear signing), message de dérivation de l'identité de desk.          |
+| `messages.ts`   | Domaine, structures EIP-712, descripteurs d'affichage (clear signing), messages EIP-191 (identité de desk, clé conformité).  |
 | `ascii.ts`      | `toDeviceAscii` / `assertDeviceAscii` : le Ledger n'affiche que l'ASCII, toute chaîne affichée passe par là avant signature. |
 | `excerpt.ts`    | `hashExcerpt` (keccak256 UTF-8), `excerptLength` (en points de code), `taskIdFrom`.                                          |
 | `typed-data.ts` | `badgeTypedData` (charge utile viem / DMK, avec `EIP712Domain`), `hashBadgeMessage` (= identifiant d'accord).                |

@@ -296,3 +296,18 @@ export function deskIdentityDeriveMessage(company: string): string {
     "Ne signez ce message que dans Badge.",
   ].join("\n");
 }
+
+/**
+ * EIP-191 message by which the compliance officer registers the X25519 public key that desk-share signer identities
+ * are sealed to. EIP-191 for the same reason as {@link deskIdentityDeriveMessage}: readable on the device without a
+ * descriptor. `issuedAt` (unix seconds) lets the enclave refuse a stale registration replayed to restore an old key.
+ */
+export function complianceKeyMessage(company: string, publicKeyHex: string, issuedAt: bigint): string {
+  return [
+    "Badge - cle de conformite",
+    `Entreprise : ${toDeviceAscii(company)}`,
+    `Cle : ${publicKeyHex.toLowerCase()}`,
+    `Emise le : ${issuedAt.toString(10)}`,
+    "Ne signez ce message que dans Badge.",
+  ].join("\n");
+}
