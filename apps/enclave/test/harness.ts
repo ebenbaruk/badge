@@ -172,7 +172,11 @@ export interface Harness extends EnclaveApp {
 }
 
 export async function createHarness(
-  options: { notes?: InventoryNote[]; measurement?: Hex } = {},
+  options: {
+    notes?: InventoryNote[];
+    measurement?: Hex;
+    onUpstreamFailure?: (route: string, diagnostic: string) => void;
+  } = {},
 ): Promise<Harness> {
   const db = openDatabase(IN_MEMORY_DATABASE);
   const clock = new TestClock();
@@ -189,6 +193,7 @@ export async function createHarness(
     dstack: new FakeDstack((options.measurement ?? MEASUREMENT).slice(2)),
     requireChannel: false,
     countTokens: (text: string) => Math.ceil(text.length / 4),
+    ...(options.onUpstreamFailure ? { onUpstreamFailure: options.onUpstreamFailure } : {}),
   });
   return { ...enclave, clock, llm, nullifiers, notes };
 }

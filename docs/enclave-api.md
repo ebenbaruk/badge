@@ -75,8 +75,9 @@ convention everywhere: enclave, `@badge/client` (`NETWORK_ERROR`, `BAD_RESPONSE`
 - domain: `INVALID_REQUEST` 400, `FORBIDDEN` / `UNKNOWN_EMPLOYEE` / `NOT_ENROLLED` 403, `NOT_FOUND` 404,
   `NONCE_REUSED` / `ALREADY_EXISTS` / `NOT_PENDING` / `COMPLIANCE_KEY_MISSING` / `ANONYMITY_SET_TOO_SMALL` 409,
   `SESSION_TOO_LONG` / `STALE` /
-  `NO_RULE` 422, `UPSTREAM_FAILED` 502 (memory or LLM; never echoes their output), `INTERNAL` 500 (details only in
-  the enclave log);
+  `NO_RULE` 422, `UPSTREAM_FAILED` 502 (memory or LLM; never echoes their output, only a content-free diagnostic in
+  the message: failed call, HTTP status, failure kind, e.g. `LlmOutputError: excerpt_classification: truncated`;
+  the same line goes to the enclave log), `INTERNAL` 500 (details only in the enclave log);
 - `@badge/consent`: `INVALID_MESSAGE` / `NOT_DEVICE_ASCII` / `SIGNATURE_MALFORMED` 400, `SIGNATURE_MISMATCH` 403,
   `EXPIRED` / `ENCLAVE_MISMATCH` / `EXCERPT_HASH_MISMATCH`... 422;
 - `@badge/zk`: `MALFORMED_PROOF` 400, `WRONG_ROOT` / `WRONG_MESSAGE` / `WRONG_SCOPE` / `INVALID_PROOF` 422,

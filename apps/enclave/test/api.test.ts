@@ -4,6 +4,7 @@
  */
 import { BADGE_AUTH_HEADERS } from "@badge/client";
 import { describe, expect, it } from "vitest";
+import { LlmOutputError } from "../src/llm/errors";
 import { call, enroll, onboard, openSession, pendingShares } from "./flows";
 import { agents, createHarness, seedNotes } from "./harness";
 
@@ -89,5 +90,35 @@ describe("mass extraction above the hard cap", () => {
     const brief = (await call(h, "GET", `/v1/tasks/${task.id}`, { as: "alice" })).json;
     expect(brief.status).toBe("ready");
     expect(brief.brief).toBeNull();
+  });
+});
+
+describe("upstream failures", () => {
+  it("answers 502 with a content-free diagnostic, and reports it with the route pattern", async () => {
+    const failures: Array<[string, string]> = [];
+    const h = await createHarness({
+      onUpstreamFailure: (route, diagnostic) => failures.push([route, diagnostic]),
+    });
+    await onboard(h, "alice");
+    h.llm.structuredCompletion = () =>
+      Promise.reject(
+        new LlmOutputError(
+          "structured output does not match the schema: Bob est en arret maladie",
+          "schema_mismatch",
+          "excerpt_classification: schema_mismatch (reason: too_big)",
+        ),
+      );
+
+    const response = await call(h, "POST", "/v1/tasks", { as: "alice", body: ORION_TASK });
+
+    expect(response.status).toBe(502);
+    expect(response.json.error.code).toBe("UPSTREAM_FAILED");
+    expect(response.json.error.message).toContain(
+      "excerpt_classification: schema_mismatch (reason: too_big)",
+    );
+    expect(response.json.error.message).not.toContain("maladie");
+    expect(failures).toEqual([
+      ["POST /v1/tasks", "LlmOutputError: excerpt_classification: schema_mismatch (reason: too_big)"],
+    ]);
   });
 });

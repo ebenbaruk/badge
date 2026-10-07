@@ -68,6 +68,22 @@ const ZK_STATUS: Record<ZkErrorCode, ContentfulStatusCode> = {
   NULLIFIER_REUSED: 409,
 };
 
+/**
+ * What the enclave may log about an UPSTREAM_FAILED error: which backend call failed and how (route, call name,
+ * HTTP status, failure kind, schema issue paths), never the error message, which can quote excerpt text or model
+ * output. Undefined for any other error.
+ */
+export function upstreamDiagnostic(error: unknown): string | undefined {
+  if (
+    error instanceof LlmRequestError ||
+    error instanceof LlmOutputError ||
+    error instanceof MemoryBackendError
+  ) {
+    return `${error.name}: ${error.diagnostic}`;
+  }
+  return undefined;
+}
+
 /** Converts any thrown value into a status and the error envelope. */
 export function toErrorResponse(error: unknown): { status: ContentfulStatusCode; body: ErrorBody } {
   const body = (code: string, message: string): ErrorBody => ({ error: { code, message } });
@@ -85,13 +101,15 @@ export function toErrorResponse(error: unknown): { status: ContentfulStatusCode;
   if (error instanceof HTTPException) {
     return { status: error.status as ContentfulStatusCode, body: body("HTTP_ERROR", error.message) };
   }
-  if (
-    error instanceof LlmRequestError ||
-    error instanceof LlmOutputError ||
-    error instanceof MemoryBackendError
-  ) {
-    // The upstream message may quote the model's output, i.e. excerpt text: never echo it to the caller.
-    return { status: 502, body: body("UPSTREAM_FAILED", "the memory or language model backend failed") };
+  const diagnostic = upstreamDiagnostic(error);
+  if (diagnostic !== undefined) {
+    // The upstream message may quote the model's output, i.e. excerpt text: never echo it to the caller. The
+    // content-free diagnostic is returned instead, because the CVM's logs are off: without it, the operator of a
+    // deployed enclave cannot tell a provider outage from a malformed answer or a Honcho failure.
+    return {
+      status: 502,
+      body: body("UPSTREAM_FAILED", `the memory or language model backend failed (${diagnostic})`),
+    };
   }
   if (error instanceof BriefInputError) {
     return { status: 409, body: body("NOTHING_TO_BRIEF", "no allowed excerpt to draft a brief from") };

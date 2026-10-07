@@ -33,6 +33,11 @@ export interface AppDeps {
   readonly countTokens?: TokenCounter;
   /** Receives unexpected errors (the API answers a generic 500). Defaults to logging the error name. */
   readonly onUnexpectedError?: (error: unknown) => void;
+  /**
+   * Receives every UPSTREAM_FAILED (the API answers a generic 502) with its route pattern and a content-free
+   * diagnostic. Defaults to one log line.
+   */
+  readonly onUpstreamFailure?: (route: string, diagnostic: string) => void;
 }
 
 export interface EnclaveServices {
