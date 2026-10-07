@@ -1,0 +1,230 @@
+# Badge application compose for the Phala Cloud CVM (Intel TDX, dstack). Deployed by infra/phala-up.sh.
+#
+# This file IS the attested code: the CVM's compose hash (sha256 of the app-compose that embeds it) is what the
+# clients pin and what every Ledger consent carries as `enclaveMeasurement`. Any change, even a comment, changes
+# the hash. Hence:
+#  - every image is pinned by digest (infra/cvm/build-push.sh rewrites the digests after a push); a tag could point
+#    to other code tomorrow without changing the hash. phala-up.sh refuses the all-zero placeholders;
+#  - it is self-contained: the CVM receives no other file from the operator, so nothing is bind-mounted from the
+#    host except the dstack guest agent socket. The Honcho settings are therefore repeated from infra/compose.yml;
+#  - no secret in clear: the four PHALA_AI_* variables are Phala encrypted secrets (encrypted on the operator's
+#    machine to the CVM's KMS key, only their names are part of the hash). The Honcho JWT secret, the database
+#    password and the admin JWT are generated inside the CVM at first boot (secrets-init) and never leave it.
+#
+# Network model (same argument as the local stack):
+#  - `sealed` is internal (no route out, no external DNS): Postgres, Honcho, the enclave, the seed job.
+#  - `gateway` is the only container also on `egress`. It forwards exactly two LLM routes to Phala Confidential AI
+#    over verified TLS, injecting the key itself (Honcho and the enclave only hold a placeholder), and it carries
+#    the single published port, 8787, to the enclave (dstack gateway URL https://<app-id>-8787.<cluster>).
+name: badge
+
+x-honcho-env: &honcho-env
+  LOG_LEVEL: INFO
+  # DB_CONNECTION_URI and AUTH_JWT_SECRET are built from /run/badge-secrets by the entrypoints (secrets-env.sh).
+  BADGE_SECRETS_DIR: /run/badge-secrets
+  AUTH_USE_AUTH: "true"
+  CACHE_ENABLED: "false"
+  TELEMETRY_ENABLED: "false"
+  SENTRY_ENABLED: "false"
+  METRICS_ENABLED: "false"
+  VECTOR_STORE_TYPE: pgvector
+  VECTOR_STORE_MIGRATED: "false"
+  LLM_OPENAI_API_KEY: dummy-key-the-gateway-injects-the-real-one
+  LLM_OPENAI_BASE_URL: http://gateway:8080/v1
+  # Phala profile: MiniLM, natively 384-dimensional, 256-token input window (Honcho truncates and logs longer input).
+  EMBEDDING_VECTOR_DIMENSIONS: "384"
+  EMBEDDING_MAX_INPUT_TOKENS: "256"
+  EMBEDDING_MODEL_CONFIG__TRANSPORT: openai
+  EMBEDDING_MODEL_CONFIG__MODEL: ${PHALA_AI_EMBEDDING_MODEL}
+  EMBEDDING_MODEL_CONFIG__OVERRIDES__BASE_URL: http://gateway:8080/v1
+  EMBEDDING_MODEL_CONFIG__DIMENSIONS_MODE: never
+  EMBEDDING_MODEL_CONFIG__ENCODING_FORMAT_MODE: float
+  EMBEDDING_MODEL_CONFIG__MAX_BATCH_SIZE: "16"
+  DERIVER_FLUSH_ENABLED: "true"
+  DERIVER_POLLING_STARTUP_JITTER_SECONDS: "0"
+  DERIVER_LOG_OBSERVATIONS: "false"
+  DERIVER_MODEL_CONFIG__TRANSPORT: openai
+  DERIVER_MODEL_CONFIG__MODEL: ${PHALA_AI_MODEL}
+  DERIVER_MODEL_CONFIG__OVERRIDES__BASE_URL: http://gateway:8080/v1
+  DERIVER_MODEL_CONFIG__THINKING_EFFORT: none
+  DERIVER_MODEL_CONFIG__STRUCTURED_OUTPUT_MODE: json_schema
+  DERIVER_MODEL_CONFIG__MAX_OUTPUT_TOKENS: "2000"
+  SUMMARY_ENABLED: "false"
+  SUMMARY_MODEL_CONFIG__TRANSPORT: openai
+  SUMMARY_MODEL_CONFIG__MODEL: ${PHALA_AI_MODEL}
+  SUMMARY_MODEL_CONFIG__OVERRIDES__BASE_URL: http://gateway:8080/v1
+  SUMMARY_MODEL_CONFIG__THINKING_EFFORT: none
+  DREAM_ENABLED: "false"
+  DREAM_DEDUCTION_MODEL_CONFIG__TRANSPORT: openai
+  DREAM_DEDUCTION_MODEL_CONFIG__MODEL: ${PHALA_AI_MODEL}
+  DREAM_DEDUCTION_MODEL_CONFIG__OVERRIDES__BASE_URL: http://gateway:8080/v1
+  DREAM_DEDUCTION_MODEL_CONFIG__THINKING_EFFORT: none
+  DREAM_INDUCTION_MODEL_CONFIG__TRANSPORT: openai
+  DREAM_INDUCTION_MODEL_CONFIG__MODEL: ${PHALA_AI_MODEL}
+  DREAM_INDUCTION_MODEL_CONFIG__OVERRIDES__BASE_URL: http://gateway:8080/v1
+  DREAM_INDUCTION_MODEL_CONFIG__THINKING_EFFORT: none
+  DIALECTIC_LEVELS__minimal__MODEL_CONFIG__TRANSPORT: openai
+  DIALECTIC_LEVELS__minimal__MODEL_CONFIG__MODEL: ${PHALA_AI_MODEL}
+  DIALECTIC_LEVELS__minimal__MODEL_CONFIG__OVERRIDES__BASE_URL: http://gateway:8080/v1
+  DIALECTIC_LEVELS__minimal__MODEL_CONFIG__THINKING_EFFORT: none
+  DIALECTIC_LEVELS__low__MODEL_CONFIG__TRANSPORT: openai
+  DIALECTIC_LEVELS__low__MODEL_CONFIG__MODEL: ${PHALA_AI_MODEL}
+  DIALECTIC_LEVELS__low__MODEL_CONFIG__OVERRIDES__BASE_URL: http://gateway:8080/v1
+  DIALECTIC_LEVELS__low__MODEL_CONFIG__THINKING_EFFORT: none
+  DIALECTIC_LEVELS__medium__MODEL_CONFIG__TRANSPORT: openai
+  DIALECTIC_LEVELS__medium__MODEL_CONFIG__MODEL: ${PHALA_AI_MODEL}
+  DIALECTIC_LEVELS__medium__MODEL_CONFIG__OVERRIDES__BASE_URL: http://gateway:8080/v1
+  DIALECTIC_LEVELS__medium__MODEL_CONFIG__THINKING_EFFORT: none
+  DIALECTIC_LEVELS__high__MODEL_CONFIG__TRANSPORT: openai
+  DIALECTIC_LEVELS__high__MODEL_CONFIG__MODEL: ${PHALA_AI_MODEL}
+  DIALECTIC_LEVELS__high__MODEL_CONFIG__OVERRIDES__BASE_URL: http://gateway:8080/v1
+  DIALECTIC_LEVELS__high__MODEL_CONFIG__THINKING_EFFORT: none
+  DIALECTIC_LEVELS__max__MODEL_CONFIG__TRANSPORT: openai
+  DIALECTIC_LEVELS__max__MODEL_CONFIG__MODEL: ${PHALA_AI_MODEL}
+  DIALECTIC_LEVELS__max__MODEL_CONFIG__OVERRIDES__BASE_URL: http://gateway:8080/v1
+  DIALECTIC_LEVELS__max__MODEL_CONFIG__THINKING_EFFORT: none
+
+# What the enclave and the seed job need to reach Honcho and the LLM (through the gateway, placeholder key).
+x-enclave-env: &enclave-env
+  BADGE_LLM_PROFILE: phala
+  BADGE_LLM_GATEWAY_URL: http://gateway:8080/v1
+  PHALA_AI_BASE_URL: ${PHALA_AI_BASE_URL}
+  PHALA_AI_API_KEY: dummy-key-the-gateway-injects-the-real-one
+  PHALA_AI_MODEL: ${PHALA_AI_MODEL}
+  PHALA_AI_EMBEDDING_MODEL: ${PHALA_AI_EMBEDDING_MODEL}
+  BADGE_HONCHO_URL: http://api:8000
+  BADGE_HONCHO_JWT_FILE: /run/badge-secrets/honcho-admin.jwt
+
+services:
+  secrets-init:
+    image: ghcr.io/ebenbaruk/badge-honcho@sha256:0000000000000000000000000000000000000000000000000000000000000000
+    # Root only to create the shared secrets volume; the script exits once the files exist.
+    user: "0"
+    entrypoint: ["sh", "/app/docker/badge-secrets-init.sh"]
+    environment:
+      BADGE_SECRETS_DIR: /run/badge-secrets
+    volumes:
+      - secrets:/run/badge-secrets
+    network_mode: none
+    restart: "no"
+
+  database:
+    image: pgvector/pgvector:pg15@sha256:47af0b65960b14f1c6945aa4ccae37836c632e9a6fe0eea9160936e616e5b2e9
+    command: ["postgres", "-c", "max_connections=50", "-c", "shared_buffers=64MB"]
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD_FILE: /run/badge-secrets/db-password
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - secrets:/run/badge-secrets:ro
+    depends_on:
+      secrets-init: { condition: service_completed_successfully }
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    networks: [sealed]
+    restart: unless-stopped
+
+  api:
+    image: ghcr.io/ebenbaruk/badge-honcho@sha256:0000000000000000000000000000000000000000000000000000000000000000
+    entrypoint: ["sh", "/app/docker/badge-entrypoint.sh"]
+    environment: *honcho-env
+    volumes:
+      - secrets:/run/badge-secrets:ro
+    depends_on:
+      database: { condition: service_healthy }
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "/app/.venv/bin/python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=2).read()",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 15s
+    networks: [sealed]
+    restart: unless-stopped
+
+  deriver:
+    image: ghcr.io/ebenbaruk/badge-honcho@sha256:0000000000000000000000000000000000000000000000000000000000000000
+    entrypoint: ["sh", "/app/docker/badge-deriver-entrypoint.sh"]
+    environment: *honcho-env
+    volumes:
+      - secrets:/run/badge-secrets:ro
+    depends_on:
+      api: { condition: service_healthy }
+    networks: [sealed]
+    restart: unless-stopped
+
+  enclave:
+    image: ghcr.io/ebenbaruk/badge-enclave@sha256:0000000000000000000000000000000000000000000000000000000000000000
+    environment: *enclave-env
+    volumes:
+      # dstack guest agent: quotes, KMS-derived keys, the compose hash (the enclave's measurement).
+      - /var/run/dstack.sock:/var/run/dstack.sock
+      - enclave-data:/data
+      - secrets:/run/badge-secrets:ro
+    depends_on:
+      api: { condition: service_healthy }
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:8787/health').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+    networks: [sealed]
+    restart: unless-stopped
+
+  # Ingests the demo dataset (infra/seed/acme.json) and checks recall. Idempotent: on later boots it only re-runs
+  # the checks (a few LLM calls). It cannot read the deriver logs from inside the CVM (BADGE_SEED_DERIVER_LOGS).
+  seed:
+    image: ghcr.io/ebenbaruk/badge-enclave@sha256:0000000000000000000000000000000000000000000000000000000000000000
+    working_dir: /app/apps/enclave
+    command: ["node", "--import", "tsx", "../../infra/seed/seed.ts"]
+    environment:
+      <<: *enclave-env
+      BADGE_SEED_DERIVER_LOGS: skip
+    volumes:
+      - secrets:/run/badge-secrets:ro
+    depends_on:
+      api: { condition: service_healthy }
+      deriver: { condition: service_started }
+      gateway: { condition: service_started }
+    networks: [sealed]
+    restart: "no"
+
+  gateway:
+    image: ghcr.io/ebenbaruk/badge-gateway@sha256:0000000000000000000000000000000000000000000000000000000000000000
+    environment:
+      BADGE_UPSTREAM_BASE_URL: ${PHALA_AI_BASE_URL}
+      BADGE_UPSTREAM_API_KEY: ${PHALA_AI_API_KEY}
+    ports:
+      - "8787:8787"
+    depends_on:
+      # nginx resolves its upstream names once, at start.
+      enclave: { condition: service_started }
+    networks: [sealed, egress]
+    restart: unless-stopped
+
+networks:
+  sealed:
+    internal: true
+  egress: {}
+
+volumes:
+  pgdata:
+  enclave-data:
+  secrets:
