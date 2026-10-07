@@ -39,11 +39,13 @@ import {
   taskView,
   type TaskRecord,
 } from "./live-views";
+import { consentHistoryEntry } from "./history";
 import type {
   AttestationView,
   RevocationTargetView,
   AuditView,
   ComplianceKeyInput,
+  ConsentHistoryView,
   ConsentRequestView,
   CreateTaskInput,
   DeskRequestView,
@@ -82,15 +84,16 @@ interface DeskRequestRecord {
 }
 
 /**
- * Everything the agent runtime holds for one employee. Enrollment, agent session and the task / desk request ids are
- * persisted; the rest is a cache of this process (consent history, revealed identities, proof checks).
+ * Everything the agent runtime holds for one employee. Enrollment, agent session, the task / desk request ids and the
+ * consent history (labels and decisions only, never the excerpt text) are persisted; the rest is a cache of this
+ * process (revealed identities, proof checks).
  */
 interface EmployeeRuntime {
   enrolledAt?: Date;
   agent?: { client: BadgeClient; session: Session; privateKey: Hex };
   tasks: TaskRecord[];
   deskRequests: DeskRequestRecord[];
-  consentHistory: ConsentRequestView[];
+  consentHistory: ConsentHistoryView[];
   complianceKey?: { publicKey: string; registeredAt: Date };
   /** Desk shares this officer de-anonymised (seq -> signer), decrypted on her side and never sent anywhere. */
   revealed: Map<number, EmployeeId>;
@@ -239,19 +242,23 @@ export class LiveEnclave implements EnclaveApi {
   async listConsents(owner: EmployeeId): Promise<ConsentRequestView[]> {
     const consents = await this.call(owner, (client) => client.listConsents());
     const pending = consents.flatMap((c) => (c.kind === "ContextShare" ? [consentView(c, owner)] : []));
-    return [...pending, ...this.runtime(owner).consentHistory];
+    return pending;
+  }
+
+  async consentHistory(owner: EmployeeId): Promise<ConsentHistoryView[]> {
+    return this.runtime(owner).consentHistory;
   }
 
   async approveConsent(owner: EmployeeId, consentId: string, signature: Hex): Promise<void> {
     const request = await this.pendingConsent(owner, consentId);
     await this.call(owner, (client) => client.approveConsent(consentId, signature));
-    this.remember(owner, { ...request, status: "approved" });
+    this.remember(owner, consentHistoryEntry(request, "approved"));
   }
 
   async rejectConsent(owner: EmployeeId, consentId: string): Promise<void> {
     const request = await this.pendingConsent(owner, consentId);
     await this.call(owner, (client) => client.rejectConsent(consentId));
-    this.remember(owner, { ...request, status: "rejected" });
+    this.remember(owner, consentHistoryEntry(request, "rejected"));
   }
 
   // ---- Grants, revocation, standing agreements ----
@@ -431,6 +438,7 @@ export class LiveEnclave implements EnclaveApi {
       }
       runtime.tasks = saved.tasks.map((task) => ({ ...task, requester: employee }));
       runtime.deskRequests = saved.deskRequests;
+      runtime.consentHistory = saved.consentHistory ?? [];
       if (saved.auditHead !== undefined) runtime.auditHead = saved.auditHead;
       runtimes.set(employee, runtime);
     }
@@ -451,6 +459,7 @@ export class LiveEnclave implements EnclaveApi {
           : { agent: { privateKey: runtime.agent.privateKey, session: runtime.agent.session } }),
         tasks: runtime.tasks.map(({ id, task, trapped }) => ({ id, task, trapped })),
         deskRequests: runtime.deskRequests,
+        consentHistory: runtime.consentHistory,
         ...(runtime.auditHead === undefined ? {} : { auditHead: runtime.auditHead }),
       };
     }
@@ -521,9 +530,10 @@ export class LiveEnclave implements EnclaveApi {
     return request;
   }
 
-  private remember(owner: EmployeeId, decided: ConsentRequestView): void {
+  private remember(owner: EmployeeId, decided: ConsentHistoryView): void {
     const runtime = this.runtime(owner);
     runtime.consentHistory = [decided, ...runtime.consentHistory].slice(0, MAX_CONSENT_HISTORY);
+    this.persist();
   }
 
   private async deskRequestView(viewer: EmployeeId, record: DeskRequestRecord): Promise<DeskRequestView> {

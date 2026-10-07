@@ -175,6 +175,21 @@ export interface ConsentRequestView {
   excerpt: { text: string; tags: string[] };
 }
 
+/**
+ * A decided consent request, as the owner's history lists it. Deliberately without the excerpt text nor the signed
+ * message: it is kept by the agent runtime (on disk, across restarts) and must not hold the owner's context.
+ */
+export interface ConsentHistoryView {
+  id: string;
+  requester: EmployeeId;
+  /** The excerpt label the owner's Ledger showed (device ASCII). */
+  excerptLabel: string;
+  /** The enclave's rules flagged the request. */
+  flagged: boolean;
+  status: Exclude<RequestStatus, "pending">;
+  createdAt: string;
+}
+
 export type GrantKind = "share" | "policy";
 
 export type AgreementStatus = "active" | "revoked" | "expired";
@@ -329,7 +344,10 @@ export interface EnclaveApi {
   getTask(requester: EmployeeId, taskId: Hex): Promise<TaskView>;
   listTasks(requester: EmployeeId): Promise<TaskView[]>;
 
+  /** Pending consent requests addressed to `owner`. */
   listConsents(owner: EmployeeId): Promise<ConsentRequestView[]>;
+  /** Requests `owner` already decided, most recent first. */
+  consentHistory(owner: EmployeeId): Promise<ConsentHistoryView[]>;
   approveConsent(owner: EmployeeId, consentId: string, signature: Hex): Promise<void>;
   rejectConsent(owner: EmployeeId, consentId: string): Promise<void>;
 

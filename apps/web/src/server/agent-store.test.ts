@@ -24,6 +24,21 @@ function runtime(): PersistedRuntime {
       tasks: [{ id: TASK_ID, task: "Brief Orion", trapped: false }],
       deskRequests: [],
     },
+    // The consent history is optional (files written before it existed) and holds labels only.
+    bob: {
+      tasks: [],
+      deskRequests: [],
+      consentHistory: [
+        {
+          id: "consent-1",
+          requester: "alice",
+          excerptLabel: "Reunion Orion du 22 septembre",
+          flagged: false,
+          status: "approved",
+          createdAt: "2026-10-07T10:00:00.000Z",
+        },
+      ],
+    },
   };
 }
 

@@ -1,7 +1,8 @@
 /**
  * Durable memory of the agent runtime: what this server must remember across restarts to keep acting for each
  * employee without a new Ledger signature. Per employee: the agent session key and its session (delegated once by an
- * AgentSession), and the ids of the tasks and desk requests the agent created (the enclave answers per id).
+ * AgentSession), the ids of the tasks and desk requests the agent created (the enclave answers per id), and the
+ * owner's decided consent requests (labels only).
  *
  * One JSON file, owner-only (0600 in a 0700 directory), written atomically. The session key is a secret: it lets
  * whoever holds it ask the enclave for context as the employee (every share still needs the owner's Ledger). A file
@@ -28,6 +29,19 @@ const employeeStateSchema = z.object({
   agent: z.object({ privateKey: bytes32, session: sessionSchema }).optional(),
   tasks: z.array(z.object({ id: bytes32, task: z.string(), trapped: z.boolean() })),
   deskRequests: z.array(z.object({ id: bytes32, task: z.string() })),
+  /** Decided consent requests (labels and decisions only): optional, files written before it existed stay valid. */
+  consentHistory: z
+    .array(
+      z.object({
+        id: z.string().min(1),
+        requester: z.enum(EMPLOYEE_IDS),
+        excerptLabel: z.string(),
+        flagged: z.boolean(),
+        status: z.enum(["approved", "rejected", "expired"]),
+        createdAt: z.iso.datetime({ offset: true }),
+      }),
+    )
+    .optional(),
   /** Compliance officer only: the last audit head she accepted (detects a truncated or rolled-back log). */
   auditHead: z
     .object({

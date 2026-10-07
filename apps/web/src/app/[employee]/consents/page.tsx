@@ -11,7 +11,13 @@ import { formatDateTime, formatLength, formatRelative } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { approveConsent, rejectConsent } from "@/server/actions/consents";
 import { devicePreview } from "@/server/device-preview";
-import { enclave, type ConsentRequestView, type RequestStatus } from "@/server/enclave";
+import {
+  enclave,
+  type ConsentHistoryView,
+  type ConsentRequestView,
+  type RequestStatus,
+} from "@/server/enclave";
+import { consentHistoryEntry } from "@/server/enclave/history";
 import { employeeFromParams, load } from "@/server/load";
 
 export const metadata: Metadata = { title: "Demandes d'accord" };
@@ -103,14 +109,14 @@ function PendingRequest({ request, owner }: { request: ConsentRequestView; owner
   );
 }
 
-function HistoryRow({ request }: { request: ConsentRequestView }) {
+function HistoryRow({ request }: { request: ConsentHistoryView }) {
   const status = STATUS_LABEL[request.status];
   return (
     <li className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5 text-xs">
       <EmployeeAvatar employee={request.requester} size="sm" />
       <span className="font-medium">{EMPLOYEES[request.requester].name}</span>
-      <span className="min-w-0 flex-1 truncate text-muted-foreground">{request.message.excerptLabel}</span>
-      {request.findings.length > 0 && <span className="text-danger">signalé</span>}
+      <span className="min-w-0 flex-1 truncate text-muted-foreground">{request.excerptLabel}</span>
+      {request.flagged && <span className="text-danger">signalé</span>}
       <span className={cn("font-medium", status.className)}>{status.label}</span>
       <time className="w-28 text-right text-muted-foreground">{formatRelative(request.createdAt)}</time>
     </li>
@@ -119,10 +125,16 @@ function HistoryRow({ request }: { request: ConsentRequestView }) {
 
 export default async function ConsentsPage({ params }: { params: Promise<{ employee: string }> }) {
   const owner = await employeeFromParams(params);
-  const consents = await load(() => enclave().listConsents(owner.id));
+  const api = enclave();
+  const consents = await load(() => Promise.all([api.listConsents(owner.id), api.consentHistory(owner.id)]));
   if (!consents.ok) return <EnclaveUnavailable failure={consents} employee={owner.id} />;
-  const pending = consents.data.filter((c) => c.status === "pending");
-  const history = consents.data.filter((c) => c.status !== "pending");
+  const [requests, decided] = consents.data;
+  const pending = requests.filter((c) => c.status === "pending");
+  // A request that expired before any decision is listed by the enclave, not in the runtime's history.
+  const history = [
+    ...requests.flatMap((c) => (c.status === "pending" ? [] : [consentHistoryEntry(c, c.status)])),
+    ...decided,
+  ];
   return (
     <div className="mx-auto max-w-5xl">
       <PageHeader

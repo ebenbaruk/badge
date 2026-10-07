@@ -9,12 +9,14 @@ import { complianceKeyRegistrationMessage } from "@badge/attest";
 import { isAddressEqual, keccak256, recoverMessageAddress, toHex, type Hex } from "viem";
 import { COMPANY_NAME, EMPLOYEES, type DeskId, type EmployeeId } from "@/lib/directory";
 import { EnclaveError } from "../errors";
+import { consentHistoryEntry } from "../enclave/history";
 import type {
   AttestationView,
   RevocationTargetView,
   ComplianceKeyInput,
   RevealNoticeInput,
   AuditView,
+  ConsentHistoryView,
   ConsentRequestView,
   CreateTaskInput,
   DeskRequestView,
@@ -94,6 +96,16 @@ export class MockEnclave implements EnclaveApi {
   }
 
   async listConsents(owner: EmployeeId): Promise<ConsentRequestView[]> {
+    return this.consentsOf(owner).filter((c) => c.status === "pending");
+  }
+
+  async consentHistory(owner: EmployeeId): Promise<ConsentHistoryView[]> {
+    return this.consentsOf(owner).flatMap((c) =>
+      c.status === "pending" ? [] : [consentHistoryEntry(c, c.status)],
+    );
+  }
+
+  private consentsOf(owner: EmployeeId): ConsentRequestView[] {
     return [...this.state.consents.values()]
       .filter((c) => c.owner === owner)
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())

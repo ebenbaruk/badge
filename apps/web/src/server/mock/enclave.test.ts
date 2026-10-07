@@ -140,6 +140,16 @@ describe("mock enclave demo scenario", () => {
     if (request === undefined) throw new Error("expected a flagged request");
     await enclave.rejectConsent("bob", request.id);
     expect((await enclave.getTask("alice", task.id)).status).toBe("refused");
+    expect(await enclave.listConsents("bob")).toEqual([]);
+    const [decided] = await enclave.consentHistory("bob");
+    expect(decided).toEqual({
+      id: request.id,
+      requester: "alice",
+      excerptLabel: request.message.excerptLabel,
+      flagged: true,
+      status: "rejected",
+      createdAt: request.createdAt,
+    });
 
     const audit = await enclave.audit("chloe");
     expect(audit.chain.ok).toBe(true);
