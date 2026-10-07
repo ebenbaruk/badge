@@ -8,18 +8,15 @@ import type { EnclaveApi } from "./types";
 
 export type * from "./types";
 
-// globalThis: one enclave client (live: agent sessions and channels; mock: its state) per process, kept across dev
-// hot reloads, otherwise every edit would drop the employees' agent sessions.
-const ENCLAVE_KEY = Symbol.for("badge.web.enclave");
-const globalEnclave = globalThis as typeof globalThis & { [ENCLAVE_KEY]?: EnclaveApi };
+// The live client is rebuilt with each module instance (dev hot reloads then run the new code) and keeps its agent
+// sessions on globalThis itself; the mock keeps its whole state in the instance, so the instance is what survives.
+const MOCK_KEY = Symbol.for("badge.web.mock-enclave");
+const globalMock = globalThis as typeof globalThis & { [MOCK_KEY]?: MockEnclave };
+let live: LiveEnclave | undefined;
 
 /** The enclave selected by BADGE_ENCLAVE_MODE: the real one by default, the in-memory mock for UI work. */
 export function enclave(): EnclaveApi {
-  const existing = globalEnclave[ENCLAVE_KEY];
-  if (existing !== undefined) return existing;
   const config = serverConfig();
-  const created =
-    config.enclaveMode === "live" ? new LiveEnclave(config.live) : new MockEnclave(config.mockMeasurement);
-  globalEnclave[ENCLAVE_KEY] = created;
-  return created;
+  if (config.enclaveMode === "live") return (live ??= new LiveEnclave(config.live));
+  return (globalMock[MOCK_KEY] ??= new MockEnclave(config.mockMeasurement));
 }

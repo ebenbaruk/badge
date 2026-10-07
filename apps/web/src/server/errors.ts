@@ -75,7 +75,9 @@ export type ActionResult<T = undefined> =
 
 /** Maps any thrown value to a UI-safe failure. Logged server-side: errors are never swallowed. */
 export function toActionFailure(error: unknown): Extract<ActionResult, { ok: false }> {
-  console.error("[badge/web]", error);
+  // A missing agent session is a normal state before onboarding (pages poll every few seconds): it is shown to the
+  // user, not logged as a server error.
+  if (!(error instanceof AgentSessionMissingError)) console.error("[badge/web]", error);
   const detail = error instanceof Error ? error.message : String(error);
   // UserRejectedError extends DeviceActionError: test it before the generic Ledger errors.
   if (error instanceof UserRejectedError)

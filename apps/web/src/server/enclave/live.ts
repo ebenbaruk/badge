@@ -88,11 +88,19 @@ const newRuntime = (): EmployeeRuntime => ({
   verifiedDeliveries: new Map(),
 });
 
+// The agent runtime's memory lives on globalThis so that dev hot reloads swap the code without dropping the agent
+// sessions (re-delegating means a new Ledger signature per employee). Production runs a single module instance.
+const RUNTIMES_KEY = Symbol.for("badge.web.live-runtimes");
+const globalRuntimes = globalThis as typeof globalThis & {
+  [RUNTIMES_KEY]?: Map<EmployeeId, EmployeeRuntime>;
+};
+const liveRuntimes = (globalRuntimes[RUNTIMES_KEY] ??= new Map());
+
 export class LiveEnclave implements EnclaveApi {
   readonly mode = "live" as const;
   /** Channel without a session key: attestation, enrollment and session opening (Ledger-signed bodies). */
   private readonly bootstrap: BadgeClient;
-  private readonly runtimes = new Map<EmployeeId, EmployeeRuntime>();
+  private readonly runtimes = liveRuntimes;
   private attested: Promise<AttestationView> | undefined;
 
   constructor(private readonly config: LiveEnclaveConfig) {

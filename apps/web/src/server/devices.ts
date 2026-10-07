@@ -13,24 +13,22 @@ import type { EmployeeId } from "@/lib/directory";
 import { serverConfig } from "./config";
 
 interface DeviceRegistry {
-  screens: Map<EmployeeId, SpeculosDevice>;
   signers: Map<EmployeeId, Promise<LedgerSigner>>;
 }
 
 // Kept on globalThis so that dev-mode hot reloads reuse the open DMK sessions instead of leaking new ones.
 const REGISTRY_KEY = Symbol.for("badge.web.devices");
 const globalRegistry = globalThis as typeof globalThis & { [REGISTRY_KEY]?: DeviceRegistry };
-const registry: DeviceRegistry = (globalRegistry[REGISTRY_KEY] ??= {
-  screens: new Map(),
-  signers: new Map(),
-});
+const registry: DeviceRegistry = (globalRegistry[REGISTRY_KEY] ??= { signers: new Map() });
+// Screen drivers are stateless HTTP clients: kept per module instance, so a hot reload picks up driver changes.
+const screens = new Map<EmployeeId, SpeculosDevice>();
 
 /** Screen driver of an employee's device (stateless HTTP client, cheap to keep). */
 export function deviceScreen(employee: EmployeeId): SpeculosDevice {
-  let device = registry.screens.get(employee);
+  let device = screens.get(employee);
   if (device === undefined) {
     device = new SpeculosDevice(serverConfig().speculosUrls[employee]);
-    registry.screens.set(employee, device);
+    screens.set(employee, device);
   }
   return device;
 }
