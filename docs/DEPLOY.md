@@ -81,6 +81,19 @@ Vérifie : génération des secrets, Postgres et Honcho sains, enclave saine **�
 attestée), HTTP en clair refusé sur `/v1` (`CHANNEL_REQUIRED`), aucun autre port publié, Honcho sans route vers Internet. La
 clé LLM est factice : aucun appel n'est facturé (le seed n'est donc pas lancé).
 
+Pour reproduire le CVM **avec le vrai LLM** (diagnostic d'un échec vu sur le CVM, dont les journaux sont coupés) :
+
+```bash
+infra/cvm/rehearse.sh up --real-llm                    # clé et modèles PHALA_AI_* lus dans BADGE_ENV_FILE, puis seed
+BADGE_ENCLAVE_URL=http://127.0.0.1:18787 pnpm demo     # adresse locale : attestation simulée attendue
+docker logs badge-cvm-rehearsal-enclave-1              # « upstream failure on <route>: <diagnostic> »
+infra/cvm/rehearse.sh down
+```
+
+Payant (quelques centimes : une centaine d'appels pour le seed et la démo). La clé n'est jamais affichée. Un
+`UPSTREAM_FAILED` porte aussi ce diagnostic sans contenu dans son message (appel, statut HTTP, type d'échec), visible
+côté client même quand les journaux du CVM sont coupés.
+
 ### 3. Publier et épingler les digests
 
 ```bash
