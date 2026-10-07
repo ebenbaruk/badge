@@ -7,6 +7,7 @@
  * - The device only renders ASCII, so every displayed string must go through `toDeviceAscii` before signing.
  */
 import type { Address, Hex } from "viem";
+import { toDeviceAscii } from "./ascii";
 
 /** Off-chain messages still need a chainId and a verifyingContract for clear signing (ERC-7730). */
 export const BADGE_DOMAIN = {
@@ -285,11 +286,13 @@ export const BADGE_DESCRIPTORS: { [K in BadgeMessageKind]: ClearSignDescriptor }
  * EIP-191 message from which the anonymous desk identity is derived (secret = keccak256(signature)).
  * EIP-191 rather than EIP-712: it is shown in clear without any descriptor or blind-signing warning, and Ledger
  * signatures are deterministic (RFC 6979), so the same Ledger always re-derives the same identity.
+ * The company name is folded to device ASCII: the Ethereum app shows a non-ASCII personal message as raw hex, which
+ * would make the owner sign something unreadable.
  */
 export function deskIdentityDeriveMessage(company: string): string {
   return [
     "Badge - identite anonyme de desk",
-    `Entreprise : ${company}`,
+    `Entreprise : ${toDeviceAscii(company)}`,
     "Ne signez ce message que dans Badge.",
   ].join("\n");
 }
