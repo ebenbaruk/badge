@@ -15,6 +15,8 @@ const DURATIONS = [7, 30, 90] as const;
 const DEFAULT_DURATION_DAYS = 30;
 const DEFAULT_MAX_LENGTH = 800;
 const DEFAULT_PURPOSE = "briefs clients";
+/** The tag of the example above the form ("mes notes Orion"), preselected when the owner has it. */
+const PREFERRED_CONTEXT_TAG = "orion";
 
 /**
  * Standing agreement form: "my Sales team may use my client notes for briefs, 30 days". Signed once on the
@@ -33,7 +35,9 @@ export function PolicyForm({
   const { runOnLedger, activity } = useLedgerActivity();
   const defaultTeam = TEAMS.find((team) => team !== ownTeam) ?? TEAMS[0];
   const [granteeTeam, setGranteeTeam] = useState<(typeof TEAMS)[number]>(defaultTeam);
-  const [contextTag, setContextTag] = useState(tags[0] ?? "");
+  const [contextTag, setContextTag] = useState(
+    tags.includes(PREFERRED_CONTEXT_TAG) ? PREFERRED_CONTEXT_TAG : (tags[0] ?? ""),
+  );
   const [purpose, setPurpose] = useState(DEFAULT_PURPOSE);
   const [maxExcerptLength, setMaxExcerptLength] = useState(DEFAULT_MAX_LENGTH);
   const [durationDays, setDurationDays] = useState<number>(DEFAULT_DURATION_DAYS);
@@ -43,7 +47,7 @@ export function PolicyForm({
     event.preventDefault();
     setBusy(true);
     await runOnLedger(
-      `Accord permanent : équipe ${granteeTeam}, contexte « ${contextTag} »`,
+      `Accord permanent : équipe ${granteeTeam}, contexte «\u00a0${contextTag}\u00a0»`,
       () =>
         createStandingAgreement({
           employee,
