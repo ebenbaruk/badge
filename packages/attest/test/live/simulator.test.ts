@@ -63,7 +63,15 @@ describe("dstack simulator", () => {
         ...bundle,
         ...client.hello,
         mode: "tdx",
+        // Every pin is mandatory in tdx mode: placeholders, the quote is refused before they are compared.
         expectedComposeHash: "00".repeat(32),
+        expectedAppId: "00".repeat(20),
+        expectedOsMeasurements: {
+          mrtd: "00".repeat(48),
+          rtmr0: "00".repeat(48),
+          rtmr1: "00".repeat(48),
+          rtmr2: "00".repeat(48),
+        },
       });
       // The simulator patches report_data into a fixed quote, which breaks the Intel signature.
       expect(result).toMatchObject({
