@@ -62,6 +62,7 @@ Single envelope `{ "error": { "code", "message" } }`. Codes: enclave (`INVALID_R
 employee's resource is reported as `NOT_FOUND`.
 
 Signed messages travel as the @badge/consent wire envelope `{kind, message, signature}` (bigints as decimal strings).
+
 - = compose hash from dstack info() as bytes32 (simulator locally, real CVM on Phala). Exposed by GET /v1/attestation/measurement
   -> {measurement: 0x-bytes32, composeHash: hex, appId}; equal to `AttestationResult.enclaveMeasurement` of the channel.
 - Every signed message must carry it; mismatch -> reject.
