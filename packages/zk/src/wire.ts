@@ -13,10 +13,12 @@ const MAX_SEMAPHORE_DEPTH = 32;
  * Canonical decimal (no sign, no leading zero, no hex) below 2^256. Canonical form matters: the verifier compares
  * these strings' values to expected ones and Semaphore re-encodes them as 32-byte words, which throws above 2^256.
  */
+const CANONICAL_DECIMAL = /^(0|[1-9][0-9]*)$/;
 const uint256Decimal = z
   .string()
-  .regex(/^(0|[1-9][0-9]*)$/, "expected a canonical decimal integer")
-  .refine((value) => BigInt(value) < UINT256_LIMIT, "exceeds 2^256 - 1");
+  .regex(CANONICAL_DECIMAL, "expected a canonical decimal integer")
+  // zod still runs refinements after a failed regex: guard BigInt, which throws a SyntaxError on non-digits.
+  .refine((value) => !CANONICAL_DECIMAL.test(value) || BigInt(value) < UINT256_LIMIT, "exceeds 2^256 - 1");
 
 /** Wire format of a desk proof (JSON-safe, bigints as decimal strings). Depth is range-checked here, pinned later. */
 export const deskProofSchema = z.strictObject({
