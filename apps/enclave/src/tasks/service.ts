@@ -15,9 +15,10 @@ import {
   taskIdFrom,
   type ContextShare,
 } from "@badge/consent";
+import type { AllowedVia, Task } from "@badge/client";
 import type { Hex } from "viem";
 import { z } from "zod";
-import { nowSeconds } from "../clock";
+import { msToUnixSeconds, nowSeconds } from "../clock";
 import { transaction } from "../db";
 import type { ContextInventory, Employee } from "../directory";
 import { EnclaveError } from "../errors";
@@ -58,39 +59,14 @@ export const CreateTaskSchema = z.strictObject({
 });
 export type CreateTaskInput = z.infer<typeof CreateTaskSchema>;
 
-export type TaskStatus = "waiting_consent" | "ready";
-
-/** What the requester learns about one excerpt: metadata only, never another owner's text. */
-export interface ExcerptView {
-  readonly ref: number;
-  readonly ownerId: string;
-  readonly ownerName: string;
-  readonly scope: "global" | "personal";
-  readonly label: string;
-  readonly length: number;
-  readonly decision: ExcerptDecision;
-  readonly basis: AccessBasis | null;
-  readonly risk: ExcerptRow["risk"];
-  readonly reasons: ExcerptRow["risk_reasons"];
-}
-
-export interface TaskView {
-  readonly id: Hex;
-  readonly status: TaskStatus;
-  readonly taskLabel: string;
-  readonly createdAt: string;
-  readonly allowed: ExcerptView[];
-  readonly pending: ExcerptView[];
-  readonly blocked: ExcerptView[];
-  readonly refused: ExcerptView[];
-}
-
-export interface TaskResult extends TaskView {
-  /** Null while consents are pending, or when no excerpt could be used. */
-  readonly brief: string | null;
-  readonly tokenStats: { readonly selectedTokens: number; readonly allContextTokens: number } | null;
-  readonly sources: Array<{ ownerId: string; ownerName: string; label: string; basis: AccessBasis | null }>;
-}
+/** How an access basis (storage) is reported to the requester (API). */
+const ALLOWED_VIA_BY_BASIS: Record<AccessBasis, AllowedVia> = {
+  global: "company",
+  own: "own",
+  consent: "consent",
+  grant: "grant_reused",
+  policy: "policy",
+};
 
 export interface TaskServiceDeps {
   readonly ctx: DomainContext;
@@ -120,6 +96,21 @@ interface Decision {
 
 const OK_VERDICT: ExtractionVerdict = { outcome: "ok", reasons: [] };
 
+/** Blocks a request for the context of someone who has no Ledger, saying why (shown to the requester). */
+function withoutLedger(verdict: ExtractionVerdict): ExtractionVerdict {
+  return {
+    outcome: "block",
+    reasons: [
+      ...verdict.reasons,
+      {
+        code: "OWNER_CANNOT_CONSENT",
+        severity: "block",
+        message: "Le propriétaire n'a pas de Ledger : son contexte ne peut pas être partagé.",
+      },
+    ],
+  };
+}
+
 export class TaskService {
   constructor(private readonly deps: TaskServiceDeps) {}
 
@@ -127,8 +118,8 @@ export class TaskService {
     return this.deps.ctx;
   }
 
-  /** POST /v1/tasks. */
-  async createTask(caller: Caller, input: CreateTaskInput): Promise<TaskView> {
+  /** POST /v1/tasks. Answers like GET /v1/tasks/:id (with the brief when nothing needs a consent). */
+  async createTask(caller: Caller, input: CreateTaskInput): Promise<Task> {
     const { directory } = this.ctx;
     const requester = directory.requireEmployee(caller.employeeId);
     const requesterAddress = directory.requireAddress(requester);
@@ -169,7 +160,7 @@ export class TaskService {
         },
       });
     });
-    return this.view(this.requireTask(caller, taskId));
+    return this.getTask(caller, taskId);
   }
 
   /**
@@ -252,7 +243,9 @@ export class TaskService {
       if (verdict.outcome === "block") return { ...base, decision: "blocked", basis: null };
       const owner = this.ctx.directory.employee(candidate.ownerId);
       // An owner without a Ledger can never consent: nothing of theirs leaves their scope.
-      if (!owner?.address) return { ...base, decision: "blocked", basis: null };
+      if (!owner?.address) {
+        return { ...base, verdict: withoutLedger(verdict), decision: "blocked", basis: null };
+      }
 
       const grant = this.deps.policy.findActiveGrant(owner.id, requester.id, hashExcerpt(candidate.text));
       if (grant) return { ...base, decision: "allowed", basis: "grant", grantId: grant.id };
@@ -395,41 +388,13 @@ export class TaskService {
     return task;
   }
 
-  private view(task: TaskRow): TaskView {
-    const excerpts = this.deps.policy.tasks.excerptsOf(task.id);
-    const toView = (row: ExcerptRow): ExcerptView => ({
-      ref: row.id,
-      ownerId: row.owner_id,
-      ownerName: this.ownerName(row.owner_id),
-      scope: row.scope,
-      label: this.requesterLabel(task, row),
-      length: row.length,
-      decision: row.decision,
-      basis: row.basis,
-      risk: row.risk,
-      reasons: row.risk_reasons,
-    });
-    const pending = excerpts.filter((e) => e.decision === "pending");
-    return {
-      id: task.id,
-      status: pending.length > 0 ? "waiting_consent" : "ready",
-      taskLabel: task.task_label,
-      createdAt: new Date(task.created_ms).toISOString(),
-      allowed: excerpts.filter((e) => e.decision === "allowed").map(toView),
-      pending: pending.map(toView),
-      blocked: excerpts.filter((e) => e.decision === "blocked").map(toView),
-      refused: excerpts.filter((e) => e.decision === "rejected" || e.decision === "expired").map(toView),
-    };
-  }
-
   /**
    * The device label is cut from the excerpt text: the requester may only see it once the excerpt is released to
    * them. Until then they see whose context it is, not what it says.
    */
-  private requesterLabel(task: TaskRow, row: ExcerptRow): string {
-    const released =
-      row.decision === "allowed" || row.owner_id === task.requester_id || row.scope === "global";
-    return released ? row.label : `Contexte personnel de ${this.ownerName(row.owner_id)}`;
+  private requesterLabel(task: TaskRow, row: ExcerptRow, released: boolean): string {
+    const visible = released || row.owner_id === task.requester_id || row.scope === "global";
+    return visible ? row.label : `Contexte personnel de ${this.ownerName(row.owner_id)}`;
   }
 
   private ownerName(ownerId: string): string {
@@ -438,43 +403,92 @@ export class TaskService {
   }
 
   /**
-   * GET /v1/tasks/:id. Once nothing is pending, drafts the brief (once, then cached) from the allowed excerpts that
-   * are STILL allowed: a grant or policy revoked since the task was created no longer covers its excerpt.
+   * GET /v1/tasks/:id. Sorts every excerpt into allowed / pending / blocked / refused and, once nothing is pending,
+   * drafts the brief from the excerpts that are STILL allowed: a grant or policy revoked since the task was created
+   * no longer covers its excerpt (it is reported as refused, reason "revoked"). The brief is cached together with
+   * the excerpts it was drafted from, and redrafted when that set changes, so a revocation also reaches old briefs.
    */
-  async getTask(caller: Caller, taskId: Hex): Promise<TaskResult> {
+  async getTask(caller: Caller, taskId: Hex): Promise<Task> {
     const task = this.requireTask(caller, taskId);
-    for (const ownerId of new Set(this.deps.policy.tasks.excerptsOf(task.id).map((e) => e.owner_id))) {
-      this.deps.policy.expirePending(ownerId);
-    }
-    const view = this.view(task);
-    if (view.status === "waiting_consent") return { ...view, brief: null, tokenStats: null, sources: [] };
+    const owners = new Set(this.deps.policy.tasks.excerptsOf(task.id).map((e) => e.owner_id));
+    for (const ownerId of owners) this.deps.policy.expirePending(ownerId);
 
-    const usable = this.deps.policy.tasks
-      .excerptsOf(task.id)
-      .filter((e) => e.decision === "allowed" && this.stillCovered(e));
-    const sources = usable.map((e) => ({
-      ownerId: e.owner_id,
-      ownerName: this.ownerName(e.owner_id),
-      label: e.label,
-      basis: e.basis,
-    }));
-    if (usable.length === 0) return { ...view, brief: null, tokenStats: null, sources };
-
-    let brief = task.brief;
-    if (brief === null) {
-      brief = await draftBrief(
-        this.deps.llm,
-        task.task,
-        usable.map((e) => ({ ownerId: e.owner_id, scope: e.scope, text: e.text })),
-      );
-      this.deps.policy.tasks.setBrief(task.id, brief, this.ctx.clock.now().getTime());
+    const allowed: Task["allowed"] = [];
+    const pending: Task["pending"] = [];
+    const blocked: Task["blocked"] = [];
+    const refused: Task["refused"] = [];
+    const usable: ExcerptRow[] = [];
+    for (const row of this.deps.policy.tasks.excerptsOf(task.id)) {
+      const base = (released: boolean) => ({
+        ownerId: row.owner_id,
+        ownerName: this.ownerName(row.owner_id),
+        excerptLabel: this.requesterLabel(task, row, released),
+        excerptLength: row.length,
+      });
+      const risk = { level: row.risk, reasons: [...row.risk_reasons] };
+      switch (row.decision) {
+        case "allowed":
+          if (row.basis !== null && this.stillCovered(row)) {
+            usable.push(row);
+            allowed.push({ ...base(true), via: ALLOWED_VIA_BY_BASIS[row.basis] });
+          } else {
+            refused.push({ ...base(false), reason: "revoked" });
+          }
+          break;
+        case "pending":
+          pending.push({ ...base(false), consentId: this.requireConsentId(row), risk });
+          break;
+        case "blocked":
+          blocked.push({ ...base(false), risk });
+          break;
+        case "rejected":
+        case "expired":
+          refused.push({ ...base(false), reason: row.decision });
+          break;
+      }
     }
+
+    const ready = pending.length === 0 && usable.length > 0;
+    const view = {
+      id: task.id,
+      taskLabel: task.task_label,
+      status: pending.length > 0 ? ("waiting_consent" as const) : ("ready" as const),
+      allowed,
+      pending,
+      blocked,
+      refused,
+      createdAt: msToUnixSeconds(task.created_ms),
+    };
+    if (!ready) return { ...view, brief: null, tokenStats: null };
+    return { ...view, brief: await this.brief(task, usable), tokenStats: this.tokenStats(usable) };
+  }
+
+  /** The cached brief when it was drafted from exactly `usable`, else a fresh draft (cached in turn). */
+  private async brief(task: TaskRow, usable: readonly ExcerptRow[]): Promise<string> {
+    const sources = usable.map((e) => e.id);
+    if (task.brief !== null && sameIds(task.brief_sources, sources)) return task.brief;
+    const brief = await draftBrief(
+      this.deps.llm,
+      task.task,
+      usable.map((e) => ({ ownerId: e.owner_id, scope: e.scope, text: e.text })),
+    );
+    this.deps.policy.tasks.setBrief(task.id, brief, sources, this.ctx.clock.now().getTime());
+    return brief;
+  }
+
+  private tokenStats(usable: readonly ExcerptRow[]): Task["tokenStats"] {
     const count = this.deps.countTokens;
-    const tokenStats = {
+    return {
       selectedTokens: usable.reduce((sum, e) => sum + count(e.text), 0),
       allContextTokens: this.deps.inventory.allNotes().reduce((sum, note) => sum + count(note.text), 0),
     };
-    return { ...view, brief, tokenStats, sources };
+  }
+
+  private requireConsentId(row: ExcerptRow): Hex {
+    const consent = this.deps.policy.consents.byTaskExcerpt(row.id);
+    // A pending excerpt always has its consent request (same transaction); a miss is corrupted state.
+    if (!consent) throw new Error(`pending excerpt ${row.id} has no consent request`);
+    return consent.id;
   }
 
   /** True when the basis that allowed this excerpt is still in force (fail closed on anything unknown). */
@@ -493,4 +507,8 @@ export class TaskService {
         return false;
     }
   }
+}
+
+function sameIds(a: readonly number[] | null, b: readonly number[]): boolean {
+  return a !== null && a.length === b.length && a.every((id, index) => id === b[index]);
 }

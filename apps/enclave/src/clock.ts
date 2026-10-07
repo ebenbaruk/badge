@@ -17,3 +17,8 @@ export function nowSeconds(clock: Clock): bigint {
 export function secondsToMs(seconds: bigint): number {
   return Number(seconds) * 1000;
 }
+
+/** Unix milliseconds (storage) to the unix seconds of the API responses. */
+export function msToUnixSeconds(ms: number): number {
+  return Math.floor(ms / 1000);
+}

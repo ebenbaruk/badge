@@ -1,4 +1,5 @@
 /** Request helpers and the bootstrap flows (enroll, session) shared by the API-level tests. */
+import { BADGE_AUTH_HEADERS, bodyBytes, canonicalRequest } from "@badge/client";
 import { decodeBadgeMessage, toDeviceAscii, toUnixSeconds, type ContextShare } from "@badge/consent";
 import type { Hex } from "viem";
 import { expect } from "vitest";
@@ -7,7 +8,6 @@ import {
   ledgers,
   MEASUREMENT,
   nextNonce,
-  SESSION_HEADER,
   signedWire,
   type DemoEmployee,
   type Harness,
@@ -20,20 +20,30 @@ export interface ApiResponse {
   readonly json: any;
 }
 
-/** Calls the in-process API, authenticated as `as`'s agent when given. */
+const lastTimestamps = new WeakMap<Harness, number>();
+
+/**
+ * Calls the in-process API. With `as`, the request is signed by that employee's agent session key exactly like the
+ * SDK does (strictly increasing timestamps on the harness clock, so identical calls are not replays).
+ */
 export async function call(
   h: Harness,
   method: "GET" | "POST",
   path: string,
   options: { as?: DemoEmployee; body?: unknown } = {},
 ): Promise<ApiResponse> {
+  const body = options.body === undefined ? null : JSON.stringify(options.body);
   const headers: Record<string, string> = { "content-type": "application/json" };
-  if (options.as) headers[SESSION_HEADER] = agents[options.as].address;
-  const response = await h.app.request(path, {
-    method,
-    headers,
-    body: options.body === undefined ? undefined : JSON.stringify(options.body),
-  });
+  if (options.as) {
+    const timestamp = Math.max(h.clock.now().getTime(), (lastTimestamps.get(h) ?? 0) + 1);
+    lastTimestamps.set(h, timestamp);
+    const agent = agents[options.as];
+    const message = canonicalRequest({ method, pathWithQuery: path, timestamp, body: bodyBytes(body) });
+    headers[BADGE_AUTH_HEADERS.session] = agent.address;
+    headers[BADGE_AUTH_HEADERS.timestamp] = String(timestamp);
+    headers[BADGE_AUTH_HEADERS.signature] = await agent.signMessage({ message });
+  }
+  const response = await h.app.request(path, { method, headers, ...(body === null ? {} : { body }) });
   return { status: response.status, json: await response.json() };
 }
 
@@ -101,11 +111,11 @@ export async function pendingShares(
 > {
   const response = await call(h, "GET", "/v1/consents", { as: who });
   expect(response.status).toBe(200);
-  return response.json.consents.map(
-    (c: { id: Hex; message: unknown; risk: { level: string; reasons: Array<{ code: string }> } }) => ({
+  return response.json.consents
+    .filter((c: { kind: string }) => c.kind === "ContextShare")
+    .map((c: { id: Hex; message: unknown; risk: { level: string; reasons: Array<{ code: string }> } }) => ({
       id: c.id,
       message: decodeBadgeMessage("ContextShare", c.message),
       risk: c.risk,
-    }),
-  );
+    }));
 }

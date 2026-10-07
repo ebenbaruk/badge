@@ -4,6 +4,7 @@
  * once at boot and immutable while the enclave runs: identities and memberships are never taken from a request.
  */
 import { readFileSync } from "node:fs";
+import type { Employee as EmployeeWire } from "@badge/client";
 import { isDeviceAscii, toDeviceAscii } from "@badge/consent";
 import { getAddress, isAddress, isAddressEqual, type Address } from "viem";
 import { z } from "zod";
@@ -206,6 +207,27 @@ export class Directory {
     if (!employee.address)
       throw new EnclaveError("FORBIDDEN", `${employee.id} has no Ledger and cannot sign`);
     return employee.address;
+  }
+
+  /**
+   * How the API shows an employee who holds a Ledger (enrollment, GET /v1/me).
+   * @throws {EnclaveError} FORBIDDEN for a directory-only employee.
+   */
+  profile(employee: Employee): EmployeeWire {
+    return {
+      id: employee.id,
+      name: employee.name,
+      team: employee.team,
+      role: employee.role,
+      address: this.requireAddress(employee),
+      desks: [...employee.desks],
+    };
+  }
+
+  /** Name and team of an employee for API responses; an unknown id is shown as itself (never throws). */
+  person(id: string): { id: string; name: string; team: string } {
+    const employee = this.#employees.get(id);
+    return { id, name: employee?.name ?? id, team: employee?.team ?? "" };
   }
 
   teams(): Set<string> {

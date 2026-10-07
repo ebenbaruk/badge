@@ -14,8 +14,11 @@ import {
   consentListSchema,
   deskRequestSchema,
   deskSchema,
+  deskShareDecisionSchema,
   enrollResponseSchema,
+  grantListSchema,
   measurementSchema,
+  meSchema,
   policyListSchema,
   policySchema,
   revocationResultSchema,
@@ -28,7 +31,10 @@ import {
   type ConsentRequest,
   type Desk,
   type DeskRequest,
+  type DeskShareDecision,
   type EnrollResponse,
+  type Grant,
+  type Me,
   type Measurement,
   type Policy,
   type RevocationResult,
@@ -82,13 +88,20 @@ export interface CreateTaskInput {
   task: string;
   /** Short ASCII label, shown on the owners' Ledgers ("Tache"). */
   taskLabel: string;
+  /**
+   * Explicitly asks for an employee's entire context (e.g. "everything about Bob"). Never needed for a normal task;
+   * the enclave treats it as a high-risk request (warning to the owner, hard cap) rather than refusing the agent.
+   */
+  requestFullContextOf?: string;
 }
 
 /** Body of `POST /v1/desk-requests`. */
 export interface CreateDeskRequestInput {
-  /** The requester's own desk. */
+  /** The requester's own desk (API id, e.g. `origination`). */
   fromDesk: string;
   task: string;
+  /** Needed only when several exchange rules let `fromDesk` receive context. */
+  ruleId?: string;
 }
 
 /** Body of `POST /v1/desk-requests/:id/approve`. */
@@ -103,8 +116,16 @@ export interface ApproveDeskRequestInput {
 export interface RegisterComplianceKeyInput {
   /** X25519 public key (hex, no prefix) derived with `complianceKeyFromSignature`. */
   publicKey: string;
-  /** Ledger EIP-191 signature of `complianceKeyRegistrationMessage(publicKey)`. */
+  /** Ledger EIP-191 signature of `complianceKeyRegistrationMessage(company, publicKey)` (@badge/attest). */
   signature: Hex;
+}
+
+/** Query of `GET /v1/audit`. */
+export interface AuditQuery {
+  /** Only entries with a higher sequence number (paging). */
+  afterSeq?: number;
+  /** Page size (the enclave caps it). */
+  limit?: number;
 }
 
 /** Body of `POST /v1/audit/reveal-notice`. */
@@ -170,6 +191,11 @@ export class BadgeClient {
     return this.signedCall("/v1/sessions", signed, false, sessionSchema);
   }
 
+  /** `GET /v1/me`: the employee the session belongs to. */
+  me(): Promise<Me> {
+    return this.call({ method: "GET", path: "/v1/me", authenticated: true, schema: meSchema });
+  }
+
   // ---- Tasks and consents ----
 
   /** `POST /v1/tasks`: the caller's agent asks for a brief. */
@@ -226,6 +252,17 @@ export class BadgeClient {
     });
   }
 
+  /** `GET /v1/grants`: active one-off grants the caller gave (what they may revoke). */
+  async listGrants(): Promise<Grant[]> {
+    const list = await this.call({
+      method: "GET",
+      path: "/v1/grants",
+      authenticated: true,
+      schema: grantListSchema,
+    });
+    return list.grants;
+  }
+
   /** `POST /v1/revocations` with a Ledger-signed ContextRevoke. */
   revoke(signed: SignedMessage<"ContextRevoke">): Promise<RevocationResult> {
     return this.signedCall("/v1/revocations", signed, true, revocationResultSchema);
@@ -278,7 +315,7 @@ export class BadgeClient {
   }
 
   /** `POST /v1/desk-requests/:id/approve` with the DeskShare signature and the membership proof. */
-  async approveDeskRequest(requestId: string, input: ApproveDeskRequestInput): Promise<DeskRequest> {
+  async approveDeskRequest(requestId: string, input: ApproveDeskRequestInput): Promise<DeskShareDecision> {
     const proof = deskProofSchema.safeParse(input.proof);
     if (!proof.success) {
       throw new BadgeApiError(0, "invalid_argument", `malformed desk proof: ${z.prettifyError(proof.error)}`);
@@ -288,7 +325,18 @@ export class BadgeClient {
       path: `/v1/desk-requests/${segment(requestId)}/approve`,
       body: { signature: input.signature, proof: proof.data },
       authenticated: true,
-      schema: deskRequestSchema,
+      schema: deskShareDecisionSchema,
+    });
+  }
+
+  /** `POST /v1/desk-requests/:id/reject`: the asked owner declines (no signature needed). */
+  rejectDeskRequest(requestId: string): Promise<DeskShareDecision> {
+    return this.call({
+      method: "POST",
+      path: `/v1/desk-requests/${segment(requestId)}/reject`,
+      body: {},
+      authenticated: true,
+      schema: deskShareDecisionSchema,
     });
   }
 
@@ -315,9 +363,18 @@ export class BadgeClient {
     });
   }
 
-  /** `GET /v1/audit` (compliance role): entries and chain verification. */
-  getAudit(): Promise<AuditLog> {
-    return this.call({ method: "GET", path: "/v1/audit", authenticated: true, schema: auditLogSchema });
+  /** `GET /v1/audit` (compliance role): a page of entries and the verification of the whole chain. */
+  getAudit(query: AuditQuery = {}): Promise<AuditLog> {
+    const params = new URLSearchParams();
+    if (query.afterSeq !== undefined) params.set("afterSeq", String(query.afterSeq));
+    if (query.limit !== undefined) params.set("limit", String(query.limit));
+    const search = params.size > 0 ? `?${params.toString()}` : "";
+    return this.call({
+      method: "GET",
+      path: `/v1/audit${search}`,
+      authenticated: true,
+      schema: auditLogSchema,
+    });
   }
 
   /** `POST /v1/audit/reveal-notice`: logs a client-side de-anonymisation. Returns the new audit entry. */

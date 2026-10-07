@@ -1,10 +1,10 @@
 /**
  * Builds the enclave's domain services from injected dependencies. Nothing here reads the environment or opens a
- * connection: tests pass fakes, server.ts passes the real implementations.
+ * connection: tests pass fakes, src/main.ts passes the real implementations.
  */
+import type { DstackAgent } from "@badge/attest/server";
 import type { NullifierRegistry } from "@badge/zk";
-import type { MiddlewareHandler } from "hono";
-import { AuditLog, type Sealer } from "../audit";
+import { AuditLog } from "../audit";
 import type { Clock } from "../clock";
 import { ComplianceService } from "../compliance";
 import type { Database } from "../db";
@@ -12,8 +12,8 @@ import { DeskService, registerDeskFixtures, SqliteNullifierRegistry } from "../d
 import type { ContextInventory, Directory } from "../directory";
 import type { LlmClient } from "../llm/client";
 import type { MemoryStore } from "../memory/types";
-import { PolicyEngine, type DomainContext, type EnclaveIdentity, type KeyRotator } from "../policy";
-import type { BadgeEnv } from "../security/types";
+import { PolicyEngine, SqliteKeyVersionStore, type DomainContext, type EnclaveMeasurement } from "../policy";
+import { KeyRotator } from "../security/keys";
 import { createO200kTokenCounter, TaskService, type TokenCounter } from "../tasks";
 
 export interface AppDeps {
@@ -23,11 +23,13 @@ export interface AppDeps {
   readonly memory: MemoryStore;
   readonly llm: LlmClient;
   readonly clock: Clock;
-  readonly enclaveIdentity: EnclaveIdentity;
-  readonly sealer: Sealer;
-  readonly keyRotator: KeyRotator;
-  /** Sets `c.get("caller")` or answers 401 (src/security in production, a header-based fake in tests). */
-  readonly authenticate: MiddlewareHandler<BadgeEnv>;
+  /**
+   * dstack guest agent (the CVM socket in production, the simulator locally): measurement, channel key and quotes,
+   * per-employee data keys.
+   */
+  readonly dstack: DstackAgent;
+  /** Production: every /v1 call must come through the attested channel (TLS ends at the Phala gateway). */
+  readonly requireChannel: boolean;
   /** Defaults to the o200k_base tokenizer. */
   readonly countTokens?: TokenCounter;
   /** Defaults to the SQLite registry in `db`. */
@@ -42,20 +44,25 @@ export interface EnclaveServices {
   readonly tasks: TaskService;
   readonly desks: DeskService;
   readonly compliance: ComplianceService;
+  /** Per-employee data keys, rotated on every revocation. */
+  readonly keys: KeyRotator;
 }
 
-export function createServices(deps: AppDeps): EnclaveServices {
+/** Wires the services; `enclave` is the measurement read from dstack by the security layer. */
+export function createServices(deps: AppDeps, enclave: EnclaveMeasurement): EnclaveServices {
   const ctx: DomainContext = {
     db: deps.db,
     directory: deps.directory,
     audit: new AuditLog(deps.db, deps.clock),
     clock: deps.clock,
-    enclave: deps.enclaveIdentity,
+    enclave,
   };
-  const policy = new PolicyEngine(ctx, deps.keyRotator);
+  const keys = new KeyRotator(deps.dstack, new SqliteKeyVersionStore(deps.db, deps.clock));
+  const policy = new PolicyEngine(ctx, keys);
   return {
     ctx,
     policy,
+    keys,
     tasks: new TaskService({
       ctx,
       policy,
@@ -67,7 +74,6 @@ export function createServices(deps: AppDeps): EnclaveServices {
     desks: new DeskService({
       ctx,
       memory: deps.memory,
-      sealer: deps.sealer,
       nullifiers: deps.nullifiers ?? new SqliteNullifierRegistry(deps.db, () => deps.clock.now().getTime()),
     }),
     compliance: new ComplianceService(ctx),

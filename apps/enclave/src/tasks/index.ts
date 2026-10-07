@@ -13,10 +13,6 @@ export {
   CreateTaskSchema,
   TaskService,
   type CreateTaskInput,
-  type ExcerptView,
-  type TaskResult,
   type TaskServiceDeps,
-  type TaskStatus,
-  type TaskView,
 } from "./service";
 export { createO200kTokenCounter, type TokenCounter } from "./tokens";

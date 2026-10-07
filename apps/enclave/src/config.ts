@@ -24,6 +24,8 @@ const EnvSchema = z.object({
   BADGE_ENCLAVE_HOST: z.string().min(1).default(DEFAULT_ENCLAVE_HOST),
   BADGE_SEED_FILE: z.string().min(1).default(ACME_DATASET_PATH),
   DSTACK_SIMULATOR_ENDPOINT: z.url().optional(),
+  /** "false" lets local tools call /v1 over plain HTTP; forced to true inside a CVM. */
+  BADGE_REQUIRE_CHANNEL: z.enum(["true", "false"]).default("true"),
 });
 
 export interface EnclaveConfig {
@@ -34,6 +36,8 @@ export interface EnclaveConfig {
   /** undefined = the CVM socket; otherwise the simulator URL (local development only). */
   readonly dstackEndpoint: string | undefined;
   readonly simulated: boolean;
+  /** Only the attested channel reaches /v1 (always true in a CVM). */
+  readonly requireChannel: boolean;
 }
 
 /** Thrown when the environment is invalid; the message names the variable. */
@@ -54,6 +58,11 @@ export function loadEnclaveConfig(
     throw new EnclaveConfigError(`invalid enclave environment: ${z.prettifyError(parsed.error)}`);
   const vars = parsed.data;
   const inCvm = socketExists(DSTACK_SOCKET_PATH);
+  const requireChannel = vars.BADGE_REQUIRE_CHANNEL === "true";
+  // On Phala, TLS ends at the gateway: a plain-HTTP enclave would expose every request to the operator.
+  if (inCvm && !requireChannel) {
+    throw new EnclaveConfigError("BADGE_REQUIRE_CHANNEL=false is refused inside a CVM");
+  }
   return {
     databasePath: join(vars.BADGE_DATA_DIR, DATABASE_FILE_NAME),
     port: vars.BADGE_ENCLAVE_PORT,
@@ -61,5 +70,6 @@ export function loadEnclaveConfig(
     seedFile: vars.BADGE_SEED_FILE,
     dstackEndpoint: inCvm ? undefined : (vars.DSTACK_SIMULATOR_ENDPOINT ?? DEFAULT_DSTACK_SIMULATOR_ENDPOINT),
     simulated: !inCvm,
+    requireChannel,
   };
 }

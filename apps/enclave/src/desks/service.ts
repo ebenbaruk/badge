@@ -15,18 +15,18 @@ import {
   verifyBadgeSignature,
   type DeskShare,
 } from "@badge/consent";
+import { sealToPublicKey } from "@badge/attest";
+import type { ConsentListWire, Desk as DeskWire, DeskRequest, DeskShareDecision } from "@badge/client";
 import {
   decodeDeskProof,
   deskGroupRoot,
   encodeDeskProof,
   verifyDeskProof,
-  type DeskProofWire,
   type NullifierRegistry,
 } from "@badge/zk";
-import { hexToBytes, stringToBytes, type Hex } from "viem";
+import type { Hex } from "viem";
 import { z } from "zod";
-import type { Sealer } from "../audit";
-import { nowSeconds } from "../clock";
+import { msToUnixSeconds, nowSeconds } from "../clock";
 import { NonceRepository, transaction } from "../db";
 import type { Desk, ExchangeRule } from "../directory";
 import { EnclaveError } from "../errors";
@@ -53,45 +53,23 @@ export const CreateDeskRequestSchema = z.strictObject({
 });
 export type CreateDeskRequestInput = z.infer<typeof CreateDeskRequestSchema>;
 
-export type DeskRequestStatus = "waiting_share" | "delivered" | "no_match" | "declined";
+export type DeskRequestStatus = DeskRequest["status"];
+/** A pending desk share as listed by GET /v1/consents (signed message in its JSON wire form). */
+export type DeskShareConsentWire = Extract<ConsentListWire["consents"][number], { kind: "DeskShare" }>;
 
-export interface DeskView {
-  readonly id: string;
-  readonly name: string;
-  /** Registered identities (the anonymity set). */
-  readonly members: number;
-  readonly commitments: string[];
-  /** Merkle root as a decimal string, null while nobody joined. */
-  readonly root: string | null;
-}
-
-export interface DeskDelivery {
-  readonly excerpt: string;
+/** What the compliance officer reads once she opens the sealed signer of a desk share. */
+export interface SealedSignerIdentity {
+  readonly employeeId: string;
+  readonly address: Hex;
+  readonly signature: Hex;
+  readonly requestId: Hex;
   readonly excerptHash: Hex;
-  readonly proof: DeskProofWire;
-  readonly sourceDesk: string;
-  readonly ruleLabel: string;
-}
-
-export interface DeskRequestView {
-  readonly id: Hex;
-  readonly status: DeskRequestStatus;
-  readonly ruleId: string;
-  readonly ruleLabel: string;
-  readonly fromDesk: string;
-  readonly sourceDesk: string;
-  readonly deliveries: DeskDelivery[];
-}
-
-export interface PendingDeskShareView {
-  readonly offer: DeskOfferRow;
-  readonly message: DeskShare;
+  readonly nullifier: string;
 }
 
 export interface DeskServiceDeps {
   readonly ctx: DomainContext;
   readonly memory: MemoryStore;
-  readonly sealer: Sealer;
   readonly nullifiers: NullifierRegistry;
 }
 
@@ -123,7 +101,7 @@ export class DeskService {
   }
 
   /** GET /v1/desks/:desk: what a member needs to build their proof. */
-  getDesk(deskId: string): DeskView {
+  getDesk(deskId: string): DeskWire {
     const desk = this.ctx.directory.requireDesk(deskId);
     const commitments = this.members.commitments(desk.id);
     return {
@@ -139,7 +117,7 @@ export class DeskService {
    * POST /v1/desks/join: registers the employee's anonymous identity commitment in a desk they belong to (per the
    * directory). The commitment is signed on the Ledger, so nobody can enroll an identity on someone's behalf.
    */
-  async join(caller: Caller, body: unknown): Promise<DeskView> {
+  async join(caller: Caller, body: unknown): Promise<DeskWire> {
     const { message, signature } = decodeSignedMessage(body, "DeskJoin");
     const employee = this.ctx.directory.requireEmployee(caller.employeeId);
     const address = this.ctx.directory.requireAddress(employee);
@@ -208,7 +186,7 @@ export class DeskService {
    * context matches the rule's topics, and prepares one DeskShare per owner. Owners who have not joined the source
    * desk are skipped: they could not prove membership.
    */
-  async createRequest(caller: Caller, input: CreateDeskRequestInput): Promise<DeskRequestView> {
+  async createRequest(caller: Caller, input: CreateDeskRequestInput): Promise<DeskRequest> {
     const { directory } = this.ctx;
     const fromDesk = directory.requireDesk(input.fromDesk);
     if (!directory.isDeskMember(caller.employeeId, fromDesk.id)) {
@@ -289,12 +267,25 @@ export class DeskService {
     return this.getRequest(caller, requestId);
   }
 
-  /** Pending desk shares the caller is asked to sign. */
-  pendingShares(caller: Caller): PendingDeskShareView[] {
-    return this.requests.pendingForOwner(caller.employeeId).map((offer) => ({
-      offer,
-      message: decodeBadgeMessage("DeskShare", JSON.parse(offer.message)),
-    }));
+  /**
+   * Pending desk shares the caller is asked to sign, with their own excerpt in full (they cannot judge a request
+   * without reading what would leave). The requester is identified by desk only.
+   */
+  pendingShares(caller: Caller): DeskShareConsentWire[] {
+    return this.requests.pendingForOwner(caller.employeeId).map((offer) => {
+      const message = decodeBadgeMessage("DeskShare", JSON.parse(offer.message));
+      return {
+        kind: "DeskShare",
+        id: offer.request_id,
+        status: "pending",
+        recipientDesk: message.recipientDesk,
+        sourceDesk: message.sourceDesk,
+        ruleLabel: message.ruleLabel,
+        excerpt: { label: offer.label, length: offer.length, text: offer.text },
+        message: encodeBadgeMessage("DeskShare", message),
+        createdAt: msToUnixSeconds(offer.created_ms),
+      };
+    });
   }
 
   private requirePendingOffer(caller: Caller, requestId: Hex): DeskOfferRow {
@@ -315,7 +306,7 @@ export class DeskService {
     requestId: Hex,
     signature: Hex,
     proofJson: unknown,
-  ): Promise<{ requestId: Hex }> {
+  ): Promise<DeskShareDecision> {
     const offer = this.requirePendingOffer(caller, requestId);
     const request = this.requests.getRequest(requestId);
     if (!request) throw new Error(`desk offer references missing request ${requestId}`);
@@ -351,19 +342,16 @@ export class DeskService {
       { expectedRoot: root, expectedExcerptHash: message.excerptHash, expectedRequestId: request.id },
       this.deps.nullifiers,
     );
-    const sealedSigner = await this.deps.sealer.seal(
-      hexToBytes(complianceKey.public_key),
-      stringToBytes(
-        JSON.stringify({
-          employeeId: owner.id,
-          address,
-          signature,
-          requestId: request.id,
-          excerptHash: message.excerptHash,
-          nullifier: nullifier.toString(10),
-        }),
-      ),
-    );
+    const signer: SealedSignerIdentity = {
+      employeeId: owner.id,
+      address,
+      signature,
+      requestId: request.id,
+      excerptHash: message.excerptHash,
+      nullifier: nullifier.toString(10),
+    };
+    // Sealed to the officer's key: the enclave keeps no readable trace of who shared, the officer alone can open it.
+    const sealedSigner = sealToPublicKey(complianceKey.public_key, JSON.stringify(signer));
     const nowMs = this.nowMs();
     transaction(this.ctx.db, () => {
       if (!this.requests.deliver(offer.id, JSON.stringify(encodeDeskProof(proof)), nullifier, nowMs)) {
@@ -386,11 +374,11 @@ export class DeskService {
         },
       });
     });
-    return { requestId: request.id };
+    return { requestId: request.id, status: "delivered" };
   }
 
   /** POST /v1/desk-requests/:id/reject: declining needs no signature and is not logged with the owner's name. */
-  reject(caller: Caller, requestId: Hex): { requestId: Hex; status: "rejected" } {
+  reject(caller: Caller, requestId: Hex): DeskShareDecision {
     const offer = this.requirePendingOffer(caller, requestId);
     if (!this.requests.reject(offer.id, this.nowMs())) {
       throw new EnclaveError("NOT_PENDING", "desk share was decided concurrently");
@@ -399,7 +387,7 @@ export class DeskService {
   }
 
   /** GET /v1/desk-requests/:id (requester only): anonymous deliveries, never the owners. */
-  getRequest(caller: Caller, requestId: Hex): DeskRequestView {
+  getRequest(caller: Caller, requestId: Hex): DeskRequest {
     const request = this.requests.getRequest(requestId);
     if (!request || request.requester_id !== caller.employeeId) {
       throw new EnclaveError("NOT_FOUND", `no desk request ${requestId}`);
@@ -431,9 +419,8 @@ export class DeskService {
           excerpt: o.text,
           excerptHash: o.excerpt_hash,
           proof: encodeDeskProof(decodeDeskProof(JSON.parse(o.proof ?? "null"))),
-          sourceDesk: sourceDesk.id,
-          ruleLabel: rule.label,
         })),
+      createdAt: msToUnixSeconds(request.created_ms),
     };
   }
 }

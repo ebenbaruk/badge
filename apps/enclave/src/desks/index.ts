@@ -11,10 +11,8 @@ export {
   DESK_SHARE_TTL_SECONDS,
   DeskService,
   type CreateDeskRequestInput,
-  type DeskDelivery,
   type DeskRequestStatus,
-  type DeskRequestView,
   type DeskServiceDeps,
-  type DeskView,
-  type PendingDeskShareView,
+  type DeskShareConsentWire,
+  type SealedSignerIdentity,
 } from "./service";

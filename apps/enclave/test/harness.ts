@@ -1,20 +1,22 @@
 /**
- * In-process enclave for tests: in-memory SQLite, the real directory and notes of the demo dataset (with test
- * Ledger keys instead of the Speculos addresses), and fakes for memory, LLM, sealing and key rotation.
+ * In-process enclave for tests: the real app (security layer + domain routes) on an in-memory SQLite, the real
+ * directory and notes of the demo dataset (with test Ledger keys instead of the Speculos addresses), a fake dstack
+ * agent, and fakes for memory and LLM.
  */
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
+import { complianceKeyDeriveMessage, complianceKeyFromSignature } from "@badge/attest";
+import type { DstackAgent } from "@badge/attest/server";
 import {
   badgeTypedData,
   encodeSignedMessage,
   type BadgeMessageKind,
   type BadgeMessages,
 } from "@badge/consent";
-import type { MiddlewareHandler } from "hono";
-import { isAddress, keccak256, stringToHex, type Hex, type TypedDataDefinition } from "viem";
+import { keccak256, stringToHex, type Hex, type TypedDataDefinition } from "viem";
 import { privateKeyToAccount, type PrivateKeyAccount } from "viem/accounts";
 import type { z } from "zod";
-import { createApp, createServices, prepareEnclaveState, type EnclaveServices } from "../src/api";
-import type { SealedBlob, Sealer } from "../src/audit";
+import { createEnclaveApp, type EnclaveApp, type EnclaveServices } from "../src/api";
 import type { Clock } from "../src/clock";
 import { IN_MEMORY_DATABASE, openDatabase } from "../src/db";
 import { SqliteNullifierRegistry } from "../src/desks";
@@ -27,15 +29,11 @@ import {
   type FindCandidatesOptions,
   type MemoryStore,
 } from "../src/memory/types";
-import type { KeyRotator } from "../src/policy";
-import { SessionRepository } from "../src/policy/repository";
-import type { BadgeEnv } from "../src/security/types";
 
 export const MEASUREMENT: Hex = `0x${"5a".repeat(32)}`;
 export const OTHER_MEASUREMENT: Hex = `0x${"66".repeat(32)}`;
 /** 2026-10-08 08:00 UTC: a fixed clock keeps expiries deterministic. */
 export const START = new Date("2026-10-08T08:00:00Z");
-export const SESSION_HEADER = "x-test-session";
 
 function testKey(name: string): PrivateKeyAccount {
   return privateKeyToAccount(keccak256(stringToHex(`badge-enclave-test:${name}`)));
@@ -114,21 +112,23 @@ export class FakeLlm implements LlmClient {
   }
 }
 
-/** Sealer fake: "seals" by hex-encoding, so tests can check what the compliance officer would read. */
-export class FakeSealer implements Sealer {
-  readonly calls: Array<{ publicKey: Uint8Array; plaintext: string }> = [];
+/**
+ * dstack agent fake: a fixed compose hash (so the measurement is {@link MEASUREMENT}) and deterministic keys. No
+ * quotes: in-process tests use the plain transport (the attested channel has its own simulator test).
+ */
+export class FakeDstack implements DstackAgent {
+  constructor(private readonly composeHash: string) {}
 
-  seal(publicKey: Uint8Array, plaintext: Uint8Array): SealedBlob {
-    const text = new TextDecoder().decode(plaintext);
-    this.calls.push({ publicKey, plaintext: text });
-    return { alg: "test-x25519", ciphertext: Buffer.from(text).toString("hex") };
+  async info() {
+    return { app_id: "badge-test", compose_hash: this.composeHash, tcb_info: { app_compose: "{}" } };
   }
-}
 
-export class FakeKeyRotator implements KeyRotator {
-  readonly rotated: string[] = [];
-  async rotateOwnerKey(employeeId: string): Promise<void> {
-    this.rotated.push(employeeId);
+  async getKey(path: string) {
+    return { key: new Uint8Array(createHash("sha256").update(`test-kms:${path}`).digest()) };
+  }
+
+  async getQuote(): Promise<never> {
+    throw new Error("FakeDstack has no quotes: use the dstack simulator for channel tests");
   }
 }
 
@@ -147,26 +147,12 @@ export function seedNotes(): InventoryNote[] {
   return loadSeedDataset().notes;
 }
 
-/** Test-only authentication: the session key in a header, looked up like the real middleware does. */
-export function headerAuth(sessions: SessionRepository, clock: Clock): MiddlewareHandler<BadgeEnv> {
-  return async (c, next) => {
-    const key = c.req.header(SESSION_HEADER);
-    const caller = key && isAddress(key) ? sessions.findActiveCaller(key, clock.now().getTime()) : undefined;
-    if (!caller) return c.json({ error: { code: "UNAUTHENTICATED", message: "no valid session" } }, 401);
-    c.set("caller", caller);
-    await next();
-  };
-}
-
-export interface Harness {
-  readonly app: ReturnType<typeof createApp>;
-  readonly services: EnclaveServices;
+export interface Harness extends EnclaveApp {
   readonly clock: TestClock;
   readonly llm: FakeLlm;
-  readonly sealer: FakeSealer;
-  readonly keyRotator: FakeKeyRotator;
   readonly nullifiers: SqliteNullifierRegistry;
   readonly notes: InventoryNote[];
+  readonly services: EnclaveServices;
 }
 
 export async function createHarness(
@@ -176,26 +162,27 @@ export async function createHarness(
   const clock = new TestClock();
   const notes = options.notes ?? seedNotes();
   const llm = new FakeLlm();
-  const sealer = new FakeSealer();
-  const keyRotator = new FakeKeyRotator();
   const nullifiers = new SqliteNullifierRegistry(db, () => clock.now().getTime());
-  const deps = {
+  const enclave = await createEnclaveApp({
     db,
     directory: testDirectory(),
     inventory: new ContextInventory(notes),
     memory: new FakeMemory(notes),
     llm,
     clock,
-    enclaveIdentity: { measurement: options.measurement ?? MEASUREMENT },
-    sealer,
-    keyRotator,
-    authenticate: headerAuth(new SessionRepository(db), clock),
+    dstack: new FakeDstack((options.measurement ?? MEASUREMENT).slice(2)),
+    requireChannel: false,
     countTokens: (text: string) => Math.ceil(text.length / 4),
     nullifiers,
-  };
-  const services = createServices(deps);
-  await prepareEnclaveState(services);
-  return { app: createApp(deps, services), services, clock, llm, sealer, keyRotator, nullifiers, notes };
+  });
+  return { ...enclave, clock, llm, nullifiers, notes };
+}
+
+/** Chloe's compliance key pair, derived from her (test) Ledger exactly like the real one. */
+export async function complianceKeyPair(): Promise<{ secretKey: Uint8Array; publicKey: string }> {
+  const signature = await ledgers.chloe.signMessage({ message: complianceKeyDeriveMessage("Acme") });
+  const { secretKey, publicKey } = complianceKeyFromSignature(signature);
+  return { secretKey, publicKey: Buffer.from(publicKey).toString("hex") };
 }
 
 /** Signs a Badge message like the Ledger would and returns its JSON wire form. */

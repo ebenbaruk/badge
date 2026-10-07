@@ -1,10 +1,16 @@
 /**
- * The enclave's HTTP API (Hono), exactly as described in docs/enclave-api.md. `createApp` is pure: every
- * dependency is injected, so the whole API runs in-process in tests (app.request) and behind the attested channel
- * in production (the channel dispatches decrypted requests to this same app).
+ * The enclave's HTTP API (Hono), exactly as described in docs/enclave-api.md. Every dependency is injected, so the
+ * whole API runs in-process in tests (app.request) and behind the attested channel in production (the channel
+ * dispatches decrypted requests to this same app).
+ *
+ * Layering: the security layer (src/security) is mounted first and owns everything about the transport and the
+ * caller (attested channel, request signatures, replay, body limits, the measurement route); the domain routes
+ * registered after it only ever see authenticated requests (`c.var.caller`), except the self-authenticating ones.
  */
-import { Hono, type MiddlewareHandler } from "hono";
-import { bodyLimit } from "hono/body-limit";
+import { Hono } from "hono";
+import type { Hex } from "viem";
+import { SessionRepository } from "../policy";
+import { mountSecurityRoutes, type SecurityHandle, type SessionResolver } from "../security";
 import type { BadgeEnv } from "../security/types";
 import { toErrorResponse } from "./errors";
 import { registerComplianceRoutes } from "./routes/compliance";
@@ -12,33 +18,28 @@ import { registerConsentRoutes } from "./routes/consents";
 import { registerDeskRoutes } from "./routes/desks";
 import { registerMeRoute, registerPublicRoutes } from "./routes/identity";
 import { registerTaskRoutes } from "./routes/tasks";
-import { createServices, type AppDeps, type EnclaveServices } from "./services";
-
-/** Largest accepted request body. A desk proof plus signature is ~2 KB; tasks are capped at 2,000 characters. */
-export const MAX_BODY_BYTES = 64 * 1024;
-
-/** Routes under /v1 that authenticate themselves (by Ledger signature or attestation), not by session. */
-export const PUBLIC_API_PATHS: ReadonlySet<string> = new Set([
-  "/v1/enroll",
-  "/v1/sessions",
-  "/v1/attestation/measurement",
-]);
-/** The attested channel (src/security) carries its own handshake; requests it unwraps are authenticated inside. */
-export const CHANNEL_PATH_PREFIX = "/v1/channel/";
+import { createServices, prepareEnclaveState, type AppDeps, type EnclaveServices } from "./services";
 
 function defaultUnexpectedErrorLogger(error: unknown): void {
   // Name only: an unexpected error message could quote internal data (excerpt text, model output).
   console.error(`[enclave] unexpected ${error instanceof Error ? error.name : typeof error}`);
 }
 
+export interface EnclaveApp {
+  readonly app: Hono<BadgeEnv>;
+  readonly services: EnclaveServices;
+  readonly security: SecurityHandle;
+  /** The bytes32 every signed message must carry (compose hash read from dstack). */
+  readonly measurement: Hex;
+}
+
 /**
- * Builds the API. Pass `services` to share them with boot code (e.g. {@link prepareEnclaveState}); by default they
- * are created from `deps`.
+ * Builds the API: security layer, then domain routes. Async because the measurement the domain checks signed
+ * messages against is read from dstack first (fails here, at boot, rather than on the first request).
  */
-export function createApp(deps: AppDeps, services: EnclaveServices = createServices(deps)): Hono<BadgeEnv> {
+export async function createEnclaveApp(deps: AppDeps): Promise<EnclaveApp> {
   const app = new Hono<BadgeEnv>();
   const onUnexpected = deps.onUnexpectedError ?? defaultUnexpectedErrorLogger;
-
   app.onError((error, c) => {
     const { status, body } = toErrorResponse(error);
     if (status >= 500 && body.error.code === "INTERNAL") onUnexpected(error);
@@ -48,22 +49,20 @@ export function createApp(deps: AppDeps, services: EnclaveServices = createServi
     c.json({ error: { code: "NOT_FOUND", message: `no route ${c.req.method} ${c.req.path}` } }, 404),
   );
 
-  app.use(
-    "*",
-    bodyLimit({
-      maxSize: MAX_BODY_BYTES,
-      onError: (c) =>
-        c.json({ error: { code: "BODY_TOO_LARGE", message: `body exceeds ${MAX_BODY_BYTES} bytes` } }, 413),
-    }),
-  );
-  // One middleware with an explicit allow-list rather than per-route registration: a new route is authenticated by
-  // default, and the authenticator never runs twice on one request (its replay cache would reject the second run).
-  const authenticate: MiddlewareHandler<BadgeEnv> = async (c, next) => {
-    const path = c.req.path;
-    if (PUBLIC_API_PATHS.has(path) || path.startsWith(CHANNEL_PATH_PREFIX)) return next();
-    return deps.authenticate(c, next);
+  const sessionRepository = new SessionRepository(deps.db);
+  const sessions: SessionResolver = {
+    resolve: async (sessionKey) =>
+      sessionRepository.findActiveCaller(sessionKey, deps.clock.now().getTime()) ?? null,
   };
-  app.use("/v1/*", authenticate);
+  const security = mountSecurityRoutes(app, {
+    dstack: deps.dstack,
+    sessions,
+    clock: { now: () => deps.clock.now().getTime() },
+    requireChannel: deps.requireChannel,
+  });
+  const { measurement } = await security.identity.read();
+  const services = createServices(deps, { measurement });
+  await prepareEnclaveState(services);
 
   registerPublicRoutes(app, services);
   registerMeRoute(app, services);
@@ -71,5 +70,5 @@ export function createApp(deps: AppDeps, services: EnclaveServices = createServi
   registerConsentRoutes(app, services);
   registerDeskRoutes(app, services);
   registerComplianceRoutes(app, services);
-  return app;
+  return { app, services, security, measurement };
 }

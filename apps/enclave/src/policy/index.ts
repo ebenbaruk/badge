@@ -2,10 +2,11 @@ export {
   ENROLL_MAX_AGE_SECONDS,
   PolicyEngine,
   SESSION_MAX_TTL_SECONDS,
+  type ContextShareConsentWire,
   type DomainContext,
-  type PendingConsentView,
 } from "./engine";
-export type { EnclaveIdentity, KeyRotator } from "./ports";
+export { SqliteKeyVersionStore } from "./key-versions";
+export type { EnclaveMeasurement, OwnerKeyRotator } from "./ports";
 export {
   ConsentRequestRepository,
   EnrollmentRepository,

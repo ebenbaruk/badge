@@ -1,15 +1,16 @@
 import type { Hex } from "viem";
 
-/** What the enclave knows about itself: the measurement every signed message must be pinned to. */
-export interface EnclaveIdentity {
+/** The measurement every signed message must be pinned to (read once from dstack by the security layer). */
+export interface EnclaveMeasurement {
   /** Compose hash of the running deployment as bytes32 (`enclaveMeasurementFrom`, @badge/attest). */
   readonly measurement: Hex;
 }
 
 /**
- * Rotates the data-encryption key of one owner's personal context (keys module, src/security). Called on every
+ * Rotates the data-encryption key of one owner's personal context (`KeyRotator` of src/security). Called on every
  * revocation, so that anything derived from the old key (caches, sealed copies) becomes unreadable.
  */
-export interface KeyRotator {
-  rotateOwnerKey(employeeId: string): Promise<void>;
+export interface OwnerKeyRotator {
+  /** Moves the owner to a new key version and returns it. */
+  rotate(employeeId: string): Promise<number>;
 }

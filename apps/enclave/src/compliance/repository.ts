@@ -1,12 +1,11 @@
-import type { Hex } from "viem";
 import { z } from "zod";
 import { parseRow, type Database } from "../db";
 
 const ComplianceKeyRowSchema = z.object({
   id: z.number().int(),
   employee_id: z.string(),
-  public_key: z.custom<Hex>((value) => typeof value === "string" && /^0x[0-9a-f]{64}$/.test(value)),
-  issued_s: z.number().int(),
+  /** X25519 public key, lowercase hex without prefix. */
+  public_key: z.string().regex(/^[0-9a-f]{64}$/),
   registered_ms: z.number().int(),
 });
 export type ComplianceKeyRow = z.infer<typeof ComplianceKeyRowSchema>;
@@ -15,25 +14,37 @@ export type ComplianceKeyRow = z.infer<typeof ComplianceKeyRowSchema>;
 export class ComplianceKeyRepository {
   constructor(private readonly db: Database) {}
 
-  /** Returns the new key id. */
+  /** Returns the stored row. */
   insert(row: {
     employeeId: string;
-    publicKey: Hex;
-    issuedAt: number;
-    signature: Hex;
+    publicKey: string;
+    signature: `0x${string}`;
     nowMs: number;
-  }): number {
+  }): ComplianceKeyRow {
     const result = this.db
       .prepare(
-        "INSERT INTO compliance_keys (employee_id, public_key, issued_s, signature, registered_ms) VALUES (?, ?, ?, ?, ?)",
+        "INSERT INTO compliance_keys (employee_id, public_key, signature, registered_ms) VALUES (?, ?, ?, ?)",
       )
-      .run(row.employeeId, row.publicKey.toLowerCase(), row.issuedAt, row.signature, row.nowMs);
-    return Number(result.lastInsertRowid);
+      .run(row.employeeId, row.publicKey, row.signature, row.nowMs);
+    return {
+      id: Number(result.lastInsertRowid),
+      employee_id: row.employeeId,
+      public_key: row.publicKey,
+      registered_ms: row.nowMs,
+    };
   }
 
   /** The current sealing key, or undefined before the compliance officer registered one. */
   latest(): ComplianceKeyRow | undefined {
     const row = this.db.prepare("SELECT * FROM compliance_keys ORDER BY id DESC LIMIT 1").get();
     return row ? parseRow(ComplianceKeyRowSchema, row) : undefined;
+  }
+
+  /** True when `publicKey` was ever registered (current or replaced). */
+  wasRegistered(publicKey: string): boolean {
+    return (
+      this.db.prepare("SELECT 1 AS one FROM compliance_keys WHERE public_key = ?").get(publicKey) !==
+      undefined
+    );
   }
 }

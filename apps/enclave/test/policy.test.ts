@@ -190,7 +190,7 @@ describe("one-off consents", () => {
     const { grantId } = (
       await call(h, "POST", `/v1/consents/${share.id}/approve`, { as: "bob", body: { signature } })
     ).json;
-    expect((await orionTask(h)).allowed.some((e: { basis: string }) => e.basis === "grant")).toBe(true);
+    expect((await orionTask(h)).allowed.some((e: { via: string }) => e.via === "grant_reused")).toBe(true);
 
     const revokeBody = async (owner: typeof ledgers.bob, id: Hex) =>
       signedWire(owner, "ContextRevoke", {
@@ -216,9 +216,9 @@ describe("one-off consents", () => {
       as: "bob",
       body: await revokeBody(ledgers.bob, grantId),
     });
-    expect(revoked.json.grantsRevoked).toBe(1);
+    expect(revoked.json.revokedGrants).toBe(1);
     const next = await orionTask(h);
-    expect(next.allowed.some((e: { basis: string }) => e.basis === "grant")).toBe(false);
+    expect(next.allowed.some((e: { via: string }) => e.via === "grant_reused")).toBe(false);
     expect(next.status).toBe("waiting_consent");
   });
 
@@ -235,7 +235,7 @@ describe("one-off consents", () => {
       }),
     });
     expect(response.json.error.code).toBe("INVALID_REQUEST");
-    expect(h.keyRotator.rotated).toEqual([]);
+    expect(await h.services.keys.currentVersion("bob")).toBe(1);
   });
 });
 
@@ -247,7 +247,7 @@ describe("standing policies", () => {
   });
 
   const policyBases = async () =>
-    (await orionTask(h)).allowed.filter((e: { basis: string }) => e.basis === "policy").length;
+    (await orionTask(h)).allowed.filter((e: { via: string }) => e.via === "policy").length;
 
   it("refuses a policy pinned to another enclave, signed by another key, or posted by someone else", async () => {
     expect((await postPolicy(h, policy(h, { enclaveMeasurement: OTHER_MEASUREMENT }))).json.error.code).toBe(
@@ -287,18 +287,18 @@ describe("standing policies", () => {
       body: await signedWire(ledgers.bob, "ContextRevoke", {
         targetLabel: "Accord Ventes",
         issuedAt: nowSec(h),
-        grantId: second.policyId,
+        grantId: second.id,
         recipient: ledgers.alice.address,
         owner: ledgers.bob.address,
         nonce: nextNonce(),
       }),
     });
-    expect(revoke.json.policiesRevoked).toBe(1);
+    expect(revoke.json.revokedPolicies).toBe(1);
     expect(await policyBases()).toBe(0);
     const listed = (await call(h, "GET", "/v1/policies", { as: "bob" })).json.policies;
-    expect(listed.map((p: { id: string; active: boolean }) => [p.id, p.active])).toEqual([
-      [created.policyId, false],
-      [second.policyId, false],
+    expect(listed.map((p: { id: string; status: string }) => [p.id, p.status])).toEqual([
+      [created.id, "expired"],
+      [second.id, "revoked"],
     ]);
   });
 });

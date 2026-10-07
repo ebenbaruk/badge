@@ -9,4 +9,3 @@ export {
   type AuditEntry,
   type ChainVerification,
 } from "./log";
-export type { SealedBlob, Sealer } from "./sealer";

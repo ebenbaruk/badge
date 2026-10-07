@@ -5,7 +5,6 @@ import {
   BADGE_DOMAIN,
   BADGE_TYPES,
   badgeTypedData,
-  complianceKeyMessage,
   deskIdentityDeriveMessage,
   excerptLength,
   hashBadgeMessage,
@@ -92,15 +91,5 @@ describe("deskIdentityDeriveMessage", () => {
     for (const line of deskIdentityDeriveMessage("Société Générale").split("\n")) {
       expect(isDeviceAscii(line), line).toBe(true);
     }
-  });
-});
-
-describe("complianceKeyMessage", () => {
-  it("is device ASCII per line and binds key and date", () => {
-    const key = `0x${"AB".repeat(32)}`;
-    const message = complianceKeyMessage("Société Générale", key, 1_791_900_000n);
-    for (const line of message.split("\n")) expect(isDeviceAscii(line), line).toBe(true);
-    expect(message).toContain(key.toLowerCase());
-    expect(message).not.toBe(complianceKeyMessage("Société Générale", key, 1_791_900_001n));
   });
 });

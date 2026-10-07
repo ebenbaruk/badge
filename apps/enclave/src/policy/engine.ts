@@ -6,6 +6,15 @@
  * Pattern of every operation: decode -> async signature check -> sync checks -> one transaction (nonce consumed,
  * effect applied, audit appended). Any failure throws before the transaction commits: the engine fails closed.
  */
+import type {
+  ConsentDecision,
+  ConsentListWire,
+  EnrollResponse,
+  Grant,
+  Policy,
+  RevocationResult,
+  Session,
+} from "@badge/client";
 import {
   checkAgentSession,
   checkContextPolicy,
@@ -18,17 +27,16 @@ import {
   hashBadgeMessage,
   toDeviceAscii,
   verifyBadgeSignature,
-  type ContextShare,
 } from "@badge/consent";
 import { getAddress, isAddressEqual, zeroAddress, zeroHash, type Address, type Hex } from "viem";
 import type { AuditLog } from "../audit";
-import { nowSeconds, secondsToMs, type Clock } from "../clock";
+import { msToUnixSeconds, nowSeconds, secondsToMs, type Clock } from "../clock";
 import { transaction, type Database, NonceRepository } from "../db";
 import type { Directory, Employee } from "../directory";
 import { EnclaveError } from "../errors";
 import type { Caller } from "../security/types";
 import { TaskRepository, type ExcerptRow } from "../tasks/repository";
-import type { EnclaveIdentity, KeyRotator } from "./ports";
+import type { EnclaveMeasurement, OwnerKeyRotator } from "./ports";
 import {
   ConsentRequestRepository,
   EnrollmentRepository,
@@ -41,6 +49,9 @@ import {
   type PolicyRow,
 } from "./repository";
 
+/** A pending one-off share as listed by GET /v1/consents (signed message in its JSON wire form). */
+export type ContextShareConsentWire = Extract<ConsentListWire["consents"][number], { kind: "ContextShare" }>;
+
 /** The contract requires a fresh enrollment: stricter than the 1-day horizon @badge/consent allows. */
 export const ENROLL_MAX_AGE_SECONDS = 10n * 60n;
 /** An agent session lives at most one working day (the consent package allows up to 7 days). */
@@ -52,13 +63,7 @@ export interface DomainContext {
   readonly directory: Directory;
   readonly audit: AuditLog;
   readonly clock: Clock;
-  readonly enclave: EnclaveIdentity;
-}
-
-export interface PendingConsentView {
-  readonly row: ConsentRow;
-  readonly message: ContextShare;
-  readonly excerpt: ExcerptRow;
+  readonly enclave: EnclaveMeasurement;
 }
 
 export class PolicyEngine {
@@ -73,7 +78,7 @@ export class PolicyEngine {
 
   constructor(
     private readonly ctx: DomainContext,
-    private readonly keyRotator: KeyRotator,
+    private readonly keyRotator: OwnerKeyRotator,
   ) {
     this.nonces = new NonceRepository(ctx.db);
     this.enrollments = new EnrollmentRepository(ctx.db);
@@ -112,7 +117,7 @@ export class PolicyEngine {
    * POST /v1/enroll: binds a directory employee to their Ledger. The message must repeat the directory identity
    * exactly as the device showed it, be signed by the directory address, fresh, and pinned to this enclave.
    */
-  async enroll(body: unknown): Promise<{ employeeId: string }> {
+  async enroll(body: unknown): Promise<EnrollResponse> {
     const { message, signature } = decodeSignedMessage(body, "EmployeeEnroll");
     const employee = this.employeeAt(message.employee);
     const { directory } = this.ctx;
@@ -140,11 +145,11 @@ export class PolicyEngine {
         data: { address: employee.address },
       });
     });
-    return { employeeId: employee.id };
+    return { employee: directory.profile(employee) };
   }
 
   /** POST /v1/sessions: registers an agent session key delegated by an enrolled employee's Ledger. */
-  async openSession(body: unknown): Promise<{ employeeId: string; sessionKey: Address; expiresAt: string }> {
+  async openSession(body: unknown): Promise<Session> {
     const { message, signature } = decodeSignedMessage(body, "AgentSession");
     const employee = this.employeeAt(message.employee);
     if (!this.enrollments.isEnrolled(employee.id)) {
@@ -182,7 +187,12 @@ export class PolicyEngine {
         data: { sessionKey, agentName: message.agentName, expiresAt: message.expiresAt.toString() },
       });
     });
-    return { employeeId: employee.id, sessionKey, expiresAt: message.expiresAt.toString() };
+    return {
+      sessionKey,
+      employeeId: employee.id,
+      agentName: message.agentName,
+      expiresAt: Number(message.expiresAt),
+    };
   }
 
   /** An active one-off grant of this exact excerpt, if any (a grant is reusable until it expires or is revoked). */
@@ -210,14 +220,32 @@ export class PolicyEngine {
     return undefined;
   }
 
-  /** Pending consent requests addressed to the caller, with the exact message to sign and the excerpt. */
-  pendingConsents(caller: Caller): PendingConsentView[] {
+  /**
+   * Pending consent requests addressed to the caller, with the exact message to sign and the risk flags. The owner
+   * sees their own excerpt in full: they cannot judge a request without reading what would leave.
+   */
+  pendingConsents(caller: Caller): ContextShareConsentWire[] {
     this.expirePending(caller.employeeId);
-    return this.consents.pendingForOwner(caller.employeeId).map((row) => ({
-      row,
-      message: decodeBadgeMessage("ContextShare", JSON.parse(row.message)),
-      excerpt: this.requireExcerpt(row.task_excerpt_id),
-    }));
+    return this.consents.pendingForOwner(caller.employeeId).map((row) => {
+      const excerpt = this.requireExcerpt(row.task_excerpt_id);
+      const message = decodeBadgeMessage("ContextShare", JSON.parse(row.message));
+      return {
+        kind: "ContextShare",
+        id: row.id,
+        status: "pending",
+        taskId: row.task_id,
+        requester: this.ctx.directory.person(row.recipient_id),
+        excerpt: {
+          label: excerpt.label,
+          length: excerpt.length,
+          text: excerpt.text,
+          tags: [...excerpt.tags],
+        },
+        message: encodeBadgeMessage("ContextShare", message),
+        risk: { level: excerpt.risk, reasons: [...excerpt.risk_reasons] },
+        createdAt: msToUnixSeconds(row.created_ms),
+      };
+    });
   }
 
   /** Marks the owner's pending requests whose signed message would already be expired. */
@@ -256,11 +284,7 @@ export class PolicyEngine {
    * POST /v1/consents/:id/approve: the owner's Ledger signature of the prepared ContextShare turns the request into
    * a grant (id = EIP-712 digest), after checking it against the exact excerpt text stored for the task.
    */
-  async approveConsent(
-    caller: Caller,
-    consentId: Hex,
-    signature: Hex,
-  ): Promise<{ consentId: Hex; grantId: Hex }> {
+  async approveConsent(caller: Caller, consentId: Hex, signature: Hex): Promise<ConsentDecision> {
     const row = this.requirePendingConsent(caller, consentId);
     const message = decodeBadgeMessage("ContextShare", JSON.parse(row.message));
     const owner = this.ctx.directory.requireEmployee(row.owner_id);
@@ -295,11 +319,11 @@ export class PolicyEngine {
         data: { consentId: row.id, grantId, excerptHash: message.excerptHash },
       });
     });
-    return { consentId: row.id, grantId };
+    return { consentId: row.id, status: "approved", grantId };
   }
 
   /** POST /v1/consents/:id/reject: no signature needed, refusing can only reduce access. */
-  rejectConsent(caller: Caller, consentId: Hex): { consentId: Hex; status: "rejected" } {
+  rejectConsent(caller: Caller, consentId: Hex): ConsentDecision {
     const row = this.requirePendingConsent(caller, consentId);
     const excerpt = this.requireExcerpt(row.task_excerpt_id);
     const nowMs = this.nowMs();
@@ -315,19 +339,27 @@ export class PolicyEngine {
         data: { consentId: row.id, excerptHash: excerpt.excerpt_hash },
       });
     });
-    return { consentId: row.id, status: "rejected" };
+    return { consentId: row.id, status: "rejected", grantId: null };
   }
 
   /** Active one-off grants the caller gave (what they can revoke). */
-  activeGrants(caller: Caller): Array<{ grant: GrantRow; message: ContextShare }> {
-    return this.grants.activeByOwner(caller.employeeId, this.nowMs()).map((grant) => ({
-      grant,
-      message: decodeBadgeMessage("ContextShare", JSON.parse(grant.message)),
-    }));
+  activeGrants(caller: Caller): Grant[] {
+    return this.grants.activeByOwner(caller.employeeId, this.nowMs()).map((grant) => {
+      const message = decodeBadgeMessage("ContextShare", JSON.parse(grant.message));
+      return {
+        id: grant.id,
+        recipient: this.ctx.directory.person(grant.recipient_id),
+        excerptLabel: message.excerptLabel,
+        excerptLength: message.excerptLength,
+        taskLabel: message.taskLabel,
+        expiresAt: msToUnixSeconds(grant.expires_ms),
+        createdAt: msToUnixSeconds(grant.created_ms),
+      };
+    });
   }
 
   /** POST /v1/policies: registers a standing agreement signed on the owner's Ledger. */
-  async createPolicy(caller: Caller, body: unknown): Promise<{ policyId: Hex }> {
+  async createPolicy(caller: Caller, body: unknown): Promise<Policy> {
     const { message, signature } = decodeSignedMessage(body, "ContextPolicy");
     const owner = this.employeeAt(message.owner);
     this.assertCallerIs(caller, owner, "a policy");
@@ -366,15 +398,25 @@ export class PolicyEngine {
         },
       });
     });
-    return { policyId };
+    const created = this.listPolicies(caller).find((policy) => policy.id === policyId);
+    if (!created) throw new Error(`policy ${policyId} missing right after its creation`);
+    return created;
   }
 
   /** GET /v1/policies: the caller's standing agreements with their usage counts. */
-  listPolicies(caller: Caller): Array<PolicyRow & { uses: number; active: boolean }> {
+  listPolicies(caller: Caller): Policy[] {
     const nowMs = this.nowMs();
-    return this.policies
-      .byOwnerWithUsage(caller.employeeId)
-      .map((policy) => ({ ...policy, active: policy.revoked_ms === null && policy.expires_ms > nowMs }));
+    return this.policies.byOwnerWithUsage(caller.employeeId).map((policy) => ({
+      id: policy.id,
+      granteeTeam: policy.grantee_team,
+      contextTag: policy.context_tag,
+      purpose: policy.purpose,
+      maxExcerptLength: policy.max_excerpt_length,
+      expiresAt: msToUnixSeconds(policy.expires_ms),
+      createdAt: msToUnixSeconds(policy.created_ms),
+      status: policy.revoked_ms !== null ? "revoked" : policy.expires_ms <= nowMs ? "expired" : "active",
+      uses: policy.uses,
+    }));
   }
 
   /**
@@ -382,10 +424,7 @@ export class PolicyEngine {
    * (grantId = 0x0: their one-off grants and the policies granted to their team). The owner's data key is
    * rotated before the revocation is recorded, so a recorded revocation always comes with a rotated key.
    */
-  async revoke(
-    caller: Caller,
-    body: unknown,
-  ): Promise<{ revocationId: Hex; grantsRevoked: number; policiesRevoked: number }> {
+  async revoke(caller: Caller, body: unknown): Promise<RevocationResult> {
     const { message, signature } = decodeSignedMessage(body, "ContextRevoke");
     const owner = this.employeeAt(message.owner);
     this.assertCallerIs(caller, owner, "a revocation");
@@ -399,7 +438,7 @@ export class PolicyEngine {
     if (this.nonces.isUsed(owner.address, message.nonce)) {
       throw new EnclaveError("NONCE_REUSED", `nonce ${message.nonce} of ${owner.address} was already used`);
     }
-    await this.keyRotator.rotateOwnerKey(owner.id);
+    await this.keyRotator.rotate(owner.id);
     const revocationId = hashBadgeMessage("ContextRevoke", message);
     const nowMs = this.nowMs();
     return transaction(this.ctx.db, () => {
@@ -442,7 +481,7 @@ export class PolicyEngine {
           keyRotated: true,
         },
       });
-      return { revocationId, grantsRevoked, policiesRevoked };
+      return { revocationId, revokedGrants: grantsRevoked, revokedPolicies: policiesRevoked };
     });
   }
 }

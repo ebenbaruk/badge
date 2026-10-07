@@ -39,6 +39,8 @@ export const RISK_REASON_CODES = [
   "OWNER_RATE_HIGH",
   "OWNER_RATE_OVER_CAP",
   "FULL_CONTEXT_REQUEST",
+  /** Not a threshold rule: the owner has no Ledger, so no consent can ever be given (tasks/service.ts). */
+  "OWNER_CANNOT_CONSENT",
 ] as const;
 export type RiskReasonCode = (typeof RISK_REASON_CODES)[number];
 

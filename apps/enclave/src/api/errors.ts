@@ -11,6 +11,7 @@ import { ZodError, z } from "zod";
 import { EnclaveError, type EnclaveErrorCode } from "../errors";
 import { LlmOutputError, LlmRequestError } from "../llm/errors";
 import { BriefInputError, MemoryBackendError } from "../memory/errors";
+import { SecurityError } from "../security/errors";
 
 export interface ErrorBody {
   readonly error: { readonly code: string; readonly message: string };
@@ -76,6 +77,8 @@ export function toErrorResponse(error: unknown): { status: ContentfulStatusCode;
     return { status: CONSENT_STATUS[error.code], body: body(error.code, error.message) };
   if (error instanceof ZkError)
     return { status: ZK_STATUS[error.code], body: body(error.code, error.message) };
+  // Security refusals are normally answered by the security layer itself; this keeps the envelope if one escapes.
+  if (error instanceof SecurityError) return { status: error.status, body: body(error.code, error.message) };
   if (error instanceof ZodError) {
     return { status: 400, body: body("INVALID_REQUEST", z.prettifyError(error)) };
   }

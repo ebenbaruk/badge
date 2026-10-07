@@ -1,10 +1,10 @@
 export { ComplianceKeyRepository, type ComplianceKeyRow } from "./repository";
 export {
   AuditQuerySchema,
-  COMPLIANCE_KEY_MAX_AGE_SECONDS,
   ComplianceService,
   RegisterComplianceKeySchema,
   RevealNoticeSchema,
+  toAuditEntryWire,
   type RegisterComplianceKeyInput,
   type RevealNoticeInput,
 } from "./service";

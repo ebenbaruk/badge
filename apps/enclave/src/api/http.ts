@@ -34,8 +34,3 @@ export function idParam(c: Context<BadgeEnv>, name: string): Hex {
   }
   return value.toLowerCase() as Hex;
 }
-
-/** Unix milliseconds as an ISO date for the JSON responses. */
-export function iso(ms: number): string {
-  return new Date(ms).toISOString();
-}

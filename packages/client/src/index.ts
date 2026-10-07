@@ -8,6 +8,7 @@ export * from "./channel-wire";
 export {
   BadgeClient,
   type ApproveDeskRequestInput,
+  type AuditQuery,
   type BadgeClientOptions,
   type CreateDeskRequestInput,
   type CreateTaskInput,

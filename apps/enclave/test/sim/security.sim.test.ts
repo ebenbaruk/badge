@@ -59,6 +59,7 @@ function enclaveApp() {
       allowed: [],
       pending: [],
       blocked: [],
+      refused: [],
       brief: "brief",
       tokenStats: { selectedTokens: 10, allContextTokens: 100 },
       createdAt: 1,

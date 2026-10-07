@@ -3,7 +3,7 @@
  * no field where excerpt text could be written, only hashes, lengths, ids and our own reason codes.
  */
 import type { RiskReason } from "../policy/rules";
-import type { SealedBlob } from "./sealer";
+import type { SealedBox } from "@badge/attest";
 
 type Hex = `0x${string}`;
 
@@ -65,9 +65,9 @@ export interface AuditEventData {
     nullifier: string;
     complianceKeyId: number;
     /** Who signed, sealed to the compliance officer's key: unreadable by the enclave operator or the requester. */
-    sealedSigner: SealedBlob;
+    sealedSigner: SealedBox;
   };
-  "compliance.key": { keyId: number; publicKey: Hex; issuedAt: string };
+  "compliance.key": { keyId: number; publicKey: string };
   "compliance.reveal": { auditSeq: number; reason: string };
 }
 

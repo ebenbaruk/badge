@@ -25,6 +25,11 @@ const TaskRowSchema = z.object({
   created_ms: z.number().int(),
   brief: z.string().nullable(),
   brief_ms: z.number().int().nullable(),
+  /** Excerpt ids the cached brief was drafted from (JSON array), null before the first draft. */
+  brief_sources: z
+    .string()
+    .nullable()
+    .transform((json) => (json === null ? null : z.array(z.number().int()).parse(JSON.parse(json)))),
 });
 export type TaskRow = z.infer<typeof TaskRowSchema>;
 
@@ -104,8 +109,11 @@ export class TaskRepository {
     return row ? parseRow(TaskRowSchema, row) : undefined;
   }
 
-  setBrief(id: Hex, brief: string, nowMs: number): void {
-    this.db.prepare("UPDATE tasks SET brief = ?, brief_ms = ? WHERE id = ?").run(brief, nowMs, id);
+  /** Caches the brief with the excerpt ids it was drafted from. */
+  setBrief(id: Hex, brief: string, sourceExcerptIds: readonly number[], nowMs: number): void {
+    this.db
+      .prepare("UPDATE tasks SET brief = ?, brief_sources = ?, brief_ms = ? WHERE id = ?")
+      .run(brief, JSON.stringify(sourceExcerptIds), nowMs, id);
   }
 
   /** Inserts an excerpt and returns its row id. */

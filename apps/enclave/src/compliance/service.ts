@@ -1,29 +1,31 @@
 /**
  * Compliance officer features: registering the X25519 key that anonymous desk-share signers are sealed to, reading
- * the audit log with its chain verification, and logging a de-anonymisation. Opening a sealed identity happens in
- * the officer's browser, never in the enclave: the enclave cannot read what it sealed.
+ * the audit log with its chain verification, and logging a de-anonymisation. Opening a sealed identity happens on
+ * the officer's side, never in the enclave: the enclave cannot read what it sealed.
  */
-import { complianceKeyMessage, ConsentError, MAX_CLOCK_SKEW_SECONDS } from "@badge/consent";
+import { complianceKeyRegistrationMessage } from "@badge/attest";
+import type { AuditEntry as AuditEntryWire, AuditLog as AuditLogWire, ComplianceKey } from "@badge/client";
+import { ConsentError } from "@badge/consent";
 import { verifyMessage, type Hex } from "viem";
 import { z } from "zod";
-import type { AuditEntry, ChainVerification } from "../audit";
-import { nowSeconds } from "../clock";
+import type { AuditEntry } from "../audit";
+import { msToUnixSeconds } from "../clock";
 import { transaction } from "../db";
 import type { Employee } from "../directory";
 import { EnclaveError } from "../errors";
 import type { DomainContext } from "../policy/engine";
 import type { Caller } from "../security/types";
-import { ComplianceKeyRepository } from "./repository";
+import { ComplianceKeyRepository, type ComplianceKeyRow } from "./repository";
 
-/** A key registration must be submitted soon after it is signed. */
-export const COMPLIANCE_KEY_MAX_AGE_SECONDS = 10n * 60n;
-const X25519_PUBLIC_KEY_HEX = /^0x[0-9a-fA-F]{64}$/;
+const X25519_PUBLIC_KEY_HEX = /^(0x)?[0-9a-fA-F]{64}$/;
 const MAX_REVEAL_REASON_CHARS = 500;
 
 /** Body of POST /v1/compliance/key. */
 export const RegisterComplianceKeySchema = z.strictObject({
-  publicKey: z.string().regex(X25519_PUBLIC_KEY_HEX, "must be a 32-byte 0x-prefixed hex X25519 key"),
-  issuedAt: z.string().regex(/^[0-9]{1,12}$/, "unix seconds as a decimal string"),
+  publicKey: z
+    .string()
+    .regex(X25519_PUBLIC_KEY_HEX, "must be a 32-byte hex X25519 key")
+    .transform((key) => key.replace(/^0x/, "").toLowerCase()),
   signature: z.string().regex(/^0x[0-9a-fA-F]{130}$/, "must be a 65-byte hex signature"),
 });
 export type RegisterComplianceKeyInput = z.infer<typeof RegisterComplianceKeySchema>;
@@ -41,6 +43,20 @@ export const AuditQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).optional(),
 });
 
+/** An audit entry as the API returns it (unix seconds). */
+export function toAuditEntryWire(entry: AuditEntry): AuditEntryWire {
+  return { ...entry, ts: msToUnixSeconds(entry.ts), data: { ...entry.data } };
+}
+
+function toComplianceKeyWire(row: ComplianceKeyRow): ComplianceKey {
+  return {
+    keyId: row.id,
+    employeeId: row.employee_id,
+    publicKey: row.public_key,
+    registeredAt: msToUnixSeconds(row.registered_ms),
+  };
+}
+
 export class ComplianceService {
   private readonly keys: ComplianceKeyRepository;
 
@@ -56,59 +72,59 @@ export class ComplianceService {
   }
 
   /**
-   * POST /v1/compliance/key: the officer's Ledger signs (EIP-191) the key and its issue date. A registration must be
-   * fresh and newer than the current key, so an old signed registration cannot be replayed to restore an old key.
+   * POST /v1/compliance/key: the officer's Ledger signs (EIP-191) `complianceKeyRegistrationMessage`. The key is
+   * derived deterministically from her Ledger, so registering the current key again is a no-op; a key that was
+   * replaced can never become current again (an old signed registration replayed would otherwise restore it).
    */
-  async registerKey(caller: Caller, input: RegisterComplianceKeyInput): Promise<{ keyId: number }> {
+  async registerKey(caller: Caller, input: RegisterComplianceKeyInput): Promise<ComplianceKey> {
     const officer = this.requireOfficer(caller);
     const address = this.ctx.directory.requireAddress(officer);
-    const issuedAt = BigInt(input.issuedAt);
-    const now = nowSeconds(this.ctx.clock);
-    if (issuedAt > now + MAX_CLOCK_SKEW_SECONDS || now - issuedAt > COMPLIANCE_KEY_MAX_AGE_SECONDS) {
-      throw new EnclaveError("STALE", "the key registration is not fresh");
-    }
-    const current = this.keys.latest();
-    if (current && BigInt(current.issued_s) >= issuedAt) {
-      throw new EnclaveError("STALE", "a newer compliance key is already registered");
-    }
-    const publicKey = input.publicKey.toLowerCase() as Hex;
-    const message = complianceKeyMessage(this.ctx.directory.company.name, publicKey, issuedAt);
+    const message = complianceKeyRegistrationMessage(this.ctx.directory.company.name, input.publicKey);
     const valid = await verifyMessage({ address, message, signature: input.signature as Hex });
-    if (!valid)
+    if (!valid) {
       throw new ConsentError(
         "SIGNATURE_MISMATCH",
         "the key registration is not signed by the officer's Ledger",
       );
+    }
     const nowMs = this.ctx.clock.now().getTime();
     return transaction(this.ctx.db, () => {
-      const keyId = this.keys.insert({
+      const current = this.keys.latest();
+      if (current?.public_key === input.publicKey) return toComplianceKeyWire(current);
+      if (this.keys.wasRegistered(input.publicKey)) {
+        throw new EnclaveError("STALE", "this compliance key was replaced and cannot be restored");
+      }
+      const row = this.keys.insert({
         employeeId: officer.id,
-        publicKey,
-        issuedAt: Number(issuedAt),
+        publicKey: input.publicKey,
         signature: input.signature as Hex,
         nowMs,
       });
       this.ctx.audit.append({
         type: "compliance.key",
         actor: officer.id,
-        subject: String(keyId),
-        data: { keyId, publicKey, issuedAt: issuedAt.toString() },
+        subject: String(row.id),
+        data: { keyId: row.id, publicKey: row.public_key },
       });
-      return { keyId };
+      return toComplianceKeyWire(row);
     });
   }
 
   /** GET /v1/audit: a page of entries plus the verification of the whole chain. */
-  readAudit(
-    caller: Caller,
-    query: z.infer<typeof AuditQuerySchema>,
-  ): { entries: AuditEntry[]; verification: ChainVerification } {
+  readAudit(caller: Caller, query: z.infer<typeof AuditQuerySchema>): AuditLogWire {
     this.requireOfficer(caller);
-    return { entries: this.ctx.audit.list(query), verification: this.ctx.audit.verify() };
+    const verification = this.ctx.audit.verify();
+    return {
+      entries: this.ctx.audit.list(query).map(toAuditEntryWire),
+      chain: verification.valid
+        ? { valid: true, length: verification.length, brokenAt: null }
+        : // On a break, `length` is the verified prefix: entries before the first broken one.
+          { valid: false, length: verification.brokenAt - 1, brokenAt: verification.brokenAt },
+    };
   }
 
   /** POST /v1/audit/reveal-notice: records that the officer opened the sealed identity of a desk share. */
-  revealNotice(caller: Caller, input: RevealNoticeInput): { seq: number } {
+  revealNotice(caller: Caller, input: RevealNoticeInput): AuditEntryWire {
     const officer = this.requireOfficer(caller);
     const entry = this.ctx.audit.get(input.seq);
     if (!entry || entry.type !== "desk.share") {
@@ -120,6 +136,6 @@ export class ComplianceService {
       subject: String(input.seq),
       data: { auditSeq: input.seq, reason: input.reason },
     });
-    return { seq: notice.seq };
+    return toAuditEntryWire(notice);
   }
 }

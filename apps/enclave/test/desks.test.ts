@@ -2,7 +2,8 @@
  * Anonymous desk-to-desk sharing through the API, with real Semaphore proofs (needs the depth-16 artifacts:
  * infra/setup.sh, or BADGE_ZK_ARTIFACTS_DIR). About 1 s per proof.
  */
-import { complianceKeyMessage, deskIdentityDeriveMessage, type DeskShare } from "@badge/consent";
+import { complianceKeyRegistrationMessage, openSealed, SEALED_BOX_ALGORITHM } from "@badge/attest";
+import { deskIdentityDeriveMessage, type DeskShare } from "@badge/consent";
 import {
   buildDeskGroup,
   createDeskProof,
@@ -14,8 +15,9 @@ import { decodeBadgeMessage } from "@badge/consent";
 import type { Hex } from "viem";
 import { beforeAll, describe, expect, it } from "vitest";
 import { fixtureCommitment } from "../src/desks";
-import { call, nowSec, onboard } from "./flows";
+import { call, onboard } from "./flows";
 import {
+  complianceKeyPair,
   createHarness,
   ledgers,
   nextNonce,
@@ -27,7 +29,6 @@ import {
 
 const PROOF_TIMEOUT_MS = 60_000;
 const MARKET_TASK = { fromDesk: "origination", task: "Tendances marche-capteurs et prix des composants" };
-const COMPLIANCE_PUBLIC_KEY: Hex = `0x${"c1".repeat(32)}`;
 
 async function deskIdentity(who: DemoEmployee): Promise<Identity> {
   return deriveDeskIdentity(await ledgers[who].signMessage({ message: deskIdentityDeriveMessage("Acme") }));
@@ -47,23 +48,23 @@ async function joinDesk(h: Harness, who: DemoEmployee, deskName: string, identit
 }
 
 async function registerComplianceKey(h: Harness) {
-  const issuedAt = nowSec(h);
+  const { publicKey } = await complianceKeyPair();
   const signature = await ledgers.chloe.signMessage({
-    message: complianceKeyMessage("Acme", COMPLIANCE_PUBLIC_KEY, issuedAt),
+    message: complianceKeyRegistrationMessage("Acme", publicKey),
   });
-  return call(h, "POST", "/v1/compliance/key", {
-    as: "chloe",
-    body: { publicKey: COMPLIANCE_PUBLIC_KEY, issuedAt: issuedAt.toString(), signature },
-  });
+  return call(h, "POST", "/v1/compliance/key", { as: "chloe", body: { publicKey, signature } });
 }
 
 async function pendingDeskShare(
   h: Harness,
   who: DemoEmployee,
 ): Promise<{ requestId: Hex; message: DeskShare }> {
-  const [share] = (await call(h, "GET", "/v1/consents", { as: who })).json.deskShares;
+  const consents: Array<{ kind: string; id: Hex; message: unknown }> = (
+    await call(h, "GET", "/v1/consents", { as: who })
+  ).json.consents;
+  const share = consents.find((c) => c.kind === "DeskShare");
   if (!share) throw new Error(`no desk share for ${who}`);
-  return { requestId: share.requestId, message: decodeBadgeMessage("DeskShare", share.message) };
+  return { requestId: share.id, message: decodeBadgeMessage("DeskShare", share.message) };
 }
 
 async function proofFor(
@@ -186,29 +187,25 @@ describe("anonymous desk share", () => {
         as: "bob",
         body: { signature, proof },
       });
-      expect(approved.status).toBe(200);
+      expect(approved.json).toEqual({ requestId: share.requestId, status: "delivered" });
 
       const delivery = (await call(h, "GET", `/v1/desk-requests/${share.requestId}`, { as: "alice" })).json;
       expect(delivery.status).toBe("delivered");
       expect(delivery.deliveries[0].excerpt).toContain("marché européen des capteurs");
-      expect(delivery.deliveries[0].ruleLabel).toBe("Regle 4 - marche capteurs");
       expect(delivery.deliveries[0].proof.merkleTreeDepth).toBe(16);
       expect(JSON.stringify(delivery)).not.toMatch(/bob|58A57|Durand/i);
       expect((await call(h, "GET", `/v1/desk-requests/${share.requestId}`, { as: "bob" })).status).toBe(404);
 
-      const sealed = h.sealer.calls.at(-1);
-      expect(Buffer.from(sealed?.publicKey ?? []).toString("hex")).toBe(COMPLIANCE_PUBLIC_KEY.slice(2));
-      expect(JSON.parse(sealed?.plaintext ?? "{}")).toMatchObject({
-        employeeId: "bob",
-        address: ledgers.bob.address,
-      });
-
       const audit = (await call(h, "GET", "/v1/audit", { as: "chloe" })).json;
       const entry = audit.entries.find((e: { type: string }) => e.type === "desk.share");
       expect(entry.actor).toBe("anonymous");
-      expect(entry.data.sealedSigner.alg).toBe("test-x25519");
+      expect(entry.data.sealedSigner.alg).toBe(SEALED_BOX_ALGORITHM);
       expect(JSON.stringify(entry)).not.toMatch(/"bob"|58A57/i);
-      expect(audit.verification.valid).toBe(true);
+      expect(audit.chain.valid).toBe(true);
+      // Only the compliance officer's Ledger-derived key opens the signer's identity.
+      const { secretKey } = await complianceKeyPair();
+      const signer = JSON.parse(new TextDecoder().decode(openSealed(secretKey, entry.data.sealedSigner)));
+      expect(signer).toMatchObject({ employeeId: "bob", address: ledgers.bob.address });
 
       const notice = await call(h, "POST", "/v1/audit/reveal-notice", {
         as: "chloe",

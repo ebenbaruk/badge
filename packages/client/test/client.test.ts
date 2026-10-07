@@ -61,18 +61,27 @@ const task = {
   id: `0x${"01".repeat(32)}`,
   taskLabel: "Brief client Durand",
   status: "waiting_consent",
-  allowed: [{ ownerId: "company", ownerName: "Acme", excerptLabel: "Catalogue 2026", via: "company" }],
+  allowed: [
+    {
+      ownerId: "company",
+      ownerName: "Acme",
+      excerptLabel: "Catalogue 2026",
+      excerptLength: 90,
+      via: "company",
+    },
+  ],
   pending: [
     {
       consentId: "c1",
       ownerId: "bob",
       ownerName: "Bob Durand",
-      excerptLabel: "Notes client",
+      excerptLabel: "Contexte personnel de Bob Durand",
       excerptLength: 120,
-      risk: { level: "ok", flags: [] },
+      risk: { level: "ok", reasons: [] },
     },
   ],
   blocked: [],
+  refused: [],
   brief: null,
   tokenStats: null,
   createdAt: 1_790_000_000,
@@ -182,8 +191,12 @@ describe("responses", () => {
             status: "pending",
             taskId: task.id,
             requester: { id: "alice", name: "Alice Martin", team: "Ventes" },
+            excerpt: { label: "Notes client Durand", length: 120, text: "...", tags: ["durand"] },
             message: share,
-            risk: { level: "warn", flags: ["owner_share_high"] },
+            risk: {
+              level: "warn",
+              reasons: [{ code: "OWNER_SHARE_HIGH", severity: "warn", message: "90 % de votre contexte" }],
+            },
             createdAt: 1,
           },
         ],
@@ -222,7 +235,7 @@ describe("responses", () => {
 
   it("encodes path segments and reports network failures", async () => {
     const { calls, fetchFn } = mockFetch({
-      body: { desk: "research", members: 3, commitments: ["1", "2", "3"], root: "42" },
+      body: { id: "research", name: "Research", members: 3, commitments: ["1", "2", "3"], root: "42" },
     });
     await client(fetchFn).getDesk("research/../x");
     expect(calls[0]?.url).toBe(`${BASE_URL}/v1/desks/research%2F..%2Fx`);
