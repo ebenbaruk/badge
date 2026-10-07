@@ -32,6 +32,11 @@ const DERIVER_CONTAINER = process.env["BADGE_DERIVER_CONTAINER"] || "badge-deriv
 const DERIVER_ALERT = /\b(WARNING|ERROR|CRITICAL)\b|Traceback/;
 const SCORE_DECIMALS = 3;
 const LOG_BUFFER_BYTES = 16 * 1024 * 1024;
+/**
+ * Inside the CVM the seed runs as a container without access to the Docker daemon, so it cannot read the deriver
+ * logs (BADGE_SEED_DERIVER_LOGS=skip). The representation and recall checks below still fail on empty memory.
+ */
+const SKIP_DERIVER_LOGS = process.env["BADGE_SEED_DERIVER_LOGS"] === "skip";
 
 class SeedCheckError extends Error {
   override readonly name = "SeedCheckError";
@@ -54,7 +59,8 @@ async function main(): Promise<void> {
   console.log(`notes: ${created} ingested, ${dataset.notes.length - created} already present`);
 
   await waitForDeriver(backend);
-  checkDeriverLogs(startedAt);
+  if (SKIP_DERIVER_LOGS) console.log("deriver logs: not checked (BADGE_SEED_DERIVER_LOGS=skip)");
+  else checkDeriverLogs(startedAt);
   await checkRepresentations(backend, dataset);
   await checkRecall(memory, dataset);
   console.log("seed OK");
