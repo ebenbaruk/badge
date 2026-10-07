@@ -40,10 +40,10 @@ export function createEnclaveClient(
  * - `tdx`: any failure (unreachable, untrusted quote) refuses to start: the agent must never talk to an
  *   unverified enclave, and a server that starts "degraded" would hide that from the employee.
  * - `simulated`: an unreachable enclave is only a warning (the channel attests again on the first call, and an
- *   enclave that does not know the session answers session_unknown), but a rejected attestation still refuses.
+ *   enclave that does not know the session answers SESSION_UNKNOWN), but a rejected attestation still refuses.
  * - In both modes the attested measurement must be the one the employee signed in the AgentSession.
  *
- * @throws McpSetupError (`attestation_failed`, `measurement_mismatch`).
+ * @throws McpSetupError (`ATTESTATION_FAILED`, `MEASUREMENT_MISMATCH`).
  */
 export async function verifyEnclave(
   client: Pick<BadgeClient, "connect">,
@@ -59,10 +59,10 @@ export async function verifyEnclave(
   try {
     measurement = (await client.connect()).enclaveMeasurement;
   } catch (error) {
-    const rejected = error instanceof BadgeApiError && error.code === "attestation_failed";
+    const rejected = error instanceof BadgeApiError && error.code === "ATTESTATION_FAILED";
     const reason = error instanceof Error ? error.message : String(error);
     if (config.attestationMode === "tdx" || rejected) {
-      throw new McpSetupError("attestation_failed", `enclave attestation failed: ${reason}`, {
+      throw new McpSetupError("ATTESTATION_FAILED", `enclave attestation failed: ${reason}`, {
         cause: error,
       });
     }
@@ -71,7 +71,7 @@ export async function verifyEnclave(
   }
   if (measurement.toLowerCase() !== session.message.enclaveMeasurement.toLowerCase()) {
     throw new McpSetupError(
-      "measurement_mismatch",
+      "MEASUREMENT_MISMATCH",
       `the enclave measures ${measurement} but the session was signed for ${session.message.enclaveMeasurement}: ` +
         "create and sign a new session for this enclave",
     );
@@ -80,7 +80,7 @@ export async function verifyEnclave(
 
 /**
  * Creates the employee's client (signing with the session key) and verifies the enclave ({@link verifyEnclave}).
- * @throws McpSetupError (`attestation_failed`, `measurement_mismatch`).
+ * @throws McpSetupError (`ATTESTATION_FAILED`, `MEASUREMENT_MISMATCH`).
  */
 export async function connectEnclave(
   config: EnclaveConfig,

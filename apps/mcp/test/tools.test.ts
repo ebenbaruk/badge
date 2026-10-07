@@ -87,11 +87,11 @@ describe("tools", () => {
     });
 
     it("turns an enclave refusal into a tool error with a hint", async () => {
-      api.createTaskResult = new BadgeApiError(401, "session_unknown", "unknown or expired session");
+      api.createTaskResult = new BadgeApiError(401, "SESSION_UNKNOWN", "unknown or expired session");
       const result = await tools.getContext(input);
 
       expect(result.isError).toBe(true);
-      expect(textOf(result)).toContain("Refus de Badge (session_unknown, HTTP 401)");
+      expect(textOf(result)).toContain("Refus de Badge (SESSION_UNKNOWN, HTTP 401)");
       expect(textOf(result)).toContain("signer une nouvelle");
     });
 
@@ -168,7 +168,7 @@ describe("tools", () => {
         ok: false,
         mode: "tdx",
         simulated: false,
-        code: "compose_hash_mismatch",
+        code: "COMPOSE_HASH_MISMATCH",
         reason: "compose hash mismatch",
       };
       const text = textOf(await tools.attestation());

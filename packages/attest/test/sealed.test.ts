@@ -53,7 +53,7 @@ describe("sealed boxes", () => {
     const { secretKey, publicKey } = generateX25519KeyPair();
     const box = sealToPublicKey(publicKey, "x");
     expect(() => openSealed(secretKey, { ...box, v: 2 })).toThrow(
-      expect.objectContaining({ code: "invalid_input" }),
+      expect.objectContaining({ code: "INVALID_INPUT" }),
     );
     expect(() => openSealed(secretKey, { ...box, extra: 1 })).toThrow(/malformed/);
     expect(() => openSealed(new Uint8Array(16), box)).toThrow(/32 bytes/);

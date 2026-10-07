@@ -68,15 +68,15 @@ describe("ChannelTable", () => {
     clock.advance(900);
     expect(table.has(channel.channelId)).toBe(true);
     clock.advance(1_001);
-    expect(() => table.get(channel.channelId)).toThrow(expect.objectContaining({ code: "channel_unknown" }));
+    expect(() => table.get(channel.channelId)).toThrow(expect.objectContaining({ code: "CHANNEL_UNKNOWN" }));
   });
 
   it("refuses a re-used handshake and new channels when full", () => {
     const table = new ChannelTable(manualClock(), 1_000, 1);
     const channel = freshChannel();
     table.add(channel);
-    expect(() => table.add(channel)).toThrow(expect.objectContaining({ code: "channel_exists" }));
-    expect(() => table.add(freshChannel())).toThrow(expect.objectContaining({ code: "channel_capacity" }));
+    expect(() => table.add(channel)).toThrow(expect.objectContaining({ code: "CHANNEL_EXISTS" }));
+    expect(() => table.add(freshChannel())).toThrow(expect.objectContaining({ code: "CHANNEL_CAPACITY" }));
   });
 });
 
@@ -116,7 +116,7 @@ describe("KeyRotator", () => {
       },
     };
     const keys = new KeyRotator(dstack, new InMemoryKeyVersionStore());
-    await expect(keys.dekFor("bob", 1)).rejects.toMatchObject({ code: "dstack_failed" });
+    await expect(keys.dekFor("bob", 1)).rejects.toMatchObject({ code: "DSTACK_FAILED" });
     fail = false;
     await expect(keys.dekFor("bob", 1)).resolves.toHaveLength(32);
   });
@@ -149,7 +149,7 @@ describe("mountSecurityRoutes", () => {
     const strict = app(true);
     const plain = await strict.request("/v1/consents");
     expect(plain.status).toBe(403);
-    expect(await plain.json()).toMatchObject({ error: { code: "channel_required" } });
+    expect(await plain.json()).toMatchObject({ error: { code: "CHANNEL_REQUIRED" } });
     expect((await strict.request("/health")).status).toBe(200);
     expect((await strict.request("/v1/attestation/measurement")).status).toBe(200);
     // Without the guard the same call reaches authentication instead.
@@ -163,9 +163,9 @@ describe("mountSecurityRoutes", () => {
       body: JSON.stringify({ sealed: { channelId: "ab".repeat(32), seq: 0, ciphertext: "00" } }),
     });
     expect(unknown.status).toBe(404);
-    expect(await unknown.json()).toMatchObject({ error: { code: "channel_unknown" } });
+    expect(await unknown.json()).toMatchObject({ error: { code: "CHANNEL_UNKNOWN" } });
     const malformed = await hono.request("/v1/channel/open", { method: "POST", body: "{" });
     expect(malformed.status).toBe(400);
-    expect(await malformed.json()).toMatchObject({ error: { code: "invalid_body" } });
+    expect(await malformed.json()).toMatchObject({ error: { code: "INVALID_BODY" } });
   });
 });

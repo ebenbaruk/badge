@@ -54,19 +54,19 @@ describe("verifyAttestation, simulated mode", () => {
 
   it("rejects a report_data bound to another enclave key", async () => {
     const result = await verifyAttestation({ ...simulatedInput, enclavePk: "33".repeat(32) });
-    expect(result).toMatchObject({ ok: false, code: "report_data_mismatch", simulated: true });
+    expect(result).toMatchObject({ ok: false, code: "REPORT_DATA_MISMATCH", simulated: true });
   });
 
   it("rejects a report_data made for another nonce (replayed quote)", async () => {
     const result = await verifyAttestation({ ...simulatedInput, nonce: "02".repeat(32) });
-    expect(result).toMatchObject({ ok: false, code: "report_data_mismatch" });
+    expect(result).toMatchObject({ ok: false, code: "REPORT_DATA_MISMATCH" });
   });
 
   it("still replays RTMR3: a tampered event log is rejected", async () => {
     const events = JSON.parse(simulatorFixture.eventLog) as { event: string; event_payload: string }[];
     const forged = events.map((e) => (e.event === "app-id" ? { ...e, event_payload: "00".repeat(20) } : e));
     const result = await verifyAttestation({ ...simulatedInput, eventLog: JSON.stringify(forged) });
-    expect(result).toMatchObject({ ok: false, code: "event_digest_mismatch" });
+    expect(result).toMatchObject({ ok: false, code: "EVENT_DIGEST_MISMATCH" });
   });
 
   it("rejects a quote whose RTMR3 was altered", async () => {
@@ -74,7 +74,7 @@ describe("verifyAttestation, simulated mode", () => {
       ...simulatedInput,
       quote: flipByte(simulatorFixture.quote, 48 + 472),
     });
-    expect(result).toMatchObject({ ok: false, code: "rtmr_mismatch" });
+    expect(result).toMatchObject({ ok: false, code: "RTMR_MISMATCH" });
   });
 
   it("enforces a pinned compose hash and app id", async () => {
@@ -82,11 +82,11 @@ describe("verifyAttestation, simulated mode", () => {
       await verifyAttestation({ ...simulatedInput, expectedComposeHash: "aa".repeat(32) }),
     ).toMatchObject({
       ok: false,
-      code: "compose_hash_mismatch",
+      code: "COMPOSE_HASH_MISMATCH",
     });
     expect(await verifyAttestation({ ...simulatedInput, expectedAppId: "aa".repeat(20) })).toMatchObject({
       ok: false,
-      code: "app_id_mismatch",
+      code: "APP_ID_MISMATCH",
     });
     expectOk(
       await verifyAttestation({
@@ -99,7 +99,7 @@ describe("verifyAttestation, simulated mode", () => {
 
   it("rejects invalid input without throwing", async () => {
     const result = await verifyAttestation({ ...simulatedInput, nonce: "short" });
-    expect(result).toMatchObject({ ok: false, code: "invalid_input" });
+    expect(result).toMatchObject({ ok: false, code: "INVALID_INPUT" });
   });
 });
 
@@ -112,7 +112,7 @@ describe("verifyAttestation, tdx mode", () => {
 
   it("requires a pinned compose hash", async () => {
     const result = await verifyAttestation({ ...tdxInput, expectedComposeHash: undefined });
-    expect(result).toMatchObject({ ok: false, code: "invalid_input", simulated: false });
+    expect(result).toMatchObject({ ok: false, code: "INVALID_INPUT", simulated: false });
   });
 
   it("rejects the simulator quote when DCAP fails (fail closed)", async () => {
@@ -120,17 +120,17 @@ describe("verifyAttestation, tdx mode", () => {
       throw new Error("No matching TCB level found");
     };
     const result = await verifyAttestation({ ...tdxInput, dcapVerifier: failing });
-    expect(result).toMatchObject({ ok: false, code: "dcap_failed", simulated: false });
+    expect(result).toMatchObject({ ok: false, code: "DCAP_FAILED", simulated: false });
   });
 
   it("rejects a TCB status other than UpToDate", async () => {
     const result = await verifyAttestation({ ...tdxInput, dcapVerifier: dcapWithStatus("OutOfDate") });
-    expect(result).toMatchObject({ ok: false, code: "tcb_not_up_to_date" });
+    expect(result).toMatchObject({ ok: false, code: "TCB_NOT_UP_TO_DATE" });
   });
 
   it("rejects the simulator bundle even with a valid signature: its compose hash is not sha256(app-compose)", async () => {
     const result = await verifyAttestation({ ...tdxInput, dcapVerifier: dcapWithStatus("UpToDate") });
-    expect(result).toMatchObject({ ok: false, code: "compose_hash_mismatch" });
+    expect(result).toMatchObject({ ok: false, code: "COMPOSE_HASH_MISMATCH" });
   });
 
   it("rejects a DCAP report that disagrees with the parsed quote", async () => {
@@ -141,7 +141,7 @@ describe("verifyAttestation, tdx mode", () => {
       reportData: simulatorFixture.reportData,
     });
     const result = await verifyAttestation({ ...tdxInput, dcapVerifier: lying });
-    expect(result).toMatchObject({ ok: false, code: "malformed_quote" });
+    expect(result).toMatchObject({ ok: false, code: "MALFORMED_QUOTE" });
   });
 
   it("accepts a consistent bundle and opens the channel end to end", async () => {
@@ -192,14 +192,14 @@ describe("verifyAttestation, tdx mode", () => {
       await verifyAttestation({ ...base, ...leaky, expectedComposeHash: leaky.composeHash }),
     ).toMatchObject({
       ok: false,
-      code: "compose_policy_violation",
+      code: "COMPOSE_POLICY_VIOLATION",
     });
 
     const good = syntheticTdxBundle(enclave.reportData);
     const debugQuote = flipByte(good.quote, 48 + 120);
     expect(
       await verifyAttestation({ ...base, ...good, quote: debugQuote, expectedComposeHash: good.composeHash }),
-    ).toMatchObject({ ok: false, code: "debug_td" });
+    ).toMatchObject({ ok: false, code: "DEBUG_TD" });
   });
 
   it("enforces pinned OS measurements", async () => {
@@ -222,7 +222,7 @@ describe("verifyAttestation, tdx mode", () => {
     const wrongOs = { ...os, mrtd: "00".repeat(48) };
     expect(await verifyAttestation({ ...input, expectedOsMeasurements: wrongOs })).toMatchObject({
       ok: false,
-      code: "os_measurement_mismatch",
+      code: "OS_MEASUREMENT_MISMATCH",
     });
   });
 });

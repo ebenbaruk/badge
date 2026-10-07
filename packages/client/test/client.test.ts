@@ -162,7 +162,7 @@ describe("request signing", () => {
 
   it("refuses an authenticated call without a session key", async () => {
     const { calls, fetchFn } = mockFetch();
-    await expect(client(fetchFn, false).listConsents()).rejects.toMatchObject({ code: "no_session_key" });
+    await expect(client(fetchFn, false).listConsents()).rejects.toMatchObject({ code: "NO_SESSION_KEY" });
     expect(calls).toHaveLength(0);
   });
 });
@@ -212,13 +212,13 @@ describe("responses", () => {
   it("maps enclave errors to BadgeApiError with the enclave's code", async () => {
     const { fetchFn } = mockFetch({
       status: 401,
-      body: { error: { code: "session_unknown", message: "session is unknown, expired or revoked" } },
+      body: { error: { code: "SESSION_UNKNOWN", message: "session is unknown, expired or revoked" } },
     });
     const error = await client(fetchFn)
       .listPolicies()
       .catch((caught: unknown) => caught);
     expect(error).toBeInstanceOf(BadgeApiError);
-    expect(error).toMatchObject({ status: 401, code: "session_unknown", isRefusal: true });
+    expect(error).toMatchObject({ status: 401, code: "SESSION_UNKNOWN", isRefusal: true });
   });
 
   it("rejects malformed bodies and unexpected shapes", async () => {
@@ -228,9 +228,9 @@ describe("responses", () => {
       { body: "not json" },
     );
     const badge = client(fetchFn);
-    await expect(badge.getTask(task.id)).rejects.toMatchObject({ status: 500, code: "bad_response" });
-    await expect(badge.getTask(task.id)).rejects.toMatchObject({ code: "bad_response" });
-    await expect(badge.getTask(task.id)).rejects.toMatchObject({ code: "bad_response" });
+    await expect(badge.getTask(task.id)).rejects.toMatchObject({ status: 500, code: "BAD_RESPONSE" });
+    await expect(badge.getTask(task.id)).rejects.toMatchObject({ code: "BAD_RESPONSE" });
+    await expect(badge.getTask(task.id)).rejects.toMatchObject({ code: "BAD_RESPONSE" });
   });
 
   it("encodes path segments and reports network failures", async () => {
@@ -243,7 +243,7 @@ describe("responses", () => {
     const failing: FetchLike = async () => {
       throw new TypeError("fetch failed");
     };
-    await expect(client(failing).measurement()).rejects.toMatchObject({ status: 0, code: "network_error" });
+    await expect(client(failing).measurement()).rejects.toMatchObject({ status: 0, code: "NETWORK_ERROR" });
   });
 
   it("validates desk proofs before sending them", async () => {
@@ -251,7 +251,7 @@ describe("responses", () => {
     const bad = { merkleTreeDepth: 16, merkleTreeRoot: "x" } as never;
     await expect(
       client(fetchFn).approveDeskRequest(task.id, { signature: `0x${"22".repeat(65)}`, proof: bad }),
-    ).rejects.toMatchObject({ code: "invalid_argument" });
+    ).rejects.toMatchObject({ code: "INVALID_ARGUMENT" });
     expect(calls).toHaveLength(0);
   });
 });
@@ -272,12 +272,12 @@ describe("channel transport", () => {
       fetch: fetchFn,
       sessionKey,
     });
-    await expect(badge.measurement()).rejects.toMatchObject({ code: "attestation_failed" });
+    await expect(badge.measurement()).rejects.toMatchObject({ code: "ATTESTATION_FAILED" });
     expect(badge.attestation?.ok).toBe(false);
   });
 
   it("connect() is only for the channel transport", async () => {
-    await expect(client(mockFetch().fetchFn).connect()).rejects.toMatchObject({ code: "invalid_argument" });
+    await expect(client(mockFetch().fetchFn).connect()).rejects.toMatchObject({ code: "INVALID_ARGUMENT" });
   });
 });
 

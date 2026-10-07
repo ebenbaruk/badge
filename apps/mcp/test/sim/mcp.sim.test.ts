@@ -161,7 +161,7 @@ describe("MCP server through the attested channel (dstack simulator)", () => {
       new Date(),
     );
     await expect(connectEnclave(config, stale, { fetch: fetchFn, warn: () => {} })).rejects.toMatchObject({
-      code: "measurement_mismatch",
+      code: "MEASUREMENT_MISMATCH",
     });
   });
 
@@ -172,7 +172,7 @@ describe("MCP server through the attested channel (dstack simulator)", () => {
     );
     const tdx: EnclaveConfig = { ...config, attestationMode: "tdx", expectedComposeHash: "ab".repeat(32) };
     await expect(connectEnclave(tdx, session, { fetch: fetchFn, warn: () => {} })).rejects.toMatchObject({
-      code: "attestation_failed",
+      code: "ATTESTATION_FAILED",
     });
   });
 });

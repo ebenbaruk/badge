@@ -77,7 +77,7 @@ export class KeyRotator implements DekProvider {
 
   /**
    * Key of a given version (to decrypt data written before a rotation).
-   * @throws RangeError on a malformed id or version; AttestError("dstack_failed") when the KMS fails.
+   * @throws RangeError on a malformed id or version; AttestError("DSTACK_FAILED") when the KMS fails.
    */
   dekFor(employeeId: string, version: number): Promise<Uint8Array> {
     assertEmployeeId(employeeId);

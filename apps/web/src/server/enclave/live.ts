@@ -474,7 +474,7 @@ export class LiveEnclave implements EnclaveApi {
     try {
       return await work(agent.client);
     } catch (error) {
-      if (error instanceof BadgeApiError && error.code === "session_unknown") {
+      if (error instanceof BadgeApiError && error.code === "SESSION_UNKNOWN") {
         this.runtime(employee).agent = undefined;
         this.persist();
         throw new AgentSessionMissingError(employee);

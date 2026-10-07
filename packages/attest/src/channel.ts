@@ -104,7 +104,7 @@ function deriveSessionKeys(
     // noble rejects low-order points (all-zero shared secret), which would make the keys predictable.
     shared = x25519.getSharedSecret(ownSecret, peerPublic);
   } catch (error) {
-    throw new ChannelError("invalid_input", "peer X25519 public key is invalid", { cause: error });
+    throw new ChannelError("INVALID_INPUT", "peer X25519 public key is invalid", { cause: error });
   }
   const transcript = concatBytes(utf8ToBytes(PROTOCOL_LABEL), nonce, clientPk, enclavePk);
   const keyFor = (direction: string) =>
@@ -155,7 +155,7 @@ class Session {
       throw new ChannelError("channel_exhausted", "channel message limit reached, open a new channel");
     }
     const json = JSON.stringify(payload);
-    if (json === undefined) throw new ChannelError("invalid_input", "payload is not JSON-serializable");
+    if (json === undefined) throw new ChannelError("INVALID_INPUT", "payload is not JSON-serializable");
     const seq = this.sendSeq;
     const aad = additionalData(this.keys.channelId, this.keys.sendLabel, seq);
     const ciphertext = gcm(this.keys.sendKey, gcmNonce(seq), aad).encrypt(utf8ToBytes(json));
@@ -167,7 +167,7 @@ class Session {
     const parsed = sealedMessageSchema.safeParse(message);
     if (!parsed.success) {
       throw new ChannelError(
-        "invalid_input",
+        "INVALID_INPUT",
         `sealed message is malformed: ${z.prettifyError(parsed.error)}`,
       );
     }
@@ -194,13 +194,13 @@ class Session {
     try {
       value = JSON.parse(new TextDecoder().decode(plaintext));
     } catch (error) {
-      throw new ChannelError("invalid_input", "decrypted payload is not JSON", { cause: error });
+      throw new ChannelError("INVALID_INPUT", "decrypted payload is not JSON", { cause: error });
     }
     if (!schema) return value as T;
     const checked = schema.safeParse(value);
     if (!checked.success) {
       throw new ChannelError(
-        "invalid_input",
+        "INVALID_INPUT",
         `decrypted payload is invalid: ${z.prettifyError(checked.error)}`,
       );
     }
@@ -242,12 +242,12 @@ export class ClientChannel {
 
   /**
    * Derives the session keys from a VERIFIED attestation of this handshake.
-   * @throws ChannelError("channel_unverified") if the attestation is not ok or was made for another handshake.
+   * @throws ChannelError("CHANNEL_UNVERIFIED") if the attestation is not ok or was made for another handshake.
    */
   establish(attestation: ChannelAttestation): void {
     if (attestation.ok !== true) {
       throw new ChannelError(
-        "channel_unverified",
+        "CHANNEL_UNVERIFIED",
         "cannot open a channel to an enclave that failed attestation",
       );
     }
@@ -255,7 +255,7 @@ export class ClientChannel {
       normalizeHex(attestation.nonce) !== this.hello.nonce ||
       normalizeHex(attestation.clientPk) !== this.hello.clientPk
     ) {
-      throw new ChannelError("channel_unverified", "attestation was verified for another handshake");
+      throw new ChannelError("CHANNEL_UNVERIFIED", "attestation was verified for another handshake");
     }
     const enclavePk = decodeHex(attestation.enclavePk, "enclavePk", X25519_KEY_LENGTH);
     this.session = new Session(
@@ -283,7 +283,7 @@ export class ClientChannel {
 
   private requireSession(): Session {
     if (!this.session) {
-      throw new ChannelError("channel_unverified", "channel not established: verify the attestation first");
+      throw new ChannelError("CHANNEL_UNVERIFIED", "channel not established: verify the attestation first");
     }
     return this.session;
   }
@@ -301,7 +301,7 @@ export class EnclaveChannel {
     const nonce = decodeHex(hello.nonce, "nonce", CHANNEL_NONCE_LENGTH);
     const clientPk = decodeHex(hello.clientPk, "clientPk", X25519_KEY_LENGTH);
     if (enclaveSecretKey.length !== X25519_KEY_LENGTH) {
-      throw new ChannelError("invalid_input", `enclave secret key must be ${X25519_KEY_LENGTH} bytes`);
+      throw new ChannelError("INVALID_INPUT", `enclave secret key must be ${X25519_KEY_LENGTH} bytes`);
     }
     const enclavePk = x25519.getPublicKey(enclaveSecretKey);
     this.enclavePk = toHex(enclavePk);
@@ -318,7 +318,7 @@ export class EnclaveChannel {
   static accept(hello: unknown, enclaveSecretKey: Uint8Array): EnclaveChannel {
     const parsed = channelHelloSchema.safeParse(hello);
     if (!parsed.success) {
-      throw new ChannelError("invalid_input", `channel hello is malformed: ${z.prettifyError(parsed.error)}`);
+      throw new ChannelError("INVALID_INPUT", `channel hello is malformed: ${z.prettifyError(parsed.error)}`);
     }
     try {
       return new EnclaveChannel(parsed.data, enclaveSecretKey);

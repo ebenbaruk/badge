@@ -33,7 +33,7 @@ describe("event log replay", () => {
 
   it("rejects a payload that does not match its digest", () => {
     const forged = withEvent("compose-hash", (e) => ({ ...e, event_payload: "00".repeat(32) }));
-    expect(() => replayRtmrs(forged)).toThrow(expect.objectContaining({ code: "event_digest_mismatch" }));
+    expect(() => replayRtmrs(forged)).toThrow(expect.objectContaining({ code: "EVENT_DIGEST_MISMATCH" }));
   });
 
   it("rejects a forged event whose digest was recomputed: RTMR3 no longer matches", () => {
@@ -44,7 +44,7 @@ describe("event log replay", () => {
       digest: runtimeEventDigest(e.event_type, e.event, payload),
     }));
     expect(() => assertRtmrsMatch(replayRtmrs(forged), quote.rtmrs)).toThrow(
-      expect.objectContaining({ code: "rtmr_mismatch", message: expect.stringContaining("RTMR3") }),
+      expect.objectContaining({ code: "RTMR_MISMATCH", message: expect.stringContaining("RTMR3") }),
     );
   });
 
@@ -55,7 +55,7 @@ describe("event log replay", () => {
 
   it("rejects malformed logs", () => {
     expect(() => parseEventLog("{not json")).toThrow(
-      expect.objectContaining({ code: "malformed_event_log" }),
+      expect.objectContaining({ code: "MALFORMED_EVENT_LOG" }),
     );
     expect(() =>
       parseEventLog([{ imr: 7, event_type: 1, digest: "", event: "", event_payload: "" }]),
@@ -77,14 +77,14 @@ describe("extractAppIdentity", () => {
     const compose = all.find((e) => e.event === "compose-hash");
     if (!compose) throw new Error("fixture has no compose-hash event");
     expect(() => extractAppIdentity([...all, compose])).toThrow(
-      expect.objectContaining({ code: "duplicate_event" }),
+      expect.objectContaining({ code: "DUPLICATE_EVENT" }),
     );
   });
 
   it("rejects a log without compose-hash", () => {
     const withoutCompose = events().filter((e) => e.event !== "compose-hash");
     expect(() => extractAppIdentity(withoutCompose)).toThrow(
-      expect.objectContaining({ code: "missing_event" }),
+      expect.objectContaining({ code: "MISSING_EVENT" }),
     );
   });
 });

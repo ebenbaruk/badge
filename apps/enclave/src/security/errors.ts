@@ -3,21 +3,21 @@ import type { ContentfulStatusCode } from "hono/utils/http-status";
 
 /** Machine-readable reasons the security layer refuses a request (sent as `error.code`). */
 export type SecurityErrorCode =
-  | "auth_missing"
-  | "auth_malformed"
-  | "clock_skew"
-  | "bad_signature"
-  | "replay"
-  | "replay_cache_full"
-  | "session_unknown"
-  | "body_too_large"
-  | "invalid_body"
-  | "channel_required"
-  | "channel_unknown"
-  | "channel_exists"
-  | "channel_capacity"
-  | "channel_rejected"
-  | "dstack_failed";
+  | "AUTH_MISSING"
+  | "AUTH_MALFORMED"
+  | "CLOCK_SKEW"
+  | "BAD_SIGNATURE"
+  | "REPLAY"
+  | "REPLAY_CACHE_FULL"
+  | "SESSION_UNKNOWN"
+  | "BODY_TOO_LARGE"
+  | "INVALID_BODY"
+  | "CHANNEL_REQUIRED"
+  | "CHANNEL_UNKNOWN"
+  | "CHANNEL_EXISTS"
+  | "CHANNEL_CAPACITY"
+  | "CHANNEL_REJECTED"
+  | "DSTACK_FAILED";
 
 /** A refusal by the security layer, with the HTTP status it maps to. */
 export class SecurityError extends Error {

@@ -38,11 +38,11 @@ export interface ToolHandlers {
 
 /** Extra guidance for the model on the refusals it can do something about. */
 const ERROR_HINTS: Readonly<Record<string, string>> = {
-  session_unknown:
+  SESSION_UNKNOWN:
     "La session de l'agent est expirée, révoquée ou inconnue : l'employé doit en signer une nouvelle sur son Ledger.",
-  attestation_failed: "L'enclave n'a pas pu être attestée : n'envoyez aucune donnée, prévenez l'employé.",
+  ATTESTATION_FAILED: "L'enclave n'a pas pu être attestée : n'envoyez aucune donnée, prévenez l'employé.",
   NOT_FOUND: "Identifiant inconnu (ou tâche d'un autre employé).",
-  network_error: "Enclave injoignable : réessayez plus tard.",
+  NETWORK_ERROR: "Enclave injoignable : réessayez plus tard.",
 };
 
 function text(content: string): CallToolResult {

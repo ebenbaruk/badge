@@ -58,12 +58,12 @@ export function parseTdxQuote(quote: string | Uint8Array): TdxQuote {
   try {
     bytes = typeof quote === "string" ? decodeHex(quote.trim(), "quote") : quote;
   } catch (error) {
-    if (error instanceof AttestError) throw new QuoteFormatError("malformed_quote", error.message);
+    if (error instanceof AttestError) throw new QuoteFormatError("MALFORMED_QUOTE", error.message);
     throw error;
   }
   if (bytes.length < MIN_QUOTE_LENGTH) {
     throw new QuoteFormatError(
-      "malformed_quote",
+      "MALFORMED_QUOTE",
       `quote is ${bytes.length} bytes, a TDX v4 quote needs at least ${MIN_QUOTE_LENGTH}`,
     );
   }
@@ -72,7 +72,7 @@ export function parseTdxQuote(quote: string | Uint8Array): TdxQuote {
   const teeType = view.getUint32(HEADER_TEE_TYPE_OFFSET, true);
   if (version !== QUOTE_VERSION_V4 || teeType !== TEE_TYPE_TDX) {
     throw new QuoteFormatError(
-      "unsupported_quote",
+      "UNSUPPORTED_QUOTE",
       `expected a TDX v4 quote (version ${QUOTE_VERSION_V4}, TEE type 0x${TEE_TYPE_TDX.toString(16)}), ` +
         `got version ${version}, TEE type 0x${teeType.toString(16)}`,
     );
@@ -80,7 +80,7 @@ export function parseTdxQuote(quote: string | Uint8Array): TdxQuote {
   const signatureLength = view.getUint32(HEADER_LENGTH + TD_REPORT_LENGTH, true);
   if (MIN_QUOTE_LENGTH + signatureLength > bytes.length) {
     throw new QuoteFormatError(
-      "malformed_quote",
+      "MALFORMED_QUOTE",
       `quote declares ${signatureLength} bytes of signature data but only ${bytes.length - MIN_QUOTE_LENGTH} follow`,
     );
   }

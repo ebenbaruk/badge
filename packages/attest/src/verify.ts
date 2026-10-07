@@ -145,7 +145,7 @@ export const phalaDcapVerifier: DcapVerifier = async (quote) => {
   const { getCollateralAndVerify } = await import("@phala/dcap-qvl");
   const verified = await getCollateralAndVerify(quote);
   const td = verified.report.asTd10() ?? verified.report.asTd15()?.base;
-  if (!td) throw new AttestationError("unsupported_quote", "DCAP report is not a TDX report");
+  if (!td) throw new AttestationError("UNSUPPORTED_QUOTE", "DCAP report is not a TDX report");
   return {
     status: verified.status,
     advisoryIds: [...verified.advisory_ids],
@@ -173,17 +173,17 @@ async function checkDcap(quote: TdxQuote, verifier: DcapVerifier): Promise<DcapR
   } catch (error) {
     if (error instanceof AttestError) throw error;
     const message = error instanceof Error ? error.message : String(error);
-    throw new AttestationError("dcap_failed", `Intel DCAP verification failed: ${message}`, { cause: error });
+    throw new AttestationError("DCAP_FAILED", `Intel DCAP verification failed: ${message}`, { cause: error });
   }
   if (report.status !== ACCEPTED_TCB_STATUS) {
     throw new AttestationError(
-      "tcb_not_up_to_date",
+      "TCB_NOT_UP_TO_DATE",
       `platform TCB status is ${report.status}, only ${ACCEPTED_TCB_STATUS} is accepted`,
     );
   }
   // Our parser and the DCAP library must agree on the signed bytes, otherwise we would check unsigned values.
   if (normalizeHex(report.rtmr3) !== quote.rtmrs[3] || normalizeHex(report.reportData) !== quote.reportData) {
-    throw new AttestationError("malformed_quote", "DCAP report and parsed quote disagree");
+    throw new AttestationError("MALFORMED_QUOTE", "DCAP report and parsed quote disagree");
   }
   return report;
 }
@@ -198,7 +198,7 @@ function checkOsMeasurements(quote: TdxQuote, expected: OsMeasurements): void {
   for (const [name, actual, wanted] of pairs) {
     if (actual !== normalizeHex(wanted)) {
       throw new AttestationError(
-        "os_measurement_mismatch",
+        "OS_MEASUREMENT_MISMATCH",
         `${name} does not match the pinned dstack OS image`,
       );
     }
@@ -218,7 +218,7 @@ async function runChecks(input: z.infer<typeof inputSchema>): Promise<VerifiedAt
   } else {
     policy.warnings.push("[simulated] Intel DCAP signature and TCB status were not verified");
   }
-  policy.require(!quote.debug, new AttestationError("debug_td", "the TD runs in debug mode"));
+  policy.require(!quote.debug, new AttestationError("DEBUG_TD", "the TD runs in debug mode"));
 
   // Freshness and key binding hold in both modes: the simulator does write the requested report_data.
   const expectedReportData = channelReportData(
@@ -228,7 +228,7 @@ async function runChecks(input: z.infer<typeof inputSchema>): Promise<VerifiedAt
   );
   if (toHex(expectedReportData) !== quote.reportData) {
     throw new AttestationError(
-      "report_data_mismatch",
+      "REPORT_DATA_MISMATCH",
       "quote report_data is not sha512(nonce || clientPk || enclavePk): stale quote or substituted key",
     );
   }
@@ -239,25 +239,25 @@ async function runChecks(input: z.infer<typeof inputSchema>): Promise<VerifiedAt
 
   policy.require(
     composeHashOf(input.appCompose) === identity.composeHash,
-    new ComposeError("compose_hash_mismatch", "sha256(app-compose) differs from the attested compose hash"),
+    new ComposeError("COMPOSE_HASH_MISMATCH", "sha256(app-compose) differs from the attested compose hash"),
   );
   const violations = composePolicyViolations(parseAppCompose(input.appCompose));
   for (const violation of violations) {
-    policy.require(false, new ComposeError("compose_policy_violation", `app-compose: ${violation}`));
+    policy.require(false, new ComposeError("COMPOSE_POLICY_VIOLATION", `app-compose: ${violation}`));
   }
   policy.require(
     identity.keyProvider === "kms",
     new EventLogError(
-      "key_provider_not_kms",
+      "KEY_PROVIDER_NOT_KMS",
       `key provider is ${identity.keyProvider ?? "absent"}, expected kms`,
     ),
   );
 
   if (input.expectedComposeHash && normalizeHex(input.expectedComposeHash) !== identity.composeHash) {
-    throw new ComposeError("compose_hash_mismatch", "attested compose hash is not the expected one");
+    throw new ComposeError("COMPOSE_HASH_MISMATCH", "attested compose hash is not the expected one");
   }
   if (input.expectedAppId && normalizeHex(input.expectedAppId) !== identity.appId) {
-    throw new AttestationError("app_id_mismatch", "attested app id is not the expected one");
+    throw new AttestationError("APP_ID_MISMATCH", "attested app id is not the expected one");
   }
   if (input.expectedOsMeasurements) checkOsMeasurements(quote, input.expectedOsMeasurements);
   if (input.mode === "tdx" && !input.expectedOsMeasurements) {
@@ -304,7 +304,7 @@ export async function verifyAttestation(input: VerifyAttestationInput): Promise<
     reason,
   });
   const parsed = inputSchema.safeParse(input);
-  if (!parsed.success) return reject("invalid_input", z.prettifyError(parsed.error));
+  if (!parsed.success) return reject("INVALID_INPUT", z.prettifyError(parsed.error));
   try {
     return await runChecks(parsed.data);
   } catch (error) {

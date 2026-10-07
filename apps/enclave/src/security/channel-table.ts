@@ -31,17 +31,17 @@ export class ChannelTable {
 
   /**
    * Registers a freshly accepted channel.
-   * @throws SecurityError("channel_exists") when the id is taken: re-opening the same hello would reset the
-   * channel's sequence numbers and make its past messages replayable. ("channel_capacity") when full.
+   * @throws SecurityError("CHANNEL_EXISTS") when the id is taken: re-opening the same hello would reset the
+   * channel's sequence numbers and make its past messages replayable. ("CHANNEL_CAPACITY") when full.
    */
   add(channel: EnclaveChannel): void {
     const now = this.clock.now();
     this.evictIdle(now);
     if (this.entries.has(channel.channelId)) {
-      throw new SecurityError("channel_exists", 409, "this handshake was already used: open a new channel");
+      throw new SecurityError("CHANNEL_EXISTS", 409, "this handshake was already used: open a new channel");
     }
     if (this.entries.size >= this.capacity) {
-      throw new SecurityError("channel_capacity", 503, "too many open channels, retry shortly");
+      throw new SecurityError("CHANNEL_CAPACITY", 503, "too many open channels, retry shortly");
     }
     this.entries.set(channel.channelId, { channel, lastUsed: now });
   }
@@ -53,12 +53,12 @@ export class ChannelTable {
 
   /**
    * Returns an open channel and refreshes its idle timer.
-   * @throws SecurityError("channel_unknown") when unknown or idle for too long (the SDK reopens on this code).
+   * @throws SecurityError("CHANNEL_UNKNOWN") when unknown or idle for too long (the SDK reopens on this code).
    */
   get(channelId: string): EnclaveChannel {
     const now = this.clock.now();
     const entry = this.lookup(channelId, now);
-    if (!entry) throw new SecurityError("channel_unknown", 404, "unknown or expired channel: open a new one");
+    if (!entry) throw new SecurityError("CHANNEL_UNKNOWN", 404, "unknown or expired channel: open a new one");
     entry.lastUsed = now;
     return entry.channel;
   }

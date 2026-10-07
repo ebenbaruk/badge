@@ -22,7 +22,7 @@ export const REQUEST_SIGNING_PREFIX = "BADGE-REQ-V1";
 
 /**
  * Maximum distance between the request timestamp and the enclave clock. Short, because the replay cache only has
- * to remember signatures for this long; a client with a badly set clock is told so by the `clock_skew` error.
+ * to remember signatures for this long; a client with a badly set clock is told so by the `CLOCK_SKEW` error.
  */
 export const MAX_REQUEST_SKEW_MS = 60_000;
 

@@ -30,7 +30,7 @@ describe("public routes", () => {
     const h = await createHarness();
     const unsigned = await call(h, "POST", "/v1/tasks", { body: ORION_TASK });
     expect(unsigned.status).toBe(401);
-    expect(unsigned.json.error.code).toBe("auth_missing");
+    expect(unsigned.json.error.code).toBe("AUTH_MISSING");
     // Signed by Alice's agent key over something else than this request.
     await onboard(h, "alice");
     const forged = await h.app.request("/v1/me", {
@@ -41,9 +41,9 @@ describe("public routes", () => {
       },
     });
     expect(forged.status).toBe(401);
-    expect(((await forged.json()) as { error: { code: string } }).error.code).toBe("bad_signature");
+    expect(((await forged.json()) as { error: { code: string } }).error.code).toBe("BAD_SIGNATURE");
     // A correctly signed request by a key that never opened a session.
-    expect((await call(h, "GET", "/v1/me", { as: "bob" })).json.error.code).toBe("session_unknown");
+    expect((await call(h, "GET", "/v1/me", { as: "bob" })).json.error.code).toBe("SESSION_UNKNOWN");
   });
 
   it("answers unknown routes with a 404 envelope after authentication", async () => {

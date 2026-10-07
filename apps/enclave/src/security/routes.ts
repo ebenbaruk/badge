@@ -40,7 +40,7 @@ export interface SecurityDeps {
   sessions: SessionResolver;
   clock: Clock;
   /**
-   * Production: refuse `/v1` calls that do not come through the attested channel (`channel_required`, 403), since
+   * Production: refuse `/v1` calls that do not come through the attested channel (`CHANNEL_REQUIRED`, 403), since
    * on Phala TLS ends at the gateway. Local development can leave it off to call routes with plain HTTP.
    */
   requireChannel?: boolean;
@@ -61,11 +61,11 @@ async function readJsonBody<T>(c: Context, schema: z.ZodType<T>, what: string): 
   try {
     value = await c.req.json();
   } catch (error) {
-    throw new SecurityError("invalid_body", 400, `${what}: body is not JSON`, { cause: error });
+    throw new SecurityError("INVALID_BODY", 400, `${what}: body is not JSON`, { cause: error });
   }
   const parsed = schema.safeParse(value);
   if (!parsed.success) {
-    throw new SecurityError("invalid_body", 400, `${what}: ${z.prettifyError(parsed.error)}`, {
+    throw new SecurityError("INVALID_BODY", 400, `${what}: ${z.prettifyError(parsed.error)}`, {
       cause: parsed.error,
     });
   }
@@ -126,7 +126,7 @@ export function mountSecurityRoutes(app: Hono<BadgeEnv>, deps: SecurityDeps): Se
       return securityErrorResponse(
         c,
         new SecurityError(
-          "channel_required",
+          "CHANNEL_REQUIRED",
           403,
           "this enclave only accepts requests through the attested channel",
         ),
@@ -139,7 +139,7 @@ export function mountSecurityRoutes(app: Hono<BadgeEnv>, deps: SecurityDeps): Se
     bodyLimit({
       maxSize: MAX_OUTER_BODY_BYTES,
       onError: (c) =>
-        securityErrorResponse(c, new SecurityError("body_too_large", 413, "request body is too large")),
+        securityErrorResponse(c, new SecurityError("BODY_TOO_LARGE", 413, "request body is too large")),
     }),
   );
 
@@ -152,8 +152,8 @@ export function mountSecurityRoutes(app: Hono<BadgeEnv>, deps: SecurityDeps): Se
     } catch (error) {
       if (error instanceof SecurityError) return securityErrorResponse(c, error);
       if (error instanceof AttestError) {
-        const status = error.code === "dstack_failed" ? 503 : 400;
-        const code = error.code === "dstack_failed" ? "dstack_failed" : "channel_rejected";
+        const status = error.code === "DSTACK_FAILED" ? 503 : 400;
+        const code = error.code === "DSTACK_FAILED" ? "DSTACK_FAILED" : "CHANNEL_REJECTED";
         return securityErrorResponse(c, new SecurityError(code, status, error.message, { cause: error }));
       }
       throw error;
@@ -167,7 +167,7 @@ export function mountSecurityRoutes(app: Hono<BadgeEnv>, deps: SecurityDeps): Se
       const channel = EnclaveChannel.accept(hello, await channelSecretKey());
       // Refuse a re-used handshake before paying for a quote (see ChannelTable.add).
       if (channels.has(channel.channelId)) {
-        throw new SecurityError("channel_exists", 409, "this handshake was already used: open a new channel");
+        throw new SecurityError("CHANNEL_EXISTS", 409, "this handshake was already used: open a new channel");
       }
       const bundle = await createAttestationBundle(deps.dstack, { ...hello, enclavePk: channel.enclavePk });
       channels.add(channel);
@@ -186,7 +186,7 @@ export function mountSecurityRoutes(app: Hono<BadgeEnv>, deps: SecurityDeps): Se
       const { sealed } = await readJsonBody(c, channelMessageRequestSchema, "channel message");
       const channelId = c.req.param("channelId") ?? "";
       if (sealed.channelId !== channelId) {
-        throw new SecurityError("channel_rejected", 400, "sealed message belongs to another channel");
+        throw new SecurityError("CHANNEL_REJECTED", 400, "sealed message belongs to another channel");
       }
       const channel = channels.get(channelId);
       // Throws ChannelError (an AttestError) on tampering, replay or a malformed inner request.

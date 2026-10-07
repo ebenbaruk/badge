@@ -13,7 +13,7 @@ export class EnclaveIdentity {
 
   constructor(private readonly dstack: DstackAgent) {}
 
-  /** @throws SecurityError("dstack_failed") when the guest agent cannot be reached or answers nonsense. */
+  /** @throws SecurityError("DSTACK_FAILED") when the guest agent cannot be reached or answers nonsense. */
   read(): Promise<Measurement> {
     this.cached ??= this.load().catch((error: unknown) => {
       this.cached = undefined;
@@ -27,7 +27,7 @@ export class EnclaveIdentity {
     try {
       info = await this.dstack.info();
     } catch (error) {
-      throw new SecurityError("dstack_failed", 503, "cannot read the enclave identity from dstack", {
+      throw new SecurityError("DSTACK_FAILED", 503, "cannot read the enclave identity from dstack", {
         cause: error,
       });
     }
@@ -36,7 +36,7 @@ export class EnclaveIdentity {
     try {
       measurement = enclaveMeasurementFrom(composeHash);
     } catch (error) {
-      throw new SecurityError("dstack_failed", 503, "dstack returned a malformed compose hash", {
+      throw new SecurityError("DSTACK_FAILED", 503, "dstack returned a malformed compose hash", {
         cause: error,
       });
     }

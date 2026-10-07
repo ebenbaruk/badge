@@ -40,7 +40,7 @@ export interface RunningEnclave {
 /**
  * Starts the enclave API (127.0.0.1:8787 by default).
  * @throws EnclaveConfigError / LlmConfigError / MemoryConfigError on a bad environment, SecurityError
- * ("dstack_failed") when the dstack agent (or the local simulator) cannot be reached.
+ * ("DSTACK_FAILED") when the dstack agent (or the local simulator) cannot be reached.
  */
 export async function startEnclaveServer(env: NodeJS.ProcessEnv = process.env): Promise<RunningEnclave> {
   const config = loadEnclaveConfig(env);

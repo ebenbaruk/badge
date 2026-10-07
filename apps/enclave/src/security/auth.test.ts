@@ -78,7 +78,7 @@ describe("auth middleware", () => {
     const init = await signedInit("GET", "/v1/consents?status=pending", null);
     expect((await app.request("/v1/consents?status=pending", init)).status).toBe(200);
     const swapped = await app.request("/v1/consents?status=all", init);
-    expect(await errorCode(swapped)).toBe("bad_signature");
+    expect(await errorCode(swapped)).toBe("BAD_SIGNATURE");
   });
 
   it("lets public routes through without headers", async () => {
@@ -90,28 +90,28 @@ describe("auth middleware", () => {
   });
 
   it.each([
-    ["missing headers", async () => ({ method: "GET" }), "auth_missing"],
+    ["missing headers", async () => ({ method: "GET" }), "AUTH_MISSING"],
     [
       "a malformed session",
       async () => {
         const init = await signedInit("GET", "/v1/consents", null);
         return { ...init, headers: { ...init.headers, [BADGE_AUTH_HEADERS.session]: "alice" } };
       },
-      "auth_malformed",
+      "AUTH_MALFORMED",
     ],
-    ["a stale timestamp", () => signedInit("GET", "/v1/consents", null, { ts: NOW - 61_000 }), "clock_skew"],
-    ["a future timestamp", () => signedInit("GET", "/v1/consents", null, { ts: NOW + 61_000 }), "clock_skew"],
+    ["a stale timestamp", () => signedInit("GET", "/v1/consents", null, { ts: NOW - 61_000 }), "CLOCK_SKEW"],
+    ["a future timestamp", () => signedInit("GET", "/v1/consents", null, { ts: NOW + 61_000 }), "CLOCK_SKEW"],
     [
       "a signature by another key",
       () => signedInit("GET", "/v1/consents", null, { signer: stranger, session: agent.address }),
-      "bad_signature",
+      "BAD_SIGNATURE",
     ],
     [
       "an unknown session",
       () => signedInit("GET", "/v1/consents", null, { signer: stranger }),
-      "session_unknown",
+      "SESSION_UNKNOWN",
     ],
-    ["a signature for another method", () => signedInit("POST", "/v1/consents", null), "bad_signature"],
+    ["a signature for another method", () => signedInit("POST", "/v1/consents", null), "BAD_SIGNATURE"],
   ])("refuses %s", async (_label, makeInit, code) => {
     const init = (await makeInit()) as RequestInit;
     const response = await setup().request("/v1/consents", { ...init, method: "GET" });
@@ -122,7 +122,7 @@ describe("auth middleware", () => {
   it("refuses a tampered body", async () => {
     const init = await signedInit("POST", "/v1/tasks", JSON.stringify({ task: "a" }));
     const response = await setup().request("/v1/tasks", { ...init, body: JSON.stringify({ task: "b" }) });
-    expect(await errorCode(response)).toBe("bad_signature");
+    expect(await errorCode(response)).toBe("BAD_SIGNATURE");
   });
 
   it("refuses replays, including under a malleated twin signature", async () => {
@@ -130,7 +130,7 @@ describe("auth middleware", () => {
     const init = await signedInit("GET", "/v1/consents", null);
     expect((await app.request("/v1/consents", init)).status).toBe(200);
     const replay = await app.request("/v1/consents", init);
-    expect(await errorCode(replay)).toBe("replay");
+    expect(await errorCode(replay)).toBe("REPLAY");
 
     // s -> n - s (and v flipped) is another valid signature of the same message.
     const headers = init.headers as Record<string, string>;
@@ -143,7 +143,7 @@ describe("auth middleware", () => {
       ...init,
       headers: { ...headers, [BADGE_AUTH_HEADERS.signature]: twin },
     });
-    expect(await errorCode(malleated)).toBe("replay");
+    expect(await errorCode(malleated)).toBe("REPLAY");
   });
 
   it("fails closed when the replay cache is full", async () => {
@@ -156,13 +156,13 @@ describe("auth middleware", () => {
       await signedInit("GET", "/v1/consents", null, { ts: NOW + 1 }),
     );
     expect(second.status).toBe(503);
-    expect(await errorCode(second)).toBe("replay_cache_full");
+    expect(await errorCode(second)).toBe("REPLAY_CACHE_FULL");
   });
 
   it("refuses a resolver answer for another session", async () => {
     const app = setup({ resolver: { resolve: async () => ({ ...alice, sessionKey: stranger.address }) } });
     const response = await app.request("/v1/consents", await signedInit("GET", "/v1/consents", null));
-    expect(await errorCode(response)).toBe("session_unknown");
+    expect(await errorCode(response)).toBe("SESSION_UNKNOWN");
   });
 
   it("refuses oversized bodies before verifying anything", async () => {

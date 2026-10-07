@@ -40,8 +40,8 @@ describe("parseTdxQuote", () => {
 
   it("rejects another quote version or TEE type", () => {
     const sgx = simulatorFixture.quote.slice(0, 8) + "00000000" + simulatorFixture.quote.slice(16);
-    expect(() => parseTdxQuote(sgx)).toThrow(expect.objectContaining({ code: "unsupported_quote" }));
+    expect(() => parseTdxQuote(sgx)).toThrow(expect.objectContaining({ code: "UNSUPPORTED_QUOTE" }));
     const v3 = "0300" + simulatorFixture.quote.slice(4);
-    expect(() => parseTdxQuote(v3)).toThrow(expect.objectContaining({ code: "unsupported_quote" }));
+    expect(() => parseTdxQuote(v3)).toThrow(expect.objectContaining({ code: "UNSUPPORTED_QUOTE" }));
   });
 });

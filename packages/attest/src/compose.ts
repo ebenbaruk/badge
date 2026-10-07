@@ -26,7 +26,7 @@ export function enclaveMeasurementFrom(composeHash: string): `0x${string}` {
   try {
     decodeHex(composeHash, "compose hash", COMPOSE_HASH_LENGTH);
   } catch (error) {
-    throw new ComposeError("malformed_compose", `invalid compose hash: ${(error as Error).message}`, {
+    throw new ComposeError("MALFORMED_COMPOSE", `invalid compose hash: ${(error as Error).message}`, {
       cause: error,
     });
   }
@@ -50,18 +50,18 @@ export type AppCompose = z.infer<typeof appComposeSchema>;
 
 /**
  * Parses the app-compose JSON string.
- * @throws ComposeError("malformed_compose") when it is not a JSON object.
+ * @throws ComposeError("MALFORMED_COMPOSE") when it is not a JSON object.
  */
 export function parseAppCompose(appCompose: string): AppCompose {
   let json: unknown;
   try {
     json = JSON.parse(appCompose);
   } catch (error) {
-    throw new ComposeError("malformed_compose", "app-compose is not valid JSON", { cause: error });
+    throw new ComposeError("MALFORMED_COMPOSE", "app-compose is not valid JSON", { cause: error });
   }
   const parsed = appComposeSchema.safeParse(json);
   if (!parsed.success) {
-    throw new ComposeError("malformed_compose", `app-compose is malformed: ${z.prettifyError(parsed.error)}`);
+    throw new ComposeError("MALFORMED_COMPOSE", `app-compose is malformed: ${z.prettifyError(parsed.error)}`);
   }
   return parsed.data;
 }

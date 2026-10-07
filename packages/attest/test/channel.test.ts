@@ -112,7 +112,7 @@ describe("attested channel", () => {
 
   it("refuses to send before the attestation was verified", () => {
     const client = ClientChannel.create();
-    expect(() => client.seal("too early")).toThrow(expect.objectContaining({ code: "channel_unverified" }));
+    expect(() => client.seal("too early")).toThrow(expect.objectContaining({ code: "CHANNEL_UNVERIFIED" }));
   });
 
   it("refuses an attestation made for another handshake", () => {
@@ -121,7 +121,7 @@ describe("attested channel", () => {
     const other = ClientChannel.create();
     const enclave = EnclaveChannel.accept(other.hello, enclaveKey.secretKey);
     expect(() => client.establish(attestationFor(other, enclave))).toThrow(
-      expect.objectContaining({ code: "channel_unverified" }),
+      expect.objectContaining({ code: "CHANNEL_UNVERIFIED" }),
     );
   });
 
@@ -139,6 +139,6 @@ describe("attested channel", () => {
     expect(() => EnclaveChannel.accept({ nonce: "00", clientPk: "11" }, key)).toThrow(ChannelError);
     expect(() => EnclaveChannel.accept(null, key)).toThrow(ChannelError);
     const { enclave } = openChannel();
-    expect(() => enclave.open({ seq: -1 })).toThrow(expect.objectContaining({ code: "invalid_input" }));
+    expect(() => enclave.open({ seq: -1 })).toThrow(expect.objectContaining({ code: "INVALID_INPUT" }));
   });
 });

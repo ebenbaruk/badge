@@ -29,13 +29,13 @@ export interface Transport {
 }
 
 /** Enclave error code meaning the channel id is unknown or expired: the request was NOT processed. */
-export const CHANNEL_UNKNOWN_CODE = "channel_unknown";
+export const CHANNEL_UNKNOWN_CODE = "CHANNEL_UNKNOWN";
 
 async function httpCall(fetchFn: FetchLike, url: string, init: RequestInit): Promise<Response> {
   try {
     return await fetchFn(url, init);
   } catch (error) {
-    throw new BadgeApiError(0, "network_error", `cannot reach the enclave at ${url}`, { cause: error });
+    throw new BadgeApiError(0, "NETWORK_ERROR", `cannot reach the enclave at ${url}`, { cause: error });
   }
 }
 
@@ -45,10 +45,10 @@ export function errorFromResponse(status: number, body: string): BadgeApiError {
   try {
     parsed = JSON.parse(body);
   } catch {
-    return new BadgeApiError(status, "bad_response", `HTTP ${status} with a non-JSON body`);
+    return new BadgeApiError(status, "BAD_RESPONSE", `HTTP ${status} with a non-JSON body`);
   }
   const checked = apiErrorBodySchema.safeParse(parsed);
-  if (!checked.success) return new BadgeApiError(status, "bad_response", `HTTP ${status} without error body`);
+  if (!checked.success) return new BadgeApiError(status, "BAD_RESPONSE", `HTTP ${status} without error body`);
   return new BadgeApiError(status, checked.data.error.code, checked.data.error.message);
 }
 
@@ -60,20 +60,20 @@ async function readJson<T>(response: Response, schema: z.ZodType<T>, what: strin
   try {
     value = JSON.parse(text);
   } catch (error) {
-    throw new BadgeApiError(response.status, "bad_response", `${what}: response is not JSON`, {
+    throw new BadgeApiError(response.status, "BAD_RESPONSE", `${what}: response is not JSON`, {
       cause: error,
     });
   }
   const checked = schema.safeParse(value);
   if (!checked.success) {
-    throw new BadgeApiError(response.status, "bad_response", `${what}: unexpected response shape`, {
+    throw new BadgeApiError(response.status, "BAD_RESPONSE", `${what}: unexpected response shape`, {
       cause: checked.error,
     });
   }
   return checked.data;
 }
 
-/** Direct HTTP: for local development only (the enclave may refuse it with `channel_required`). */
+/** Direct HTTP: for local development only (the enclave may refuse it with `CHANNEL_REQUIRED`). */
 export class PlainTransport implements Transport {
   constructor(
     private readonly baseUrl: string,
@@ -120,7 +120,7 @@ export class ChannelTransport implements Transport {
     return this.lastAttestation;
   }
 
-  /** Opens (or reuses) the channel; throws `attestation_failed` if the enclave cannot be verified. */
+  /** Opens (or reuses) the channel; throws `ATTESTATION_FAILED` if the enclave cannot be verified. */
   async connect(): Promise<VerifiedAttestation> {
     await this.ensureChannel();
     // ensureChannel only returns with a verified attestation.
@@ -164,7 +164,7 @@ export class ChannelTransport implements Transport {
     try {
       return channel.client.open(outer.sealed, innerResponseSchema);
     } catch (error) {
-      throw new BadgeApiError(0, "channel_failed", "cannot open the enclave's sealed response", {
+      throw new BadgeApiError(0, "CHANNEL_FAILED", "cannot open the enclave's sealed response", {
         cause: error,
       });
     }
@@ -193,19 +193,19 @@ export class ChannelTransport implements Transport {
     if (!result.ok) {
       throw new BadgeApiError(
         0,
-        "attestation_failed",
+        "ATTESTATION_FAILED",
         `enclave attestation rejected (${result.code}): ${result.reason}`,
       );
     }
     try {
       client.establish(result);
     } catch (error) {
-      throw new BadgeApiError(0, "channel_failed", "cannot establish the channel", { cause: error });
+      throw new BadgeApiError(0, "CHANNEL_FAILED", "cannot establish the channel", { cause: error });
     }
     if (client.channelId !== opened.channelId || result.enclavePk !== opened.enclavePk) {
       throw new BadgeApiError(
         0,
-        "channel_failed",
+        "CHANNEL_FAILED",
         "the enclave announced another channel than the attested one",
       );
     }

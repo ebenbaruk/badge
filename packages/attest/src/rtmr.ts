@@ -49,13 +49,13 @@ export function parseEventLog(eventLog: string | unknown[]): DstackEvent[] {
     try {
       raw = JSON.parse(eventLog);
     } catch (error) {
-      throw new EventLogError("malformed_event_log", "event log is not valid JSON", { cause: error });
+      throw new EventLogError("MALFORMED_EVENT_LOG", "event log is not valid JSON", { cause: error });
     }
   }
   const parsed = z.array(eventSchema).safeParse(raw);
   if (!parsed.success) {
     throw new EventLogError(
-      "malformed_event_log",
+      "MALFORMED_EVENT_LOG",
       `event log is malformed: ${z.prettifyError(parsed.error)}`,
     );
   }
@@ -80,7 +80,7 @@ function replayDigests(digests: readonly string[]): string {
     let bytes = decodeHex(digest, "event digest");
     if (bytes.length > RTMR_LENGTH) {
       throw new EventLogError(
-        "malformed_event_log",
+        "MALFORMED_EVENT_LOG",
         `event digest is ${bytes.length} bytes, max ${RTMR_LENGTH}`,
       );
     }
@@ -102,14 +102,14 @@ export function replayRtmrs(events: readonly DstackEvent[]): [string, string, st
     if (event.imr !== RUNTIME_RTMR_INDEX) continue;
     if (event.event_type !== DSTACK_RUNTIME_EVENT_TYPE) {
       throw new EventLogError(
-        "event_digest_mismatch",
+        "EVENT_DIGEST_MISMATCH",
         `RTMR3 event "${event.event}" has type 0x${event.event_type.toString(16)}, its payload cannot be checked`,
       );
     }
     const expected = runtimeEventDigest(event.event_type, event.event, event.event_payload);
     if (expected !== normalizeHex(event.digest)) {
       throw new EventLogError(
-        "event_digest_mismatch",
+        "EVENT_DIGEST_MISMATCH",
         `digest of RTMR3 event "${event.event}" does not match its payload`,
       );
     }
@@ -125,12 +125,12 @@ export function replayRtmrs(events: readonly DstackEvent[]): [string, string, st
 
 /**
  * Checks that the event log replays to the RTMRs of the quote (all four registers).
- * @throws EventLogError("rtmr_mismatch") naming the first register that differs.
+ * @throws EventLogError("RTMR_MISMATCH") naming the first register that differs.
  */
 export function assertRtmrsMatch(replayed: readonly string[], quoted: readonly string[]): void {
   for (let index = 0; index < RTMR_COUNT; index++) {
     if (replayed[index] !== quoted[index]) {
-      throw new EventLogError("rtmr_mismatch", `replayed RTMR${index} does not match the quote`);
+      throw new EventLogError("RTMR_MISMATCH", `replayed RTMR${index} does not match the quote`);
     }
   }
 }
@@ -149,7 +149,7 @@ function singleRuntimeEvent(events: readonly DstackEvent[], name: string): Dstac
   const matches = events.filter((e) => e.imr === RUNTIME_RTMR_INDEX && e.event === name);
   // Two events with the same name would make "the" attested value ambiguous: refuse rather than pick one.
   if (matches.length > 1) {
-    throw new EventLogError("duplicate_event", `RTMR3 contains ${matches.length} "${name}" events`);
+    throw new EventLogError("DUPLICATE_EVENT", `RTMR3 contains ${matches.length} "${name}" events`);
   }
   return matches[0];
 }
@@ -162,13 +162,13 @@ function parseKeyProvider(payloadHex: string): string {
   try {
     json = JSON.parse(text);
   } catch (error) {
-    throw new EventLogError("malformed_event_log", "key-provider event payload is not JSON", {
+    throw new EventLogError("MALFORMED_EVENT_LOG", "key-provider event payload is not JSON", {
       cause: error,
     });
   }
   const parsed = keyProviderSchema.safeParse(json);
   if (!parsed.success) {
-    throw new EventLogError("malformed_event_log", "key-provider event payload has no name");
+    throw new EventLogError("MALFORMED_EVENT_LOG", "key-provider event payload has no name");
   }
   return parsed.data.name;
 }
@@ -184,7 +184,7 @@ export function extractAppIdentity(events: readonly DstackEvent[]): AttestedAppI
   const keyProviderEvent = singleRuntimeEvent(events, DSTACK_EVENTS.keyProvider);
   if (!appIdEvent || !composeEvent) {
     throw new EventLogError(
-      "missing_event",
+      "MISSING_EVENT",
       "RTMR3 must contain exactly one app-id and one compose-hash event",
     );
   }
@@ -192,7 +192,7 @@ export function extractAppIdentity(events: readonly DstackEvent[]): AttestedAppI
   const composeHash = decodeHex(composeEvent.event_payload, "compose-hash payload");
   if (appId.length !== APP_ID_LENGTH || composeHash.length !== COMPOSE_HASH_LENGTH) {
     throw new EventLogError(
-      "malformed_event_log",
+      "MALFORMED_EVENT_LOG",
       `app-id must be ${APP_ID_LENGTH} bytes and compose-hash ${COMPOSE_HASH_LENGTH} bytes`,
     );
   }

@@ -52,7 +52,7 @@ describe("createAttestationBundle", () => {
       },
     });
     await expect(createAttestationBundle(failing, handshake)).rejects.toMatchObject({
-      code: "dstack_failed",
+      code: "DSTACK_FAILED",
       message: expect.stringContaining("Service not found"),
     });
   });
@@ -73,12 +73,12 @@ describe("deriveEnclaveKey", () => {
   });
 
   it("rejects malformed paths", async () => {
-    await expect(deriveEnclaveKey(stubAgent(), "../etc")).rejects.toMatchObject({ code: "invalid_input" });
-    await expect(deriveEnclaveKey(stubAgent(), "")).rejects.toMatchObject({ code: "invalid_input" });
+    await expect(deriveEnclaveKey(stubAgent(), "../etc")).rejects.toMatchObject({ code: "INVALID_INPUT" });
+    await expect(deriveEnclaveKey(stubAgent(), "")).rejects.toMatchObject({ code: "INVALID_INPUT" });
   });
 
   it("rejects a key of the wrong size", async () => {
     const short = stubAgent({ getKey: async () => ({ key: new Uint8Array(16) }) });
-    await expect(deriveEnclaveKey(short, "badge/x")).rejects.toMatchObject({ code: "dstack_failed" });
+    await expect(deriveEnclaveKey(short, "badge/x")).rejects.toMatchObject({ code: "DSTACK_FAILED" });
   });
 });

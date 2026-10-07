@@ -74,7 +74,7 @@ infra/cvm/rehearse.sh down    # arrêt et suppression des volumes de répétitio
 Vérifie : génération des secrets, Postgres et Honcho sains, enclave saine **à travers la passerelle**
 (`http://127.0.0.1:18787/health`), mesure exposée, canal attesté ouvert et aller-retour d'une requête par ce canal
 (`infra/cvm/check-channel.ts` : quote vérifié contre le simulateur, mesure relue dans le canal identique à la mesure
-attestée), HTTP en clair refusé sur `/v1` (`channel_required`), aucun autre port publié, Honcho sans route vers Internet. La
+attestée), HTTP en clair refusé sur `/v1` (`CHANNEL_REQUIRED`), aucun autre port publié, Honcho sans route vers Internet. La
 clé LLM est factice : aucun appel n'est facturé (le seed n'est donc pas lancé).
 
 ### 3. Publier et épingler les digests
@@ -196,7 +196,7 @@ variables chiffrées change le compose hash : redéployer, puis redistribuer les
   ceux du deriver (`BADGE_SEED_DERIVER_LOGS=skip`), seuls ses contrôles de représentation et de rappel s'appliquent.
   `phala ps` peut être refusé avec `--no-public-sysinfo` ; `phala-status.sh` s'appuie alors sur `/health`.
 - **Socket dstack** : l'enclave tourne sous l'utilisateur `node` (uid 1000). Si le socket `/var/run/dstack.sock` du
-  CVM n'est pas accessible à cet uid, l'enclave refuse de démarrer (erreur `dstack_failed`) ; correctif : ajouter
+  CVM n'est pas accessible à cet uid, l'enclave refuse de démarrer (erreur `DSTACK_FAILED`) ; correctif : ajouter
   `user: "0"` au service `enclave` (ce qui change le compose hash).
 - Le format JSON exact de `phala deploy --json` et `phala cvms get --json` n'est pas documenté : les scripts
   cherchent `app_id` et l'URL publique dans toute la réponse ; en cas d'échec, les sorties brutes sont dans

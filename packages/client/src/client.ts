@@ -172,11 +172,11 @@ export class BadgeClient {
 
   /**
    * Opens and verifies the attested channel now (otherwise done on the first call).
-   * @throws BadgeApiError("invalid_argument") in plain mode, ("attestation_failed") if the enclave is not trusted.
+   * @throws BadgeApiError("INVALID_ARGUMENT") in plain mode, ("ATTESTATION_FAILED") if the enclave is not trusted.
    */
   async connect(): Promise<VerifiedAttestation> {
     if (!this.channel)
-      throw new BadgeApiError(0, "invalid_argument", "connect() needs the channel transport");
+      throw new BadgeApiError(0, "INVALID_ARGUMENT", "connect() needs the channel transport");
     return this.channel.connect();
   }
 
@@ -319,7 +319,7 @@ export class BadgeClient {
   async approveDeskRequest(requestId: string, input: ApproveDeskRequestInput): Promise<DeskShareDecision> {
     const proof = deskProofSchema.safeParse(input.proof);
     if (!proof.success) {
-      throw new BadgeApiError(0, "invalid_argument", `malformed desk proof: ${z.prettifyError(proof.error)}`);
+      throw new BadgeApiError(0, "INVALID_ARGUMENT", `malformed desk proof: ${z.prettifyError(proof.error)}`);
     }
     return this.call({
       method: "POST",
@@ -422,7 +422,7 @@ export class BadgeClient {
     try {
       body = encodeSignedMessage(signed);
     } catch (error) {
-      throw new BadgeApiError(0, "invalid_argument", `cannot encode signed ${signed.kind}`, { cause: error });
+      throw new BadgeApiError(0, "INVALID_ARGUMENT", `cannot encode signed ${signed.kind}`, { cause: error });
     }
     return this.call({ method: "POST", path, body, authenticated, schema });
   }
@@ -439,7 +439,7 @@ export class BadgeClient {
     try {
       value = JSON.parse(response.body);
     } catch (error) {
-      throw new BadgeApiError(response.status, "bad_response", `${options.path}: response is not JSON`, {
+      throw new BadgeApiError(response.status, "BAD_RESPONSE", `${options.path}: response is not JSON`, {
         cause: error,
       });
     }
@@ -447,7 +447,7 @@ export class BadgeClient {
     if (!checked.success) {
       throw new BadgeApiError(
         response.status,
-        "bad_response",
+        "BAD_RESPONSE",
         `${options.path}: unexpected response shape: ${z.prettifyError(checked.error)}`,
         { cause: checked.error },
       );
@@ -464,7 +464,7 @@ export class BadgeClient {
     if (!account) {
       throw new BadgeApiError(
         0,
-        "no_session_key",
+        "NO_SESSION_KEY",
         `${method} ${path} needs a session key (openSession first)`,
       );
     }

@@ -63,7 +63,7 @@ describe("session file", () => {
 
   it("does not replace an existing file unless asked", async () => {
     await writeSessionFile(file, newSession(), { overwrite: false });
-    await expectSetupError(writeSessionFile(file, newSession(), { overwrite: false }), "session_file_exists");
+    await expectSetupError(writeSessionFile(file, newSession(), { overwrite: false }), "SESSION_FILE_EXISTS");
     await chmod(file, WORLD_READABLE);
     await writeSessionFile(file, newSession(), { overwrite: true });
     expect((await stat(file)).mode & 0o777).toBe(OWNER_ONLY);
@@ -72,12 +72,12 @@ describe("session file", () => {
   it("refuses a file other users can read", async () => {
     await writeSessionFile(file, newSession(), { overwrite: false });
     await chmod(file, WORLD_READABLE);
-    await expectSetupError(readSessionFile(file), "session_file_insecure");
+    await expectSetupError(readSessionFile(file), "SESSION_FILE_INSECURE");
   });
 
   it("refuses a key that does not match the delegated session key", async () => {
     await writeSessionFile(file, { ...newSession(), privateKey: generatePrivateKey() }, { overwrite: false });
-    await expectSetupError(readSessionFile(file), "session_file_invalid");
+    await expectSetupError(readSessionFile(file), "SESSION_FILE_INVALID");
   });
 
   it("refuses malformed content without echoing it", async () => {
@@ -89,7 +89,7 @@ describe("session file", () => {
       },
     );
     const error = await readSessionFile(file).catch((e: unknown) => e as Error);
-    expect(error).toMatchObject({ code: "session_file_invalid" });
+    expect(error).toMatchObject({ code: "SESSION_FILE_INVALID" });
     expect((error as Error).message).not.toContain("0xsecret");
   });
 
@@ -146,10 +146,10 @@ describe("enclave verification at startup", () => {
   const simulated = { ...channel, attestationMode: "simulated" } as const;
   const tdx = { ...channel, attestationMode: "tdx", expectedComposeHash: COMPOSE_HASH } as const;
   const unreachable = {
-    connect: () => Promise.reject(new BadgeApiError(0, "network_error", "ECONNREFUSED")),
+    connect: () => Promise.reject(new BadgeApiError(0, "NETWORK_ERROR", "ECONNREFUSED")),
   };
   const untrusted = {
-    connect: () => Promise.reject(new BadgeApiError(0, "attestation_failed", "rtmr_mismatch")),
+    connect: () => Promise.reject(new BadgeApiError(0, "ATTESTATION_FAILED", "RTMR_MISMATCH")),
   };
   const warnings: string[] = [];
   const warn = (message: string) => warnings.push(message);
@@ -167,17 +167,17 @@ describe("enclave verification at startup", () => {
     const other = {
       connect: async () => verifiedAttestation({ enclaveMeasurement: `0x${"99".repeat(32)}` }),
     };
-    await expectSetupError(verifyEnclave(other, simulated, session, warn), "measurement_mismatch");
+    await expectSetupError(verifyEnclave(other, simulated, session, warn), "MEASUREMENT_MISMATCH");
   });
 
   it("refuses to start in tdx mode when the enclave cannot be attested", async () => {
-    await expectSetupError(verifyEnclave(unreachable, tdx, session, warn), "attestation_failed");
-    await expectSetupError(verifyEnclave(untrusted, tdx, session, warn), "attestation_failed");
+    await expectSetupError(verifyEnclave(unreachable, tdx, session, warn), "ATTESTATION_FAILED");
+    await expectSetupError(verifyEnclave(untrusted, tdx, session, warn), "ATTESTATION_FAILED");
   });
 
   it("only warns about an unreachable simulator, but still refuses a rejected attestation", async () => {
     await verifyEnclave(unreachable, simulated, session, warn);
     expect(warnings).toEqual([expect.stringContaining("ECONNREFUSED")]);
-    await expectSetupError(verifyEnclave(untrusted, simulated, session, warn), "attestation_failed");
+    await expectSetupError(verifyEnclave(untrusted, simulated, session, warn), "ATTESTATION_FAILED");
   });
 });

@@ -32,18 +32,18 @@ and the caller; domain routes registered after it only see authenticated request
   `sha512(nonce || clientPk || enclavePk)`, event log, app-compose); `POST /v1/channel/:id {sealed} -> {sealed}`.
   The inner payload `{method, path, headers, body} -> {status, contentType, body}` is dispatched in-process to the
   same app. Inner paths must be under `/v1/` (no `..`, never the channel itself); forwarded headers: `content-type`
-  and the three `x-badge-*` headers. Channels live in memory (idle TTL 15 min, cap 10 000, `503 channel_capacity`);
-  an unknown or expired id answers `404 channel_unknown` (the SDK reopens and retries once: the request was not
-  executed); reusing a hello answers `409 channel_exists`.
+  and the three `x-badge-*` headers. Channels live in memory (idle TTL 15 min, cap 10 000, `503 CHANNEL_CAPACITY`);
+  an unknown or expired id answers `404 CHANNEL_UNKNOWN` (the SDK reopens and retries once: the request was not
+  executed); reusing a hello answers `409 CHANNEL_EXISTS`.
 - **Channel required**: with `BADGE_REQUIRE_CHANNEL=true` (default, forced inside a CVM: TLS ends at the Phala
-  gateway) any `/v1` call not dispatched by the channel answers `403 channel_required`, except the channel routes and
+  gateway) any `/v1` call not dispatched by the channel answers `403 CHANNEL_REQUIRED`, except the channel routes and
   the measurement. `BADGE_REQUIRE_CHANNEL=false` allows plain HTTP for local tools.
 - **Request signature**: every `/v1` route except the public ones carries `x-badge-session` (session key address),
   `x-badge-ts` (unix ms) and `x-badge-sig` = EIP-191 signature by the session key of
   `BADGE-REQ-V1\n{METHOD}\n{path+query}\n{ts}\n{sha256(body) lowercase hex}` (`canonicalRequest`,
-  `packages/client/src/request-auth.ts`; verified by `src/security/auth.ts`). Refusals (401): `auth_missing`,
-  `auth_malformed`, `clock_skew` (more than 60 s), `bad_signature`, `replay` (cache keyed on session + signed string,
-  not on the malleable signature bytes; full cache fails closed with `503 replay_cache_full`), `session_unknown`
+  `packages/client/src/request-auth.ts`; verified by `src/security/auth.ts`). Refusals (401): `AUTH_MISSING`,
+  `AUTH_MALFORMED`, `CLOCK_SKEW` (more than 60 s), `BAD_SIGNATURE`, `REPLAY` (cache keyed on session + signed string,
+  not on the malleable signature bytes; full cache fails closed with `503 REPLAY_CACHE_FULL`), `SESSION_UNKNOWN`
   (unknown, expired or revoked session, resolved by `SessionRepository.findActiveCaller`). Bodies above 256 KiB: 413.
 - **Public routes**: `GET /health`, `GET /v1/attestation/measurement`, `POST /v1/channel/*`, and the two routes whose
   bodies are Ledger-signed: `POST /v1/enroll`, `POST /v1/sessions`. Any new route is authenticated by default.
@@ -59,11 +59,14 @@ mismatch is refused (`ENCLAVE_MISMATCH`).
 
 ## Errors
 
-Single envelope `{ "error": { "code", "message" } }`, with a stable machine `code`:
+Single envelope `{ "error": { "code", "message" } }`, with a stable machine `code` in UPPER_SNAKE_CASE (the same
+convention everywhere: enclave, `@badge/client` (`NETWORK_ERROR`, `BAD_RESPONSE`, `ATTESTATION_FAILED`,
+`CHANNEL_FAILED`, `NO_SESSION_KEY`, `INVALID_ARGUMENT`, produced by the SDK itself), `@badge/attest`, `@badge/consent`,
+`@badge/zk`):
 
-- security layer (lowercase): `auth_*`, `clock_skew`, `bad_signature`, `replay`, `session_unknown` 401,
-  `channel_required` 403, `channel_unknown` 404, `channel_exists` 409, `body_too_large` 413, `invalid_body` /
-  `channel_rejected` 400, `replay_cache_full` / `channel_capacity` / `dstack_failed` 503;
+- security layer: `AUTH_*`, `CLOCK_SKEW`, `BAD_SIGNATURE`, `REPLAY`, `SESSION_UNKNOWN` 401,
+  `CHANNEL_REQUIRED` 403, `CHANNEL_UNKNOWN` 404, `CHANNEL_EXISTS` 409, `BODY_TOO_LARGE` 413, `INVALID_BODY` /
+  `CHANNEL_REJECTED` 400, `REPLAY_CACHE_FULL` / `CHANNEL_CAPACITY` / `DSTACK_FAILED` 503;
 - domain: `INVALID_REQUEST` 400, `FORBIDDEN` / `UNKNOWN_EMPLOYEE` / `NOT_ENROLLED` 403, `NOT_FOUND` 404,
   `NONCE_REUSED` / `ALREADY_EXISTS` / `NOT_PENDING` / `COMPLIANCE_KEY_MISSING` 409, `SESSION_TOO_LONG` / `STALE` /
   `NO_RULE` 422, `UPSTREAM_FAILED` 502 (memory or LLM; never echoes their output), `INTERNAL` 500 (details only in

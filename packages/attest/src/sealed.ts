@@ -52,7 +52,7 @@ function sharedSecret(secretKey: Uint8Array, publicKey: Uint8Array): Uint8Array 
     // noble rejects low-order points (all-zero shared secret), which would make the key predictable.
     return x25519.getSharedSecret(secretKey, publicKey);
   } catch (error) {
-    throw new AttestError("invalid_input", "X25519 public key is invalid", { cause: error });
+    throw new AttestError("INVALID_INPUT", "X25519 public key is invalid", { cause: error });
   }
 }
 
@@ -61,13 +61,13 @@ const AAD = utf8ToBytes(`${SEALED_BOX_LABEL}|${SEALED_BOX_VERSION}|${SEALED_BOX_
 /**
  * Encrypts `plaintext` (bytes, or a string as UTF-8) so that only the holder of the secret key matching
  * `recipientPk` (32 bytes, or hex) can read it.
- * @throws AttestError("invalid_input") on a malformed public key.
+ * @throws AttestError("INVALID_INPUT") on a malformed public key.
  */
 export function sealToPublicKey(recipientPk: Uint8Array | string, plaintext: Uint8Array | string): SealedBox {
   const recipient =
     typeof recipientPk === "string" ? decodeHex(recipientPk, "recipientPk", X25519_KEY_LENGTH) : recipientPk;
   if (recipient.length !== X25519_KEY_LENGTH) {
-    throw new AttestError("invalid_input", `recipientPk must be ${X25519_KEY_LENGTH} bytes`);
+    throw new AttestError("INVALID_INPUT", `recipientPk must be ${X25519_KEY_LENGTH} bytes`);
   }
   const ephemeralSecret = x25519.utils.randomPrivateKey();
   const epk = x25519.getPublicKey(ephemeralSecret);
@@ -87,16 +87,16 @@ export function sealToPublicKey(recipientPk: Uint8Array | string, plaintext: Uin
 /**
  * Opens a sealed box (validated here: it usually comes from storage or the network) with the recipient's secret key.
  * Returns the plaintext bytes (decode with `TextDecoder` for text).
- * @throws AttestError("invalid_input") on a malformed envelope or key, ("sealed_box_auth_failed") when the box was
+ * @throws AttestError("INVALID_INPUT") on a malformed envelope or key, ("sealed_box_auth_failed") when the box was
  * tampered with or sealed to another key.
  */
 export function openSealed(recipientSk: Uint8Array, sealed: unknown): Uint8Array {
   const parsed = sealedBoxSchema.safeParse(sealed);
   if (!parsed.success) {
-    throw new AttestError("invalid_input", `sealed box is malformed: ${z.prettifyError(parsed.error)}`);
+    throw new AttestError("INVALID_INPUT", `sealed box is malformed: ${z.prettifyError(parsed.error)}`);
   }
   if (recipientSk.length !== X25519_KEY_LENGTH) {
-    throw new AttestError("invalid_input", `recipient secret key must be ${X25519_KEY_LENGTH} bytes`);
+    throw new AttestError("INVALID_INPUT", `recipient secret key must be ${X25519_KEY_LENGTH} bytes`);
   }
   const epk = decodeHex(parsed.data.epk, "epk", X25519_KEY_LENGTH);
   const recipientPk = x25519.getPublicKey(recipientSk);

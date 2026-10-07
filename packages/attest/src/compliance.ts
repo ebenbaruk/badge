@@ -22,7 +22,7 @@ const PRINTABLE_ASCII = /^[\x20-\x7e]+$/;
 
 function assertPrintableAscii(value: string, label: string): void {
   if (!PRINTABLE_ASCII.test(value)) {
-    throw new AttestError("invalid_input", `${label} must be printable ASCII (it is shown on the Ledger)`);
+    throw new AttestError("INVALID_INPUT", `${label} must be printable ASCII (it is shown on the Ledger)`);
   }
 }
 
@@ -46,7 +46,7 @@ export function complianceKeyRegistrationMessage(company: string, publicKey: str
 
 /**
  * Derives the compliance X25519 key pair from the Ledger's EIP-191 signature of `complianceKeyDeriveMessage`.
- * @throws AttestError("invalid_input") when `signature` is not 65 bytes of hex.
+ * @throws AttestError("INVALID_INPUT") when `signature` is not 65 bytes of hex.
  */
 export function complianceKeyFromSignature(signature: string): {
   secretKey: Uint8Array;

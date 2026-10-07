@@ -54,7 +54,7 @@ export function createDstackClient(endpoint?: string): DstackClient {
 function wrap(action: string, error: unknown): AttestError {
   if (error instanceof AttestError) return error;
   const message = error instanceof Error ? error.message : String(error);
-  return new AttestError("dstack_failed", `dstack ${action} failed: ${message}`, { cause: error });
+  return new AttestError("DSTACK_FAILED", `dstack ${action} failed: ${message}`, { cause: error });
 }
 
 /**
@@ -62,7 +62,7 @@ function wrap(action: string, error: unknown): AttestError {
  * sha512(nonce || clientPk || enclavePk), the event log and the exact app-compose string.
  *
  * Uses `getQuote` + `info` rather than `attest()`: the 0.5.3 simulator answers "Service not found" to `attest`.
- * @throws AttestError("dstack_failed") when the guest agent fails, or returns a quote over other report_data.
+ * @throws AttestError("DSTACK_FAILED") when the guest agent fails, or returns a quote over other report_data.
  */
 export async function createAttestationBundle(
   dstack: DstackAgent,
@@ -82,7 +82,7 @@ export async function createAttestationBundle(
   }
   // Catch a misbehaving agent here rather than letting every client reject the bundle.
   if (parseTdxQuote(quote.quote).reportData !== toHex(reportData)) {
-    throw new AttestError("dstack_failed", "dstack returned a quote over another report_data");
+    throw new AttestError("DSTACK_FAILED", "dstack returned a quote over another report_data");
   }
   return {
     quote: normalizeHex(quote.quote),
@@ -95,12 +95,12 @@ export async function createAttestationBundle(
 /**
  * Derives a 32-byte secret from the dstack KMS. Deterministic per (app, path): the same deployment always gets the
  * same key back after a restart, and no other app can derive it.
- * @throws AttestError("invalid_input") on a malformed path, AttestError("dstack_failed") when the agent fails.
+ * @throws AttestError("INVALID_INPUT") on a malformed path, AttestError("DSTACK_FAILED") when the agent fails.
  */
 export async function deriveEnclaveKey(dstack: DstackAgent, path: string): Promise<Uint8Array> {
   const checkedPath = z.string().regex(KEY_PATH_PATTERN).safeParse(path);
   if (!checkedPath.success) {
-    throw new AttestError("invalid_input", `invalid key path "${path}" (lowercase, digits, / _ . : - only)`);
+    throw new AttestError("INVALID_INPUT", `invalid key path "${path}" (lowercase, digits, / _ . : - only)`);
   }
   let response: Awaited<ReturnType<DstackAgent["getKey"]>>;
   try {
@@ -110,7 +110,7 @@ export async function deriveEnclaveKey(dstack: DstackAgent, path: string): Promi
   }
   if (response.key.length !== DERIVED_KEY_LENGTH) {
     throw new AttestError(
-      "dstack_failed",
+      "DSTACK_FAILED",
       `getKey returned ${response.key.length} bytes, expected ${DERIVED_KEY_LENGTH}`,
     );
   }

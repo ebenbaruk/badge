@@ -44,7 +44,7 @@ function randomNonce(): bigint {
 
 /**
  * Generates a fresh session key and the `AgentSession` message delegating to it.
- * @throws BadgeApiError("invalid_argument") when the TTL is not positive or exceeds {@link ENCLAVE_MAX_SESSION_TTL_SECONDS}.
+ * @throws BadgeApiError("INVALID_ARGUMENT") when the TTL is not positive or exceeds {@link ENCLAVE_MAX_SESSION_TTL_SECONDS}.
  */
 export function createAgentSession(
   employee: Address,
@@ -54,7 +54,7 @@ export function createAgentSession(
   if (ttl <= 0n || ttl > ENCLAVE_MAX_SESSION_TTL_SECONDS) {
     throw new BadgeApiError(
       0,
-      "invalid_argument",
+      "INVALID_ARGUMENT",
       `session TTL must be in (0, ${ENCLAVE_MAX_SESSION_TTL_SECONDS}] seconds, got ${ttl}`,
     );
   }

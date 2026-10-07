@@ -1,13 +1,13 @@
 /** Failure codes of the MCP server's own setup (enclave refusals stay `BadgeApiError` from @badge/client). */
 export type McpErrorCode =
-  | "config_invalid"
-  | "session_file_invalid"
-  | "session_file_insecure"
-  | "session_file_exists"
-  | "session_not_opened"
-  | "session_expired"
-  | "attestation_failed"
-  | "measurement_mismatch";
+  | "CONFIG_INVALID"
+  | "SESSION_FILE_INVALID"
+  | "SESSION_FILE_INSECURE"
+  | "SESSION_FILE_EXISTS"
+  | "SESSION_NOT_OPENED"
+  | "SESSION_EXPIRED"
+  | "ATTESTATION_FAILED"
+  | "MEASUREMENT_MISMATCH";
 
 /** A setup error: the server refuses to start (fail closed) and prints `message`, never a secret. */
 export class McpSetupError extends Error {

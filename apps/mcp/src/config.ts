@@ -61,7 +61,7 @@ export interface McpConfig extends EnclaveConfig {
 function parseEnv(env: NodeJS.ProcessEnv): z.infer<typeof EnvSchema> {
   const parsed = EnvSchema.safeParse(env);
   if (!parsed.success) {
-    throw new McpSetupError("config_invalid", `invalid configuration: ${z.prettifyError(parsed.error)}`);
+    throw new McpSetupError("CONFIG_INVALID", `invalid configuration: ${z.prettifyError(parsed.error)}`);
   }
   return parsed.data;
 }
@@ -77,7 +77,7 @@ function enclaveConfigOf(vars: z.infer<typeof EnvSchema>): EnclaveConfig {
 
 /**
  * Reads only the enclave connection settings (session CLI).
- * @throws McpSetupError("config_invalid").
+ * @throws McpSetupError("CONFIG_INVALID").
  */
 export function loadEnclaveConfig(env: NodeJS.ProcessEnv = process.env): EnclaveConfig {
   return enclaveConfigOf(parseEnv(env));
@@ -86,7 +86,7 @@ export function loadEnclaveConfig(env: NodeJS.ProcessEnv = process.env): Enclave
 /**
  * Reads the configuration. Command-line flags (`--session <file>`, `--http`, `--port <n>`) override the
  * environment, so one harness config can point several agents at different session files.
- * @throws McpSetupError("config_invalid") naming the offending variable.
+ * @throws McpSetupError("CONFIG_INVALID") naming the offending variable.
  */
 export function loadMcpConfig(
   env: NodeJS.ProcessEnv = process.env,
@@ -100,7 +100,7 @@ export function loadMcpConfig(
       strict: true,
     }).values;
   } catch (error) {
-    throw new McpSetupError("config_invalid", (error as Error).message, { cause: error });
+    throw new McpSetupError("CONFIG_INVALID", (error as Error).message, { cause: error });
   }
   const vars = parseEnv({
     ...env,
@@ -110,7 +110,7 @@ export function loadMcpConfig(
   });
   if (vars.BADGE_SESSION_KEY_FILE === undefined) {
     throw new McpSetupError(
-      "config_invalid",
+      "CONFIG_INVALID",
       "no session file: set BADGE_SESSION_KEY_FILE or pass --session <file> (see `pnpm --filter @badge/mcp session create`)",
     );
   }

@@ -27,11 +27,11 @@ const task = await agent.createTask({ task: "Preparer le rendez-vous Durand", ta
 
 - `transport: "channel"` : canal chiffré attesté (`@badge/attest`), ouvert à la demande ; aucune clé n'est dérivée
   avant la vérification du quote. Les requêtes sont sérialisées (numéros de séquence stricts). Un canal expiré est
-  rouvert et la requête rejouée une seule fois (code `channel_unknown` : la requête n'a pas été exécutée).
+  rouvert et la requête rejouée une seule fois (code `CHANNEL_UNKNOWN` : la requête n'a pas été exécutée).
 - `transport: "plain"` : HTTP direct, pour le développement local (refusé par une enclave en `requireChannel`).
 - `attestationMode: "tdx"` exige `expectedComposeHash`.
 - Toutes les erreurs sont des `BadgeApiError { status, code, message }` (`code` de l'enclave ou du SDK :
-  `network_error`, `bad_response`, `attestation_failed`, `channel_failed`, `no_session_key`, `invalid_argument`).
+  `NETWORK_ERROR`, `BAD_RESPONSE`, `ATTESTATION_FAILED`, `CHANNEL_FAILED`, `NO_SESSION_KEY`, `INVALID_ARGUMENT`).
 - Chaque réponse est validée par zod (`api-schemas.ts`) ; les messages signés qu'elle contient sont décodés avec
   `@badge/consent` (bigint restaurés), prêts à être signés sur le Ledger.
 

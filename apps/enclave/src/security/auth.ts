@@ -54,7 +54,7 @@ export interface AuthMiddlewareOptions {
 
 function header(value: string | undefined, name: string): string {
   if (value === undefined || value.length === 0) {
-    throw new SecurityError("auth_missing", 401, `missing ${name} header`);
+    throw new SecurityError("AUTH_MISSING", 401, `missing ${name} header`);
   }
   return value;
 }
@@ -79,16 +79,16 @@ async function authenticate(
     request.headers.get(BADGE_AUTH_HEADERS.signature) ?? undefined,
     BADGE_AUTH_HEADERS.signature,
   );
-  if (!isAddress(session)) throw new SecurityError("auth_malformed", 401, "session key is not an address");
-  if (!TIMESTAMP_PATTERN.test(ts)) throw new SecurityError("auth_malformed", 401, "timestamp is not unix ms");
+  if (!isAddress(session)) throw new SecurityError("AUTH_MALFORMED", 401, "session key is not an address");
+  if (!TIMESTAMP_PATTERN.test(ts)) throw new SecurityError("AUTH_MALFORMED", 401, "timestamp is not unix ms");
   if (!SIGNATURE_PATTERN.test(sig))
-    throw new SecurityError("auth_malformed", 401, "signature is not 65 bytes");
+    throw new SecurityError("AUTH_MALFORMED", 401, "signature is not 65 bytes");
 
   const timestamp = Number(ts);
   const now = clock.now();
   if (Math.abs(now - timestamp) > MAX_REQUEST_SKEW_MS) {
     throw new SecurityError(
-      "clock_skew",
+      "CLOCK_SKEW",
       401,
       `request timestamp is ${Math.round((timestamp - now) / 1000)} s away from the enclave clock (max ${MAX_REQUEST_SKEW_MS / 1000} s)`,
     );
@@ -99,25 +99,25 @@ async function authenticate(
   try {
     signer = await recoverMessageAddress({ message: signed, signature: sig as Hex });
   } catch (error) {
-    throw new SecurityError("bad_signature", 401, "signature cannot be recovered", { cause: error });
+    throw new SecurityError("BAD_SIGNATURE", 401, "signature cannot be recovered", { cause: error });
   }
   if (!isAddressEqual(signer, sessionKey)) {
-    throw new SecurityError("bad_signature", 401, "request is not signed by the session key it names");
+    throw new SecurityError("BAD_SIGNATURE", 401, "request is not signed by the session key it names");
   }
   // Keyed on what was signed, not on the signature bytes: ECDSA signatures are malleable (s -> n - s), so a
   // signature-keyed cache would let an attacker replay a request under a twin signature.
   const replayKey = sha256(stringToBytes(`${sessionKey}\n${signed}`));
   // Once the timestamp leaves the window the skew check refuses it, so the entry can be forgotten then.
   const verdict = replays.checkAndRemember(replayKey, timestamp + MAX_REQUEST_SKEW_MS, now);
-  if (verdict === "replay") throw new SecurityError("replay", 401, "request already processed (replay)");
+  if (verdict === "replay") throw new SecurityError("REPLAY", 401, "request already processed (replay)");
   if (verdict === "full")
-    throw new SecurityError("replay_cache_full", 503, "too many requests, retry shortly");
+    throw new SecurityError("REPLAY_CACHE_FULL", 503, "too many requests, retry shortly");
 
   const caller = await resolver.resolve(sessionKey);
-  if (!caller) throw new SecurityError("session_unknown", 401, "session is unknown, expired or revoked");
+  if (!caller) throw new SecurityError("SESSION_UNKNOWN", 401, "session is unknown, expired or revoked");
   if (!isAddressEqual(caller.sessionKey, sessionKey)) {
     // A resolver bug must not let one session act as another.
-    throw new SecurityError("session_unknown", 401, "session resolver returned another session");
+    throw new SecurityError("SESSION_UNKNOWN", 401, "session resolver returned another session");
   }
   return caller;
 }
@@ -125,8 +125,8 @@ async function authenticate(
 /**
  * Hono middleware authenticating every non-public request and exposing the caller as `c.var.caller`.
  * Mount it on `/v1/*` before the domain routes (`mountSecurityRoutes` does): new routes are protected by default.
- * Refusals: 401 (`auth_missing`, `auth_malformed`, `clock_skew`, `bad_signature`, `replay`, `session_unknown`),
- * 413 (`body_too_large`), 503 (`replay_cache_full`).
+ * Refusals: 401 (`AUTH_MISSING`, `AUTH_MALFORMED`, `CLOCK_SKEW`, `BAD_SIGNATURE`, `REPLAY`, `SESSION_UNKNOWN`),
+ * 413 (`BODY_TOO_LARGE`), 503 (`REPLAY_CACHE_FULL`).
  */
 export function createAuthMiddleware(
   resolver: SessionResolver,
@@ -140,12 +140,12 @@ export function createAuthMiddleware(
     try {
       const declaredLength = Number(c.req.header("content-length") ?? "0");
       if (declaredLength > MAX_AUTHENTICATED_BODY_BYTES) {
-        throw new SecurityError("body_too_large", 413, `body exceeds ${MAX_AUTHENTICATED_BODY_BYTES} bytes`);
+        throw new SecurityError("BODY_TOO_LARGE", 413, `body exceeds ${MAX_AUTHENTICATED_BODY_BYTES} bytes`);
       }
       // Hono caches the body, so handlers can still call c.req.json() after this read.
       const body = new Uint8Array(await c.req.arrayBuffer());
       if (body.length > MAX_AUTHENTICATED_BODY_BYTES) {
-        throw new SecurityError("body_too_large", 413, `body exceeds ${MAX_AUTHENTICATED_BODY_BYTES} bytes`);
+        throw new SecurityError("BODY_TOO_LARGE", 413, `body exceeds ${MAX_AUTHENTICATED_BODY_BYTES} bytes`);
       }
       const url = new URL(c.req.url);
       caller = await authenticate(c.req.raw, url.pathname + url.search, body, clock, replays, resolver);

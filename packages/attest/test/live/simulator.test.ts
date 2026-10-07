@@ -68,7 +68,7 @@ describe("dstack simulator", () => {
       // The simulator patches report_data into a fixed quote, which breaks the Intel signature.
       expect(result).toMatchObject({
         ok: false,
-        code: "dcap_failed",
+        code: "DCAP_FAILED",
         simulated: false,
         reason: expect.stringContaining("signature is invalid"),
       });

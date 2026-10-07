@@ -51,7 +51,7 @@ export interface UsableSession {
 /**
  * Reads and validates a session file. The key must match `message.sessionKey`, so a file edited by hand cannot
  * pair one employee's delegation with another key.
- * @throws McpSetupError (`session_file_insecure`, `session_file_invalid`).
+ * @throws McpSetupError (`SESSION_FILE_INSECURE`, `SESSION_FILE_INVALID`).
  */
 export async function readSessionFile(path: string): Promise<StoredSession> {
   await assertOwnerOnly(path);
@@ -59,28 +59,28 @@ export async function readSessionFile(path: string): Promise<StoredSession> {
   try {
     raw = await readFile(path, "utf8");
   } catch (error) {
-    throw new McpSetupError("session_file_invalid", `cannot read the session file ${path}`, { cause: error });
+    throw new McpSetupError("SESSION_FILE_INVALID", `cannot read the session file ${path}`, { cause: error });
   }
   let json: unknown;
   try {
     json = JSON.parse(raw);
   } catch (error) {
-    throw new McpSetupError("session_file_invalid", `${path} is not JSON`, { cause: error });
+    throw new McpSetupError("SESSION_FILE_INVALID", `${path} is not JSON`, { cause: error });
   }
   const parsed = sessionFileSchema.safeParse(json);
   if (!parsed.success) {
     // Only the issue paths and messages: never echo the values (one of them is the private key).
-    throw new McpSetupError("session_file_invalid", `${path}: ${z.prettifyError(parsed.error)}`);
+    throw new McpSetupError("SESSION_FILE_INVALID", `${path}: ${z.prettifyError(parsed.error)}`);
   }
   let message: AgentSession;
   try {
     message = decodeBadgeMessage("AgentSession", parsed.data.session);
   } catch (error) {
-    throw new McpSetupError("session_file_invalid", `${path}: invalid AgentSession`, { cause: error });
+    throw new McpSetupError("SESSION_FILE_INVALID", `${path}: invalid AgentSession`, { cause: error });
   }
   const privateKey = parsed.data.privateKey as Hex;
   if (!isAddressEqual(privateKeyToAccount(privateKey).address, message.sessionKey)) {
-    throw new McpSetupError("session_file_invalid", `${path}: the key does not match session.sessionKey`);
+    throw new McpSetupError("SESSION_FILE_INVALID", `${path}: the key does not match session.sessionKey`);
   }
   return { privateKey, message, signature: parsed.data.signature };
 }
@@ -88,7 +88,7 @@ export async function readSessionFile(path: string): Promise<StoredSession> {
 /**
  * Writes a session file owner-only. Refuses to replace an existing file unless `overwrite` (a lost key cannot be
  * recovered, and an opened session would silently be orphaned).
- * @throws McpSetupError (`session_file_exists`).
+ * @throws McpSetupError (`SESSION_FILE_EXISTS`).
  */
 export async function writeSessionFile(
   path: string,
@@ -108,7 +108,7 @@ export async function writeSessionFile(
     });
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "EEXIST") {
-      throw new McpSetupError("session_file_exists", `${path} already exists (use --force to replace it)`);
+      throw new McpSetupError("SESSION_FILE_EXISTS", `${path} already exists (use --force to replace it)`);
     }
     throw error;
   }
@@ -118,18 +118,18 @@ export async function writeSessionFile(
 
 /**
  * Checks that the stored session can be used now: opened (signed) and not expired.
- * @throws McpSetupError (`session_not_opened`, `session_expired`).
+ * @throws McpSetupError (`SESSION_NOT_OPENED`, `SESSION_EXPIRED`).
  */
 export function requireUsableSession(stored: StoredSession, now: Date): UsableSession {
   if (stored.signature === null) {
     throw new McpSetupError(
-      "session_not_opened",
+      "SESSION_NOT_OPENED",
       "the session is not opened yet: sign it on the Ledger, then run `pnpm --filter @badge/mcp session open`",
     );
   }
   if (stored.message.expiresAt <= toUnixSeconds(now)) {
     throw new McpSetupError(
-      "session_expired",
+      "SESSION_EXPIRED",
       `the agent session expired at ${new Date(Number(stored.message.expiresAt) * 1000).toISOString()}: create a new one`,
     );
   }
@@ -147,11 +147,11 @@ async function assertOwnerOnly(path: string): Promise<void> {
   try {
     mode = (await stat(path)).mode;
   } catch (error) {
-    throw new McpSetupError("session_file_invalid", `cannot read the session file ${path}`, { cause: error });
+    throw new McpSetupError("SESSION_FILE_INVALID", `cannot read the session file ${path}`, { cause: error });
   }
   if ((mode & GROUP_OTHER_BITS) !== 0) {
     throw new McpSetupError(
-      "session_file_insecure",
+      "SESSION_FILE_INSECURE",
       `${path} is readable by other users (mode ${(mode & PERMISSION_BITS).toString(OCTAL)}): run chmod 600 on it`,
     );
   }

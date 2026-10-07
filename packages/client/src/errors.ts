@@ -2,7 +2,7 @@ import { z } from "zod";
 
 /**
  * Error body returned by every enclave route: `{ error: { code, message } }`. `code` is a stable machine string
- * (e.g. `session_unknown`, `clock_skew`, `consent_not_found`); `message` is for humans and logs.
+ * (e.g. `SESSION_UNKNOWN`, `CLOCK_SKEW`, `NOT_FOUND`); `message` is for humans and logs.
  */
 export const apiErrorBodySchema = z.object({
   error: z.object({
@@ -14,12 +14,12 @@ export type ApiErrorBody = z.infer<typeof apiErrorBodySchema>;
 
 /** Error codes produced by the SDK itself (never sent by the enclave). */
 export type ClientErrorCode =
-  | "network_error"
-  | "bad_response"
-  | "attestation_failed"
-  | "channel_failed"
-  | "no_session_key"
-  | "invalid_argument";
+  | "NETWORK_ERROR"
+  | "BAD_RESPONSE"
+  | "ATTESTATION_FAILED"
+  | "CHANNEL_FAILED"
+  | "NO_SESSION_KEY"
+  | "INVALID_ARGUMENT";
 
 /**
  * Any failure of a {@link BadgeClient} call. `status` is the HTTP status (0 for failures before or outside HTTP),

@@ -50,7 +50,7 @@ function locateTcbInfo(response: unknown): unknown {
   try {
     return JSON.parse(nested);
   } catch (error) {
-    throw new AttestError("invalid_input", "tcb_info is a string but not JSON", { cause: error });
+    throw new AttestError("INVALID_INPUT", "tcb_info is a string but not JSON", { cause: error });
   }
 }
 
@@ -58,12 +58,12 @@ function locateTcbInfo(response: unknown): unknown {
  * Checks a deployment's TCB info against the compose file that was deployed and returns its pins.
  * @param response TCB info, or a response object carrying it under `tcb_info`.
  * @param deployedDockerCompose The exact content of the compose file given to `phala deploy`.
- * @throws AttestError("invalid_input"), EventLogError (replay), ComposeError (hash, content or policy mismatch).
+ * @throws AttestError("INVALID_INPUT"), EventLogError (replay), ComposeError (hash, content or policy mismatch).
  */
 export function captureDeploymentPins(response: unknown, deployedDockerCompose: string): DeploymentPins {
   const parsed = tcbInfoSchema.safeParse(locateTcbInfo(response));
   if (!parsed.success) {
-    throw new AttestError("invalid_input", `TCB info is malformed: ${z.prettifyError(parsed.error)}`);
+    throw new AttestError("INVALID_INPUT", `TCB info is malformed: ${z.prettifyError(parsed.error)}`);
   }
   const tcb = parsed.data;
 
@@ -77,20 +77,20 @@ export function captureDeploymentPins(response: unknown, deployedDockerCompose: 
   const composeHash = composeHashOf(tcb.app_compose);
   if (composeHash !== identity.composeHash) {
     throw new ComposeError(
-      "compose_hash_mismatch",
+      "COMPOSE_HASH_MISMATCH",
       "sha256(app_compose) differs from the attested compose hash",
     );
   }
   const appCompose = parseAppCompose(tcb.app_compose);
   if (appCompose["docker_compose_file"] !== deployedDockerCompose) {
     throw new ComposeError(
-      "compose_hash_mismatch",
+      "COMPOSE_HASH_MISMATCH",
       "the deployed docker_compose_file is not byte-identical to the local compose file",
     );
   }
   const violations = composePolicyViolations(appCompose);
   if (violations.length > 0) {
-    throw new ComposeError("compose_policy_violation", violations.join("; "));
+    throw new ComposeError("COMPOSE_POLICY_VIOLATION", violations.join("; "));
   }
 
   return {

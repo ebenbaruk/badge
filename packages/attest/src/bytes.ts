@@ -5,15 +5,15 @@ const HEX_PATTERN = /^(0x)?([0-9a-fA-F]{2})*$/;
 
 /**
  * Decodes a hex string (optional `0x` prefix) and enforces its byte length when given.
- * Throws `AttestError("invalid_input")` naming `label`, so a bad field is easy to locate.
+ * Throws `AttestError("INVALID_INPUT")` naming `label`, so a bad field is easy to locate.
  */
 export function decodeHex(value: string, label: string, expectedLength?: number): Uint8Array {
   if (!HEX_PATTERN.test(value)) {
-    throw new AttestError("invalid_input", `${label} is not a valid hex string`);
+    throw new AttestError("INVALID_INPUT", `${label} is not a valid hex string`);
   }
   const bytes = hexToBytes(value.startsWith("0x") ? value.slice(2) : value);
   if (expectedLength !== undefined && bytes.length !== expectedLength) {
-    throw new AttestError("invalid_input", `${label} must be ${expectedLength} bytes, got ${bytes.length}`);
+    throw new AttestError("INVALID_INPUT", `${label} must be ${expectedLength} bytes, got ${bytes.length}`);
   }
   return bytes;
 }

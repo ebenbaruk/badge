@@ -132,21 +132,21 @@ export function toActionFailure(error: unknown): Extract<ActionResult, { ok: fal
 function enclaveFailure(error: BadgeApiError): Extract<ActionResult, { ok: false }> {
   const detail = `${error.code}: ${error.message}`;
   switch (error.code) {
-    case "network_error":
+    case "NETWORK_ERROR":
       return {
         ok: false,
         code: "ENCLAVE_UNREACHABLE",
         message: "Enclave injoignable : vérifiez qu'elle est démarrée.",
         detail,
       };
-    case "attestation_failed":
+    case "ATTESTATION_FAILED":
       return {
         ok: false,
         code: "ATTESTATION_FAILED",
         message: "Attestation de l'enclave refusée : aucune donnée n'a été envoyée.",
         detail,
       };
-    case "session_unknown":
+    case "SESSION_UNKNOWN":
       return {
         ok: false,
         code: "NO_SESSION",

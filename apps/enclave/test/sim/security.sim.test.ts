@@ -115,11 +115,11 @@ describe("attested channel + request auth (dstack simulator)", () => {
     });
     await expect(plain.createTask({ task: "x", taskLabel: "x" })).rejects.toMatchObject({
       status: 403,
-      code: "channel_required",
+      code: "CHANNEL_REQUIRED",
     });
     await expect(sdk(fetchFn, intruder).createTask({ task: "x", taskLabel: "x" })).rejects.toMatchObject({
       status: 401,
-      code: "session_unknown",
+      code: "SESSION_UNKNOWN",
     });
   });
 
@@ -169,7 +169,7 @@ describe("attested channel + request auth (dstack simulator)", () => {
     expect((await post(sealed)).status).toBe(200);
     const replayed = await post(sealed);
     expect(replayed.status).toBe(400);
-    expect(await replayed.json()).toMatchObject({ error: { code: "channel_rejected" } });
+    expect(await replayed.json()).toMatchObject({ error: { code: "CHANNEL_REJECTED" } });
 
     const next = client.seal({ method: "GET", path: "/v1/attestation/measurement", headers: {}, body: null });
     const flipped = (next.ciphertext[0] === "0" ? "1" : "0") + next.ciphertext.slice(1);
