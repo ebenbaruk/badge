@@ -14,6 +14,7 @@
  */
 import { createPrivateKey, sign, type KeyObject } from "node:crypto";
 import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   getSchemaHash,
@@ -36,9 +37,15 @@ import { ClearSignSetupError } from "./errors";
 
 /** Env var overriding the path of the app-ethereum test CAL key (PEM). */
 export const CAL_TEST_KEY_ENV = "BADGE_CAL_TEST_KEY";
-/** Default location, fetched by `infra/setup.sh` and never committed. */
-export const DEFAULT_CAL_TEST_KEY_PATH = fileURLToPath(
-  new URL("../../../infra/keys/cal-test.pem", import.meta.url),
+/**
+ * Default location, fetched by `infra/setup.sh` and never committed.
+ * Built with `path.resolve`, not `new URL("...", import.meta.url)`: bundlers (Next.js Turbopack) treat the latter
+ * as an asset import and fail the build when the gitignored key is absent. Bundled callers pass the path
+ * explicitly (`calTestKeyPath` or `$BADGE_CAL_TEST_KEY`).
+ */
+export const DEFAULT_CAL_TEST_KEY_PATH = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  "../../../infra/keys/cal-test.pem",
 );
 
 /** Magic bytes of the signed EIP-712 filter payloads (app-ethereum `eip712/InputData.py`). */
