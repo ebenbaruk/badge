@@ -8,6 +8,17 @@
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:speculos": "vitest run --config vitest.live.config.ts"
+  },
+  "dependencies": {
+    "@badge/consent": "workspace:*",
+    "@ledgerhq/context-module": "2.6.0",
+    "@ledgerhq/device-management-kit": "1.10.0",
+    "@ledgerhq/device-signer-kit-ethereum": "1.18.1",
+    "@ledgerhq/device-transport-kit-speculos": "1.2.1",
+    "rxjs": "7.8.2",
+    "viem": "2.57.3",
+    "zod": "4.6.5"
   }
 }
