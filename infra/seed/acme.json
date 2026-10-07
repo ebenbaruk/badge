@@ -1,0 +1,147 @@
+{
+  "company": {
+    "id": "acme",
+    "name": "Acme",
+    "description": "Fabricant francais de capteurs industriels connectes (ETI, 420 salaries, siege a Lyon)."
+  },
+  "employees": [
+    {
+      "id": "alice",
+      "name": "Alice Martin",
+      "team": "Ventes",
+      "ledgerAddress": "0x9858EfFD232B4033E47d90003D41EC34EcaEda94"
+    },
+    {
+      "id": "bob",
+      "name": "Bob Durand",
+      "team": "Grands comptes",
+      "ledgerAddress": null
+    },
+    {
+      "id": "chloe",
+      "name": "Chloe Bernard",
+      "team": "Juridique & conformite",
+      "ledgerAddress": null
+    }
+  ],
+  "desks": [
+    {
+      "id": "research",
+      "name": "Research",
+      "members": ["bob"],
+      "allowedTopics": ["marche-capteurs", "prix-composants"]
+    },
+    {
+      "id": "origination",
+      "name": "Origination",
+      "members": ["alice"],
+      "allowedTopics": ["marche-capteurs"]
+    }
+  ],
+  "notes": [
+    {
+      "id": "company-presentation",
+      "ownerId": "company",
+      "tags": ["entreprise"],
+      "text": "Acme conçoit et fabrique des capteurs industriels connectés (vibration, température, pression) pour la logistique et l'industrie. Siège à Lyon, usine à Villeurbanne, 420 salariés."
+    },
+    {
+      "id": "company-catalogue-2026",
+      "ownerId": "company",
+      "tags": ["produits", "prix"],
+      "text": "Catalogue 2026 : capteur de vibration AX-200 à 118 € HT l'unité, capteur multi-mesures AX-500 à 245 € HT, passerelle radio GW-10 à 890 € HT. Abonnement plateforme Acme Cloud : 2 € par capteur et par mois."
+    },
+    {
+      "id": "company-politique-tarifaire",
+      "ownerId": "company",
+      "tags": ["prix", "politique"],
+      "text": "Politique tarifaire : remise maximale de 8 % sans validation ; au-delà, validation obligatoire par la direction commerciale. Conditions de paiement standard : 30 jours fin de mois. Tout contrat au-dessus de 500 k€ passe par une revue juridique."
+    },
+    {
+      "id": "company-organisation",
+      "ownerId": "company",
+      "tags": ["organisation"],
+      "text": "Organisation commerciale : Alice Martin (Ventes) gère les nouveaux clients, Bob Durand (Grands comptes) suit les clients stratégiques dont Orion Logistique, Chloe Bernard (Juridique & conformité) valide les contrats et les sujets RH sensibles."
+    },
+    {
+      "id": "company-client-orion",
+      "ownerId": "company",
+      "tags": ["clients", "orion"],
+      "text": "Orion Logistique : client grand compte depuis 2021, 14 entrepôts en France et au Benelux, environ 35 000 capteurs AX-200 installés. Contrat-cadre actuel jusqu'au 31 décembre 2026."
+    },
+    {
+      "id": "company-actualite-salon",
+      "ownerId": "company",
+      "tags": ["actualites"],
+      "text": "Actualité : Acme sera présent au salon Global Industrie à Paris du 10 au 13 mars 2027, stand B42."
+    },
+    {
+      "id": "alice-objectif-orion",
+      "ownerId": "alice",
+      "tags": ["orion", "rendez-vous"],
+      "text": "Rendez-vous demain 8 octobre à 10 h avec Orion Logistique (je remplace Bob en congé). Objectif : renouvellement du contrat-cadre pour 2027 et proposer l'AX-500 sur les nouveaux entrepôts."
+    },
+    {
+      "id": "alice-prospect-helios",
+      "ownerId": "alice",
+      "tags": ["prospects"],
+      "text": "Prospect Helios Froid : démo AX-200 prévue le 15 octobre, ils comparent avec un concurrent allemand."
+    },
+    {
+      "id": "bob-orion-conditions-2025",
+      "ownerId": "bob",
+      "tags": ["orion", "conditions"],
+      "text": "Conditions Orion 2025 : remise 12 % si volume > 40k unités, paiement 60 j fin de mois. Validé par la direction commerciale en janvier."
+    },
+    {
+      "id": "bob-orion-reunion-septembre",
+      "ownerId": "bob",
+      "tags": ["orion", "reunion"],
+      "text": "Réunion Orion du 22 septembre avec Marc Lefèvre (directeur des achats) : ils veulent des livraisons trimestrielles et un engagement de délai à 3 semaines. Satisfaits de l'AX-200, inquiets du prix de la passerelle GW-10."
+    },
+    {
+      "id": "bob-orion-points-attention",
+      "ownerId": "bob",
+      "tags": ["orion", "negociation"],
+      "text": "Orion, points d'attention pour le renouvellement : ils ouvrent 4 entrepôts en 2027 (environ 8 000 capteurs), un concurrent leur a proposé -15 %. Marc Lefèvre décide, mais la DAF valide tout ce qui dépasse 1 M€."
+    },
+    {
+      "id": "bob-perso-conges",
+      "ownerId": "bob",
+      "tags": ["perso"],
+      "text": "Rappel perso : congés du 7 au 18 octobre, Alice reprend le rendez-vous Orion du 8."
+    },
+    {
+      "id": "bob-research-marche-capteurs",
+      "ownerId": "bob",
+      "tags": ["desk:research", "marche-capteurs"],
+      "text": "Desk Research : le marché européen des capteurs industriels connectés progresse de 9 % en 2026 ; le prix des puces radio a baissé de 18 % sur le trimestre, ce qui laisse de la marge sur les passerelles."
+    },
+    {
+      "id": "chloe-revue-contrats",
+      "ownerId": "chloe",
+      "tags": ["juridique", "contrats"],
+      "text": "Note juridique : nouveau modèle de contrat-cadre validé le 1er octobre, clause de pénalité de retard plafonnée à 5 % du montant de la commande."
+    },
+    {
+      "id": "chloe-rh-prudhommes",
+      "ownerId": "chloe",
+      "tags": ["rh", "confidentiel"],
+      "text": "Confidentiel RH : un salarié de l'entrepôt de Villeurbanne, Julien Petit, a saisi les prud'hommes pour licenciement abusif ; il est en arrêt maladie depuis août. Audience le 20 novembre, ne pas en parler en interne."
+    }
+  ],
+  "recallChecks": [
+    {
+      "task": "brief du rendez-vous de demain avec le client Orion",
+      "requesterId": "alice",
+      "mustInclude": ["bob-orion-conditions-2025"],
+      "mustExclude": ["chloe-rh-prudhommes"]
+    },
+    {
+      "task": "tendances du marché des capteurs industriels et prix des composants",
+      "requesterId": "alice",
+      "mustInclude": ["bob-research-marche-capteurs"],
+      "mustExclude": ["chloe-rh-prudhommes"]
+    }
+  ]
+}
