@@ -45,4 +45,5 @@ WORKDIR /app/apps/enclave
 EXPOSE 8787
 VOLUME ["/data"]
 # tsx from the enclave's own dependencies (pnpm --filter start would pull pnpm into the runtime image).
-CMD ["node", "--import", "tsx", "src/main.ts"]
+# node:sqlite is still flagged experimental on Node 24: its warning is noise in the CVM logs, as in `pnpm start`.
+CMD ["node", "--no-warnings=ExperimentalWarning", "--import", "tsx", "src/main.ts"]

@@ -72,7 +72,9 @@ infra/cvm/rehearse.sh down    # arrêt et suppression des volumes de répétitio
 ```
 
 Vérifie : génération des secrets, Postgres et Honcho sains, enclave saine **à travers la passerelle**
-(`http://127.0.0.1:18787/health`), mesure exposée, aucun autre port publié, Honcho sans route vers Internet. La
+(`http://127.0.0.1:18787/health`), mesure exposée, canal attesté ouvert et aller-retour d'une requête par ce canal
+(`infra/cvm/check-channel.ts` : quote vérifié contre le simulateur, mesure relue dans le canal identique à la mesure
+attestée), HTTP en clair refusé sur `/v1` (`channel_required`), aucun autre port publié, Honcho sans route vers Internet. La
 clé LLM est factice : aucun appel n'est facturé (le seed n'est donc pas lancé).
 
 ### 3. Publier et épingler les digests
