@@ -37,6 +37,7 @@ import type { DomainContext, PolicyEngine } from "../policy/engine";
 import { evaluateExtraction, type ExtractionVerdict } from "../policy/rules";
 import type { Caller } from "../security/types";
 import { deviceLabel, fullContextLabel } from "./labels";
+import { servesTask } from "./selection";
 import type { AccessBasis, ExcerptDecision, ExcerptRow, NewExcerpt, TaskRow } from "./repository";
 import type { TokenCounter } from "./tokens";
 
@@ -164,8 +165,9 @@ export class TaskService {
   }
 
   /**
-   * Candidates from memory, filtered by the relevance classifier, plus the explicitly requested full context.
-   * Explicit requests skip the relevance filter (the agent asked for them by name) but nothing else.
+   * Candidates from memory, kept by the selection gate (`servesTask`: classifier relevance and confidence, no
+   * colleague's personal matters), plus the explicitly requested full context. Explicit requests skip the gate (the
+   * agent asked for them by name, and the owner must see that) but nothing else.
    */
   private async selectExcerpts(requester: Employee, input: CreateTaskInput): Promise<KeptExcerpt[]> {
     const candidates = await this.deps.memory.findCandidates(input.task, { requesterId: requester.id });
@@ -185,7 +187,9 @@ export class TaskService {
         if (!classification) throw new Error("classification missing for a candidate");
         return { ...excerpt, classification };
       })
-      .filter((excerpt) => excerpt.explicit || excerpt.classification.relevant);
+      .filter(
+        (excerpt) => excerpt.explicit || servesTask(excerpt.candidate, excerpt.classification, requester.id),
+      );
   }
 
   /** One excerpt made of every note of `ownerId`, as an agent asking for "everything" would get. */
