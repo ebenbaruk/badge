@@ -46,6 +46,5 @@ infra/vendor/
 *.gif
 
 # Private working notes
-CLAUDE.md
 CLAUDE.local.md
 .claude/
