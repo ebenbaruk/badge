@@ -142,8 +142,8 @@ start_speculos() {
   if [ -s "$DEVELOP_ELF" ]; then
     "$INFRA_DIR/speculos.sh" | sed 's/^/  /'
   else
-    warn "develop Ethereum app not built: using the 1.22.3 release (no address-book contact names)."
-    warn "Build it once with infra/build-eth-app.sh (Docker, a few minutes) to enable them."
+    ok "using the published Ethereum app 1.22.3 (all the demo needs)"
+    ok "optional: infra/build-eth-app.sh builds the develop app, which adds address-book contact names"
     ETH_APP=release "$INFRA_DIR/speculos.sh" | sed 's/^/  /'
   fi
 }

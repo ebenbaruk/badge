@@ -54,5 +54,4 @@ fetch "https://snark-artifacts.pse.dev/semaphore/${SEMAPHORE_ARTIFACTS_VERSION}/
 # Public TEST CAL key of app-ethereum: signs our EIP-712 filters, accepted by Speculos only (never a real device).
 fetch "$CAL_TEST_KEY_URL" "keys/cal-test.pem" "$CAL_TEST_KEY_SHA256"
 
-[ -s apps/app-1.23.0-dev-flex.elf ] || echo "Note: develop ELF missing, run ./build-eth-app.sh for contact names"
 echo "OK: Speculos image pinned, $(ls -1 apps/*.elf zk-artifacts/semaphore-* keys/*.pem | tr '\n' ' ')(checksums verified)"

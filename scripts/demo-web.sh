@@ -141,13 +141,11 @@ cmd_start() {
   mkdir -p "$RUN_DIR"
 
   step "Local stack (scripts/bootstrap.sh, idempotent)"
-  if [ -s "$STATE_DIR/indexed-profile" ]; then
-    "$REPO_ROOT/scripts/bootstrap.sh" --skip-seed >"$(log_file bootstrap)" 2>&1 ||
-      { tail -n 30 "$(log_file bootstrap)" >&2; die "bootstrap failed (log: $(log_file bootstrap))"; }
-    ok "Speculos Ledgers, simulated TEE and memory up (memory already seeded; log: $(log_file bootstrap))"
-  else
-    "$REPO_ROOT/scripts/bootstrap.sh"
-  fi
+  # Always the full bootstrap, seed included: the seed only ingests what is missing, and checks recall, so an emptied
+  # memory (reset, pruned Docker volume) is reloaded instead of silently starving the demo.
+  "$REPO_ROOT/scripts/bootstrap.sh" >"$(log_file bootstrap)" 2>&1 ||
+    { tail -n 30 "$(log_file bootstrap)" >&2; die "bootstrap failed (log: $(log_file bootstrap))"; }
+  ok "Speculos Ledgers, simulated TEE, memory up and seeded (log: $(log_file bootstrap))"
 
   cmd_stop
   [ "$fresh" = false ] || archive_state
