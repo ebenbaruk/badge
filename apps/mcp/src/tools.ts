@@ -39,10 +39,10 @@ export interface ToolHandlers {
 /** Extra guidance for the model on the refusals it can do something about. */
 const ERROR_HINTS: Readonly<Record<string, string>> = {
   SESSION_UNKNOWN:
-    "La session de l'agent est expirée, révoquée ou inconnue : l'employé doit en signer une nouvelle sur son Ledger.",
-  ATTESTATION_FAILED: "L'enclave n'a pas pu être attestée : n'envoyez aucune donnée, prévenez l'employé.",
-  NOT_FOUND: "Identifiant inconnu (ou tâche d'un autre employé).",
-  NETWORK_ERROR: "Enclave injoignable : réessayez plus tard.",
+    "The agent session is expired, revoked or unknown: the employee must sign a new one on their Ledger.",
+  ATTESTATION_FAILED: "The enclave could not be attested: do not send any data, warn the employee.",
+  NOT_FOUND: "Unknown id (or another employee's task).",
+  NETWORK_ERROR: "Enclave unreachable: try again later.",
 };
 
 function text(content: string): CallToolResult {
@@ -52,7 +52,7 @@ function text(content: string): CallToolResult {
 function refusal(error: BadgeApiError): CallToolResult {
   const hint = ERROR_HINTS[error.code];
   const status = error.status === 0 ? "" : `, HTTP ${error.status}`;
-  const lines = [`Refus de Badge (${error.code}${status}) : ${error.message}`];
+  const lines = [`Refused by Badge (${error.code}${status}): ${error.message}`];
   if (hint !== undefined) lines.push(hint);
   return { isError: true, content: [{ type: "text", text: lines.join("\n") }] };
 }
@@ -87,10 +87,10 @@ export function createToolHandlers(deps: ToolDeps): ToolHandlers {
           const { measurement, composeHash, appId } = await api.measurement();
           return text(
             [
-              "Transport HTTP direct (développement) : l'enclave n'est PAS attestée.",
-              `- Mesure annoncée : ${measurement}`,
-              `- Compose hash annoncé : ${composeHash}`,
-              `- App id : ${appId}`,
+              "Direct HTTP transport (development): the enclave is NOT attested.",
+              `- Announced measurement: ${measurement}`,
+              `- Announced compose hash: ${composeHash}`,
+              `- App id: ${appId}`,
             ].join("\n"),
           );
         }

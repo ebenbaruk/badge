@@ -21,14 +21,14 @@ export const agentKey = privateKeyToAccount(
 export const NOW = 1_791_900_000n; // 2026-10-13, a fixed clock keeps the tests deterministic.
 export const HOUR = 3600n;
 export const MEASUREMENT: Hex = `0x${"ab".repeat(32)}`;
-export const EXCERPT = "Client Dupont : renouvellement prévu en novembre, budget 120 k€.";
+export const EXCERPT = "Client Dupont: renewal planned for November, budget €120k, café meeting.";
 const SALT: Hex = `0x${"11".repeat(32)}`;
 
 export const MESSAGES: BadgeMessages = {
   EmployeeEnroll: {
     company: "Acme",
     employeeName: "Alice Martin",
-    team: "Ventes",
+    team: "Sales",
     enclaveMeasurement: MEASUREMENT,
     employee: alice.address,
     issuedAt: NOW - 60n,
@@ -36,7 +36,7 @@ export const MESSAGES: BadgeMessages = {
   },
   AgentSession: {
     agentName: "Claude Code",
-    access: "Demandes seulement",
+    access: "Requests only",
     expiresAt: NOW + 8n * HOUR,
     sessionKey: agentKey.address,
     enclaveMeasurement: MEASUREMENT,
@@ -44,22 +44,22 @@ export const MESSAGES: BadgeMessages = {
     nonce: 2n,
   },
   ContextShare: {
-    recipientName: "Bob (Ventes)",
-    excerptLabel: "Notes client Dupont",
+    recipientName: "Bob (Sales)",
+    excerptLabel: "Dupont client notes",
     excerptLength: excerptLength(EXCERPT),
-    taskLabel: "Brief rendez-vous",
+    taskLabel: "Meeting brief",
     expiresAt: NOW + 24n * HOUR,
     excerptHash: hashExcerpt(EXCERPT),
     enclaveMeasurement: MEASUREMENT,
     recipient: bob.address,
     owner: alice.address,
-    taskId: taskIdFrom("Brief rendez-vous", SALT),
+    taskId: taskIdFrom("Meeting brief", SALT),
     nonce: 3n,
   },
   ContextPolicy: {
-    granteeTeam: "Ventes",
-    contextTag: "notes-clients",
-    purpose: "Briefs clients",
+    granteeTeam: "Sales",
+    contextTag: "clients",
+    purpose: "client briefs",
     maxExcerptLength: 500,
     expiresAt: NOW + 30n * 24n * HOUR,
     enclaveMeasurement: MEASUREMENT,
@@ -67,7 +67,7 @@ export const MESSAGES: BadgeMessages = {
     nonce: 4n,
   },
   ContextRevoke: {
-    targetLabel: "Partage Bob",
+    targetLabel: "Share with Bob",
     issuedAt: NOW,
     grantId: `0x${"22".repeat(32)}`,
     recipient: bob.address,
@@ -82,10 +82,10 @@ export const MESSAGES: BadgeMessages = {
     nonce: 6n,
   },
   DeskShare: {
-    recipientDesk: "Recherche",
-    excerptLabel: "Note sectorielle",
+    recipientDesk: "Research",
+    excerptLabel: "Sector note",
     excerptLength: excerptLength(EXCERPT),
-    ruleLabel: "Info publique",
+    ruleLabel: "Public info",
     expiresAt: NOW + 24n * HOUR,
     excerptHash: hashExcerpt(EXCERPT),
     enclaveMeasurement: MEASUREMENT,

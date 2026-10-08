@@ -8,12 +8,12 @@ import { EnclaveUnavailable } from "@/components/enclave-unavailable";
 import { EmptyState, PageHeader, SectionTitle } from "@/components/page-header";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DESK_NAMES, EMPLOYEES, isDeskId, isEmployeeId } from "@/lib/directory";
-import { formatDateTime, formatTime, ofName, reasonForThirdParty } from "@/lib/format";
+import { formatDateTime, formatTime, reasonForThirdParty } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { enclave, type AuditEntryView } from "@/server/enclave";
 import { employeeFromParams, load } from "@/server/load";
 
-export const metadata: Metadata = { title: "Conformité" };
+export const metadata: Metadata = { title: "Compliance" };
 
 /** Long hashes and decimals (nullifiers, roots) are cut in the table; the full value is in the tooltip. */
 const MAX_DATA_VALUE_LENGTH = 16;
@@ -33,15 +33,15 @@ const TYPE_TONE: Record<string, string> = {
   "compliance.reveal": "bg-violet/12 text-violet dark:text-lavender",
 };
 
-/** Rule reasons as the enclave logs them in `rule.warn` / `rule.block` entries (French message, stable code). */
+/** Rule reasons as the enclave logs them in `rule.warn` / `rule.block` entries (human-readable message, stable code). */
 const ruleReasonsSchema = z.array(z.object({ code: z.string(), message: z.string().optional() }));
 
 function actorLabel(actor: string): string {
   if (isEmployeeId(actor)) return EMPLOYEES[actor].name;
-  if (actor === "anonymous") return "Membre anonyme d'un desk";
+  if (actor === "anonymous") return "Anonymous desk member";
   if (actor === "enclave") return "Enclave";
   const desk = actor.startsWith("desk:") ? actor.slice("desk:".length) : null;
-  if (desk !== null) return `Desk ${isDeskId(desk) ? DESK_NAMES[desk] : desk} (anonyme)`;
+  if (desk !== null) return `Desk ${isDeskId(desk) ? DESK_NAMES[desk] : desk} (anonymous)`;
   return actor;
 }
 
@@ -52,9 +52,9 @@ function DataCell({ data }: { data: Record<string, unknown> }) {
   return (
     <div className="flex max-w-80 flex-wrap gap-x-2 gap-y-0.5 font-mono text-[10.5px] text-muted-foreground">
       {entries.map(([key, value]) => {
-        // Sealed boxes are ciphertext for the compliance key: meaningless to read, opened with « Lever l'anonymat ».
+        // Sealed boxes are ciphertext for the compliance key: meaningless to read, opened with "Reveal identity".
         const text =
-          key === SEALED_SIGNER_KEY ? "scellé" : typeof value === "string" ? value : JSON.stringify(value);
+          key === SEALED_SIGNER_KEY ? "sealed" : typeof value === "string" ? value : JSON.stringify(value);
         return (
           <span key={key} className="truncate" title={text}>
             {key}={text.length > MAX_DATA_VALUE_LENGTH ? `${text.slice(0, SHORT_DATA_VALUE_LENGTH)}…` : text}
@@ -122,13 +122,11 @@ function AlertRow({ entry }: { entry: AuditEntryView }) {
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <span className="rounded-pill border border-danger/35 bg-danger/8 px-2 py-0.5 mono-chip text-danger">
-            {block ? "Bloqué" : "Signalé"}
+            {block ? "Blocked" : "Flagged"}
           </span>
           <span className="text-muted-foreground">
-            {isEmployeeId(entry.actor)
-              ? `Agent ${ofName(EMPLOYEES[entry.actor].name)}`
-              : "Demande d'un agent"}{" "}
-            → contexte de {owner === null ? "?" : EMPLOYEES[owner].name}
+            {isEmployeeId(entry.actor) ? `${EMPLOYEES[entry.actor].name}'s agent` : "An agent's request"} →{" "}
+            {owner === null ? "?" : `${EMPLOYEES[owner].name}'s`} context
           </span>
           <time className="ml-auto mono-label text-[10px] text-muted-foreground">
             {formatDateTime(entry.ts)}
@@ -162,64 +160,64 @@ export default async function CompliancePage({ params }: { params: Promise<{ emp
   return (
     <div className="mx-auto max-w-6xl">
       <PageHeader
-        title="Conformité"
-        eyebrow="Enclave · journal chaîné"
-        description="Journal d'audit de l'enclave : chaque entrée est chaînée à la précédente par son empreinte SHA-256 et ne contient que des empreintes, jamais le texte des extraits."
+        title="Compliance"
+        eyebrow="Enclave · hash-chained log"
+        description="The enclave's audit log: each entry is chained to the previous one by its SHA-256 fingerprint and holds only fingerprints, never the text of an excerpt."
       />
       <div className="grid gap-4 sm:grid-cols-3">
         <Stat
           icon={trusted ? <Link2 className="size-3.5" /> : <Link2Off className="size-3.5" />}
-          label="Intégrité de la chaîne"
+          label="Chain integrity"
           tile="periwinkle"
           alarm={!trusted}
           value={
             <span className="block">
               {!chain.ok
-                ? `Rompue à l'entrée ${chain.brokenAt}`
+                ? `Broken at entry ${chain.brokenAt}`
                 : chain.anchorProblem !== undefined
-                  ? "Non fiable"
-                  : "Vérifiée"}
+                  ? "Untrusted"
+                  : "Verified"}
               {/* The anchor problem is a sentence: it goes on the small line, the tile keeps a short verdict. */}
               <span className="mt-2 block font-sans text-xs font-medium tracking-normal opacity-75">
                 {chain.ok && chain.anchorProblem !== undefined ? `${chain.anchorProblem} · ` : ""}
-                {chain.length} entrées
+                {chain.length} entries
               </span>
             </span>
           }
         />
         <Stat
           icon={<ShieldAlert className="size-3.5" />}
-          label="Alertes des règles"
+          label="Rule alerts"
           tile="peach"
           alarm={alerts.length > 0}
           value={alerts.length}
         />
         <Stat
           icon={<VenetianMask className="size-3.5" />}
-          label="Partages anonymes scellés"
+          label="Sealed anonymous shares"
           tile="lavender"
           value={sealed.length}
         />
       </div>
       <div className="mt-3 flex flex-wrap items-center gap-1.5 rounded-pill border bg-card px-4 py-2 text-[11px] text-muted-foreground">
-        Tête de chaîne <CopyableHash value={chain.headHash} />
+        Chain head <CopyableHash value={chain.headHash} />
         {chain.headSigner !== undefined && (
           <span className="inline-flex items-center gap-1.5">
             <span className="inline-flex items-center gap-1 text-success">
               <BadgeCheck className="size-3" />
-              signée par l&apos;enclave attestée
+              signed by the attested enclave
             </span>
-            · clé d&apos;audit <CopyableHash value={chain.headSigner} />
+            · audit key <CopyableHash value={chain.headSigner} />
           </span>
         )}
       </div>
 
       <section className="mt-10">
-        <SectionTitle>Alertes</SectionTitle>
+        <SectionTitle>Alerts</SectionTitle>
         {alerts.length === 0 ? (
-          <EmptyState icon={<ShieldAlert />} title="Aucune alerte">
-            Les règles anti-aspiration (longueur, part du contexte, nombre de personnes, fréquence) n&apos;ont
-            rien signalé.
+          <EmptyState icon={<ShieldAlert />} title="No alerts">
+            The mass-extraction rules (length, share of context, number of people, frequency) have flagged
+            nothing.
           </EmptyState>
         ) : (
           <ul className="divide-y overflow-hidden rounded-3xl border border-danger/30 bg-card">
@@ -231,9 +229,9 @@ export default async function CompliancePage({ params }: { params: Promise<{ emp
       </section>
 
       <section className="mt-10">
-        <SectionTitle>Identités scellées des partages anonymes</SectionTitle>
+        <SectionTitle>Sealed identities of anonymous shares</SectionTitle>
         {sealed.length === 0 ? (
-          <EmptyState icon={<VenetianMask />} title="Aucun partage anonyme" />
+          <EmptyState icon={<VenetianMask />} title="No anonymous shares" />
         ) : (
           <ul className="divide-y overflow-hidden rounded-3xl border bg-card">
             {sealed.map((item) => (
@@ -245,7 +243,7 @@ export default async function CompliancePage({ params }: { params: Promise<{ emp
                 <span className="font-semibold">Desk {DESK_NAMES[item.sourceDesk]}</span>
                 <span className="text-muted-foreground">{item.label}</span>
                 <span className="inline-flex items-center gap-1 text-muted-foreground">
-                  scellé <CopyableHash value={item.sealed} />
+                  sealed <CopyableHash value={item.sealed} />
                 </span>
                 <span className="ml-auto">
                   {item.revealed === undefined ? (
@@ -257,9 +255,9 @@ export default async function CompliancePage({ params }: { params: Promise<{ emp
                   ) : (
                     <span className="inline-flex animate-gallery-in items-center rounded-pill bg-lavender px-3 py-1 font-semibold text-lavender-ink">
                       {item.revealed.employee === undefined
-                        ? "Identité levée"
+                        ? "Identity revealed"
                         : EMPLOYEES[item.revealed.employee].name}{" "}
-                      · levée le {formatDateTime(item.revealed.revealedAt)}
+                      · revealed {formatDateTime(item.revealed.revealedAt)}
                     </span>
                   )}
                 </span>
@@ -270,20 +268,20 @@ export default async function CompliancePage({ params }: { params: Promise<{ emp
       </section>
 
       <section className="mt-10">
-        <SectionTitle>Journal d&apos;audit</SectionTitle>
+        <SectionTitle>Audit log</SectionTitle>
         {entries.length === 0 ? (
-          <EmptyState icon={<ScrollText />} title="Journal vide" />
+          <EmptyState icon={<ScrollText />} title="Empty log" />
         ) : (
           <div className="overflow-hidden rounded-3xl border bg-card">
             <Table>
               <TableHeader className="bg-surface/60 [&_th]:mono-label [&_th]:text-[10px] [&_th]:text-muted-foreground">
                 <TableRow>
                   <TableHead className="pl-4">#</TableHead>
-                  <TableHead>Heure</TableHead>
-                  <TableHead>Événement</TableHead>
-                  <TableHead>Acteur</TableHead>
-                  <TableHead>Données</TableHead>
-                  <TableHead className="pr-4">Empreinte / préc.</TableHead>
+                  <TableHead>Time</TableHead>
+                  <TableHead>Event</TableHead>
+                  <TableHead>Actor</TableHead>
+                  <TableHead>Data</TableHead>
+                  <TableHead className="pr-4">Fingerprint / prev.</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

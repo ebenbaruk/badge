@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 
 /** Public repository of the project (the jury and visitors land there from the footer and the FAQ). */
 export const GITHUB_URL = "https://github.com/ebenbaruk/badge";
-/** Where every "Ouvrir la démo" call to action leads. */
+/** Where every "Open the demo" call to action leads. */
 export const DEMO_ROUTE: Route = "/demo";
 
 /** Small left-hand label of the editorial `1fr 2.4fr` layout. */
@@ -57,7 +57,7 @@ export function TextLink({ children, href, className }: TextLinkProps) {
     return (
       <a href={href} target="_blank" rel="noreferrer" className={classes}>
         {content}
-        <span className="sr-only"> (nouvel onglet)</span>
+        <span className="sr-only"> (opens in a new tab)</span>
       </a>
     );
   }

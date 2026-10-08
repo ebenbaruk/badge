@@ -42,7 +42,7 @@ const envSchema = z.object({
    */
   BADGE_WEB_DATA_DIR: z.string().min(1).default(DEFAULT_DATA_DIR),
   /**
-   * `1` enables the rehearsal helpers: the "Revue auto" button and its route, which walk the review on the device
+   * `1` enables the rehearsal helpers: the "Auto review" button and its route, which walk the review on the device
    * and hold "Hold to sign" without a human reading it. Off unless set (never in a real deployment).
    */
   BADGE_REHEARSAL: z.enum(["0", "1"]).default("0"),

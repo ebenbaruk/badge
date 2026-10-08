@@ -2,41 +2,41 @@
   "company": {
     "id": "acme",
     "name": "Acme",
-    "description": "Fabricant francais de capteurs industriels connectes (ETI, 420 salaries, siege a Lyon)."
+    "description": "French maker of connected industrial sensors (mid-size company, 420 employees, headquartered in Lyon)."
   },
   "employees": [
     {
       "id": "alice",
       "name": "Alice Martin",
-      "team": "Ventes",
+      "team": "Sales",
       "role": "employee",
       "ledgerAddress": "0x9858EfFD232B4033E47d90003D41EC34EcaEda94"
     },
     {
       "id": "bob",
       "name": "Bob Durand",
-      "team": "Grands comptes",
+      "team": "Key Accounts",
       "role": "employee",
       "ledgerAddress": "0x58A57ed9d8d624cBD12e2C467D34787555bB1b25"
     },
     {
       "id": "chloe",
       "name": "Chloe Bernard",
-      "team": "Juridique & conformite",
+      "team": "Legal & Compliance",
       "role": "compliance",
       "ledgerAddress": "0x3061750d3dF69ef7B8d4407CB7f3F879Fd9d2398"
     },
     {
       "id": "david",
       "name": "David Moreau",
-      "team": "Strategie",
+      "team": "Strategy",
       "role": "employee",
       "ledgerAddress": "0xfc2077CA7F403cBECA41B1B0F62D91B5EA631B5E"
     },
     {
       "id": "emma",
       "name": "Emma Leroy",
-      "team": "Strategie",
+      "team": "Strategy",
       "role": "employee",
       "ledgerAddress": "0xc70eC8094CCE52B6574A5a2b7bf0c7D8288d77cC"
     }
@@ -44,10 +44,13 @@
   "exchangeRules": [
     {
       "id": "rule-4",
-      "label": "Regle 4 - marche capteurs",
+      "label": "Rule 4 - sensor market",
       "sourceDesk": "research",
       "recipientDesk": "origination",
-      "allowedTags": ["marche-capteurs", "prix-composants"]
+      "allowedTags": [
+        "sensor-market",
+        "component-prices"
+      ]
     }
   ],
   "desks": [
@@ -60,8 +63,8 @@
         "emma"
       ],
       "allowedTopics": [
-        "marche-capteurs",
-        "prix-composants"
+        "sensor-market",
+        "component-prices"
       ]
     },
     {
@@ -71,7 +74,7 @@
         "alice"
       ],
       "allowedTopics": [
-        "marche-capteurs"
+        "sensor-market"
       ]
     }
   ],
@@ -80,35 +83,35 @@
       "id": "company-presentation",
       "ownerId": "company",
       "tags": [
-        "entreprise"
+        "company"
       ],
-      "text": "Acme conçoit et fabrique des capteurs industriels connectés (vibration, température, pression) pour la logistique et l'industrie. Siège à Lyon, usine à Villeurbanne, 420 salariés."
+      "text": "Acme designs and manufactures connected industrial sensors (vibration, temperature, pressure) for logistics and manufacturing. Headquarters in Lyon, plant in Villeurbanne, 420 employees."
     },
     {
       "id": "company-catalogue-2026",
       "ownerId": "company",
       "tags": [
-        "produits",
-        "prix"
+        "products",
+        "pricing"
       ],
-      "text": "Catalogue 2026 : capteur de vibration AX-200 à 118 € HT l'unité, capteur multi-mesures AX-500 à 245 € HT, passerelle radio GW-10 à 890 € HT. Abonnement plateforme Acme Cloud : 2 € par capteur et par mois."
+      "text": "2026 catalog: AX-200 vibration sensor at EUR 118 per unit excl. VAT, AX-500 multi-sensor at EUR 245 excl. VAT, GW-10 radio gateway at EUR 890 excl. VAT. Acme Cloud platform subscription: EUR 2 per sensor per month."
     },
     {
       "id": "company-politique-tarifaire",
       "ownerId": "company",
       "tags": [
-        "prix",
-        "politique"
+        "pricing",
+        "policy"
       ],
-      "text": "Politique tarifaire : remise maximale de 8 % sans validation ; au-delà, validation obligatoire par la direction commerciale. Conditions de paiement standard : 30 jours fin de mois. Tout contrat au-dessus de 500 k€ passe par une revue juridique."
+      "text": "Pricing policy: discounts up to 8% need no approval; anything above requires sign-off from sales management. Standard payment terms: 30 days end of month. Any contract above EUR 500k goes through legal review."
     },
     {
       "id": "company-organisation",
       "ownerId": "company",
       "tags": [
-        "organisation"
+        "organization"
       ],
-      "text": "Organisation commerciale : Alice Martin (Ventes) gère les nouveaux clients, Bob Durand (Grands comptes) suit les clients stratégiques dont Orion Logistique, Chloe Bernard (Juridique & conformité) valide les contrats et les sujets RH sensibles."
+      "text": "Sales organization: Alice Martin (Sales) handles new clients, Bob Durand (Key Accounts) manages strategic clients including Orion Logistique, Chloe Bernard (Legal & Compliance) approves contracts and sensitive HR matters."
     },
     {
       "id": "company-client-orion",
@@ -117,24 +120,24 @@
         "clients",
         "orion"
       ],
-      "text": "Orion Logistique : client grand compte depuis 2021, 14 entrepôts en France et au Benelux, environ 35 000 capteurs AX-200 installés. Contrat-cadre actuel jusqu'au 31 décembre 2026."
+      "text": "Orion Logistique: key account since 2021, 14 warehouses in France and the Benelux, about 35,000 AX-200 sensors installed. Current framework agreement runs until December 31, 2026."
     },
     {
       "id": "company-actualite-salon",
       "ownerId": "company",
       "tags": [
-        "actualites"
+        "news"
       ],
-      "text": "Actualité : Acme sera présent au salon Global Industrie à Paris du 10 au 13 mars 2027, stand B42."
+      "text": "News: Acme will exhibit at the Global Industrie trade show in Paris, March 10-13, 2027, booth B42."
     },
     {
       "id": "alice-objectif-orion",
       "ownerId": "alice",
       "tags": [
         "orion",
-        "rendez-vous"
+        "meetings"
       ],
-      "text": "Rendez-vous demain 8 octobre à 10 h avec Orion Logistique (je remplace Bob en congé). Objectif : renouvellement du contrat-cadre pour 2027 et proposer l'AX-500 sur les nouveaux entrepôts."
+      "text": "Meeting tomorrow, October 8 at 10 am, with Orion Logistique (I'm covering for Bob, who is on leave). Goal: renew the framework agreement for 2027 and pitch the AX-500 for the new warehouses."
     },
     {
       "id": "alice-prospect-helios",
@@ -142,74 +145,74 @@
       "tags": [
         "prospects"
       ],
-      "text": "Prospect Helios Froid : démo AX-200 prévue le 15 octobre, ils comparent avec un concurrent allemand."
+      "text": "Prospect Helios Froid: AX-200 demo scheduled for October 15, they are comparing us with a German competitor."
     },
     {
       "id": "bob-orion-conditions-2025",
       "ownerId": "bob",
       "tags": [
         "orion",
-        "conditions"
+        "terms"
       ],
-      "text": "Conditions Orion 2025 : remise 12 % si volume > 40k unités, paiement 60 j fin de mois. Validé par la direction commerciale en janvier."
+      "text": "Orion 2025 terms: 12% discount if volume > 40k units, payment at 60 days end of month. Approved by sales management in January."
     },
     {
       "id": "bob-orion-reunion-septembre",
       "ownerId": "bob",
       "tags": [
         "orion",
-        "reunion"
+        "meeting-notes"
       ],
-      "text": "Réunion Orion du 22 septembre avec Marc Lefèvre (directeur des achats) : ils veulent des livraisons trimestrielles et un engagement de délai à 3 semaines. Satisfaits de l'AX-200, inquiets du prix de la passerelle GW-10."
+      "text": "Orion meeting on September 22 with Marc Lefevre (purchasing director): they want quarterly deliveries and a committed 3-week lead time. Happy with the AX-200, worried about the price of the GW-10 gateway."
     },
     {
       "id": "bob-orion-points-attention",
       "ownerId": "bob",
       "tags": [
         "orion",
-        "negociation"
+        "negotiation"
       ],
-      "text": "Orion, points d'attention pour le renouvellement : ils ouvrent 4 entrepôts en 2027 (environ 8 000 capteurs), un concurrent leur a proposé -15 %. Marc Lefèvre décide, mais la DAF valide tout ce qui dépasse 1 M€."
+      "text": "Orion, watch-outs for the renewal: they are opening 4 warehouses in 2027 (about 8,000 sensors), and a competitor has offered them 15% off. Marc Lefevre decides, but the CFO's office signs off on anything above EUR 1M."
     },
     {
       "id": "bob-perso-conges",
       "ownerId": "bob",
       "tags": [
-        "perso"
+        "personal"
       ],
-      "text": "Rappel perso : congés du 7 au 18 octobre, Alice reprend le rendez-vous Orion du 8."
+      "text": "Personal reminder: on leave October 7-18, Alice is taking over the Orion meeting on the 8th."
     },
     {
       "id": "bob-research-marche-capteurs",
       "ownerId": "bob",
       "tags": [
         "desk:research",
-        "marche-capteurs"
+        "sensor-market"
       ],
-      "text": "Desk Research : le marché européen des capteurs industriels connectés progresse de 9 % en 2026 ; le prix des puces radio a baissé de 18 % sur le trimestre, ce qui laisse de la marge sur les passerelles."
+      "text": "Research desk: the European market for connected industrial sensors is growing 9% in 2026; radio chip prices fell 18% over the quarter, which leaves room on gateway margins."
     },
     {
       "id": "chloe-revue-contrats",
       "ownerId": "chloe",
       "tags": [
-        "juridique",
-        "contrats"
+        "legal",
+        "contracts"
       ],
-      "text": "Note juridique : nouveau modèle de contrat-cadre validé le 1er octobre, clause de pénalité de retard plafonnée à 5 % du montant de la commande."
+      "text": "Legal note: new framework agreement template approved on October 1, late-delivery penalty clause capped at 5% of the order value."
     },
     {
       "id": "chloe-rh-prudhommes",
       "ownerId": "chloe",
       "tags": [
-        "rh",
-        "confidentiel"
+        "hr",
+        "confidential"
       ],
-      "text": "Confidentiel RH : un salarié de l'entrepôt de Villeurbanne, Julien Petit, a saisi les prud'hommes pour licenciement abusif ; il est en arrêt maladie depuis août. Audience le 20 novembre, ne pas en parler en interne."
+      "text": "Confidential HR: an employee at the Villeurbanne warehouse, Julien Petit, has filed an unfair dismissal claim with the labor court; he has been on sick leave since August. Hearing on November 20, do not discuss internally."
     }
   ],
   "recallChecks": [
     {
-      "task": "brief du rendez-vous de demain avec le client Orion",
+      "task": "brief for tomorrow's meeting with client Orion",
       "requesterId": "alice",
       "mustInclude": [
         "bob-orion-conditions-2025"
@@ -219,7 +222,7 @@
       ]
     },
     {
-      "task": "tendances du marché des capteurs industriels et prix des composants",
+      "task": "industrial sensor market trends and component prices",
       "requesterId": "alice",
       "mustInclude": [
         "bob-research-marche-capteurs"

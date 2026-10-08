@@ -32,7 +32,7 @@ export interface RuleEvaluation {
   findings: RuleFinding[];
 }
 
-const percent = (ratio: number): string => `${Math.round(ratio * 100)} %`;
+const percent = (ratio: number): string => `${Math.round(ratio * 100)}%`;
 
 export function evaluateExtraction(request: ExtractionRequest): RuleEvaluation {
   const findings: RuleFinding[] = [];
@@ -42,34 +42,34 @@ export function evaluateExtraction(request: ExtractionRequest): RuleEvaluation {
     findings.push({
       rule: "full-context",
       outcome: "warn",
-      message: "L'agent demande tout le contexte personnel, sans recherche liée à une tâche.",
+      message: "The agent asks for your entire personal context, with no task-scoped search.",
     });
   }
   if (request.excerptLength > EXCERPT_LENGTH_BLOCK) {
     findings.push({
       rule: "excerpt-length",
       outcome: "block",
-      message: `Extrait de ${request.excerptLength} caractères (maximum ${EXCERPT_LENGTH_BLOCK}).`,
+      message: `Excerpt of ${request.excerptLength} characters (maximum ${EXCERPT_LENGTH_BLOCK}).`,
     });
   } else if (request.excerptLength > EXCERPT_LENGTH_WARN) {
     findings.push({
       rule: "excerpt-length",
       outcome: "warn",
-      message: `Extrait inhabituellement long : ${request.excerptLength} caractères (seuil ${EXCERPT_LENGTH_WARN}).`,
+      message: `Unusually long excerpt: ${request.excerptLength} characters (threshold ${EXCERPT_LENGTH_WARN}).`,
     });
   }
   if (share >= OWNER_SHARE_WARN) {
     findings.push({
       rule: "owner-share",
       outcome: "warn",
-      message: `${percent(share)} du contexte personnel demandé d'un coup (seuil ${percent(OWNER_SHARE_WARN)}).`,
+      message: `${percent(share)} of your personal context requested at once (threshold ${percent(OWNER_SHARE_WARN)}).`,
     });
   }
   if (request.distinctOwnersInTask >= DISTINCT_OWNERS_BLOCK) {
     findings.push({
       rule: "distinct-owners",
       outcome: "block",
-      message: `Une seule tâche vise ${request.distinctOwnersInTask} personnes (maximum ${DISTINCT_OWNERS_BLOCK - 1}).`,
+      message: `A single task targets ${request.distinctOwnersInTask} people (maximum ${DISTINCT_OWNERS_BLOCK - 1}).`,
     });
   }
   const requestsThisHour = request.recentRequestsToOwner + 1;
@@ -77,13 +77,13 @@ export function evaluateExtraction(request: ExtractionRequest): RuleEvaluation {
     findings.push({
       rule: "owner-rate",
       outcome: "block",
-      message: `${requestsThisHour} demandes vers la même personne en une heure (maximum ${REQUESTS_PER_OWNER_HOUR_BLOCK - 1}).`,
+      message: `${requestsThisHour} requests to the same person within an hour (maximum ${REQUESTS_PER_OWNER_HOUR_BLOCK - 1}).`,
     });
   } else if (requestsThisHour >= REQUESTS_PER_OWNER_HOUR_WARN) {
     findings.push({
       rule: "owner-rate",
       outcome: "warn",
-      message: `${requestsThisHour} demandes vers la même personne en une heure.`,
+      message: `${requestsThisHour} requests to the same person within an hour.`,
     });
   }
 

@@ -17,7 +17,7 @@ import { useEffect, useRef, useState } from "react";
 import { useReducedMotion } from "@/components/motion/use-reduced-motion";
 import { DEMO_ROUTE } from "./primitives";
 
-const STEPS = ["L’agent demande", "Vous donnez l’accord", "L’extrait est partagé"] as const;
+const STEPS = ["The agent asks", "You consent", "The excerpt is shared"] as const;
 
 /** An illustrative consent sequence, independent from real signing and enclave state. */
 export function Hero() {
@@ -57,33 +57,33 @@ export function Hero() {
       <div className="lp-hero-layout">
         <div className="lp-hero-copy">
           <p className="lp-hero-eyebrow">
-            <span /> La mémoire confidentielle de vos agents
+            <span /> Confidential memory for your agents
           </p>
           <h1 id="hero-title">
-            Vos agents
+            Your agents
             <br />
-            savent plus.
+            know more.
             <br />
             <span>
-              Vous décidez
+              You decide
               <br />
-              quoi.
+              what.
             </span>
           </h1>
           <p className="lp-hero-description">
-            Le savoir de votre entreprise, à portée de vos agents. Votre contexte personnel, partagé
-            uniquement avec votre accord.
+            The right context for every task: your company&apos;s knowledge, always within reach. Your
+            personal context, shared only with your consent.
           </p>
           <div className="lp-hero-actions">
             <Link href={DEMO_ROUTE} className="lp-primary-action">
-              Essayer Badge <ArrowUpRight size={19} />
+              Try Badge <ArrowUpRight size={19} />
             </Link>
-            <a href="#fonctionnement" className="lp-secondary-action">
-              Voir le fonctionnement <ArrowDown size={15} />
+            <a href="#how-it-works" className="lp-secondary-action">
+              See how it works <ArrowDown size={15} />
             </a>
           </div>
           <p className="lp-hero-assurance">
-            <Fingerprint size={17} /> Votre accord se signe sur votre Ledger.
+            <Fingerprint size={17} /> You sign your consent on your Ledger.
           </p>
         </div>
 
@@ -94,13 +94,13 @@ export function Hero() {
           data-paused={paused || reducedMotion}
         >
           <div className="consent-preview-header">
-            <span>UN PARTAGE, PAS TOUTE VOTRE MÉMOIRE.</span>
-            <span className="consent-example">Exemple illustratif</span>
+            <span>ONE EXCERPT, NOT YOUR WHOLE MEMORY.</span>
+            <span className="consent-example">Illustrative example</span>
           </div>
           <div className="consent-design-heading">
             <div>
-              <span>LE POUVOIR DE DIRE OUI.</span>
-              <p>La clé, c’est vous.</p>
+              <span>THE POWER TO SAY YES.</span>
+              <p>You hold the key.</p>
             </div>
             <div className="consent-design-mark" aria-hidden="true">
               <Fingerprint strokeWidth={1.2} />
@@ -112,8 +112,8 @@ export function Hero() {
                 <Bot size={22} />
               </span>
               <div>
-                <span className="consent-small-label">L’agent d’Alice</span>
-                <p>Prépare mon rendez-vous avec Orion.</p>
+                <span className="consent-small-label">Alice’s agent</span>
+                <p>Prepare my meeting with Orion.</p>
               </div>
               <span className="consent-request-dot" />
             </div>
@@ -125,26 +125,26 @@ export function Hero() {
               <div className="consent-card-top">
                 <span className="consent-owner">B</span>
                 <div>
-                  <strong>Votre contexte, Bob.</strong>
-                  <span>Vous seul autorisez le partage.</span>
+                  <strong>Your context, Bob.</strong>
+                  <span>Only you can authorize sharing.</span>
                 </div>
                 <LockKeyhole size={18} />
               </div>
               <div className="consent-card-content">
                 <div className="consent-card-heading">
-                  <h2>Partager cet extrait ?</h2>
-                  <span>01 extrait</span>
+                  <h2>Share this excerpt?</h2>
+                  <span>01 excerpt</span>
                 </div>
                 <blockquote>
-                  « Orion souhaite déployer la solution auprès de son équipe commerciale dès novembre. »
+                  “Orion wants to roll the solution out to its sales team as early as November.”
                 </blockquote>
                 <div className="consent-scope">
                   <span>
-                    Avec <strong>Alice</strong>
+                    With <strong>Alice</strong>
                   </span>
                   <ArrowRight size={13} />
                   <span>
-                    Pour <strong>le brief Orion</strong>
+                    For <strong>the Orion brief</strong>
                   </span>
                 </div>
               </div>
@@ -155,17 +155,17 @@ export function Hero() {
                 <div>
                   <strong>
                     {activeStep === 0
-                      ? "En attente de votre décision"
+                      ? "Waiting for your decision"
                       : activeStep === 1
-                        ? "Accord signé sur votre Ledger"
-                        : "Votre accord est vérifié"}
+                        ? "Consent signed on your Ledger"
+                        : "Your consent is verified"}
                   </strong>
                   <span>
                     {activeStep === 0
-                      ? "L’agent ne peut pas signer à votre place."
+                      ? "The agent can’t sign on your behalf."
                       : activeStep === 1
-                        ? "Vous autorisez cet extrait, pour cette tâche."
-                        : "Seul l’extrait autorisé peut être transmis."}
+                        ? "You authorize this excerpt, for this task."
+                        : "Only the authorized excerpt can be released."}
                   </span>
                 </div>
               </div>
@@ -179,13 +179,13 @@ export function Hero() {
               <div>
                 <strong>
                   {activeStep === 2
-                    ? "L’extrait rejoint le brief d’Alice."
-                    : "Le reste de vos notes reste privé."}
+                    ? "The excerpt joins Alice’s brief."
+                    : "The rest of your notes stays private."}
                 </strong>
                 <span>
                   {activeStep === 2
-                    ? "Le reste de vos notes reste privé."
-                    : "Aucun partage avant votre accord."}
+                    ? "The rest of your notes stays private."
+                    : "Nothing is shared before you consent."}
                 </span>
               </div>
               <span className="consent-result-check">
@@ -194,7 +194,7 @@ export function Hero() {
             </div>
           </div>
           <div className="consent-playback">
-            <div className="consent-steps" aria-label="Étapes du partage">
+            <div className="consent-steps" aria-label="Sharing steps">
               {STEPS.map((label, index) => (
                 <button
                   key={label}
@@ -215,7 +215,7 @@ export function Hero() {
               <button
                 type="button"
                 className="consent-pause"
-                aria-label={paused ? "Relancer l’animation" : "Mettre l’animation en pause"}
+                aria-label={paused ? "Resume the animation" : "Pause the animation"}
                 aria-pressed={paused}
                 onClick={() => setPaused((value) => !value)}
               >
@@ -226,11 +226,11 @@ export function Hero() {
         </div>
       </div>
       <div className="lp-hero-foundation">
-        <span>La confiance, inscrite dans l’architecture.</span>
+        <span>Trust, built into the architecture.</span>
         <div>
-          <span>Signé sur Ledger</span>
-          <span>Exécuté en enclave</span>
-          <span>Chaque partage tracé</span>
+          <span>Signed on Ledger</span>
+          <span>Run in an enclave</span>
+          <span>Every share logged</span>
         </div>
       </div>
     </section>

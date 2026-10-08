@@ -3,36 +3,40 @@ import { GITHUB_URL, SECTION_X, TextLink } from "./primitives";
 
 const QUESTIONS = [
   {
-    q: "Où vivent les données ?",
-    a: "Dans l'enclave : une machine virtuelle confidentielle Intel TDX sur Phala, qui garde la mémoire, la politique et le journal. Le serveur web et l'agent ne reçoivent que ce que l'enclave leur remet : un brief, avec la provenance de chaque extrait.",
+    q: "Why not share everything, or lock it down with rules?",
+    a: "Sharing everything leaks what should never leak, and rigid guardrails stop autonomous agents at every turn. Badge's memory knows all the context, injects only what a task needs (fewer tokens, better results) and asks the owner when it is personal.",
   },
   {
-    q: "Que voit le modèle de langage ?",
-    a: "Seulement les extraits nécessaires à une tâche, une fois autorisés, envoyés par la passerelle unique vers Phala Confidential AI. Le contexte complet d'un collègue n'est jamais envoyé au modèle.",
+    q: "Where does the data live?",
+    a: "In the enclave: an Intel TDX confidential virtual machine on Phala that holds the memory, the policy and the log. The web server and the agent only get what the enclave hands them: a brief, with the provenance of every excerpt.",
   },
   {
-    q: "Pourquoi un Ledger ?",
-    a: "Parce que son écran est hors de portée de l'agent, du navigateur et du serveur. Grâce au clear signing (EIP-712), ce que le propriétaire lit est exactement ce qu'il signe, et l'enclave vérifie cette signature avant de libérer quoi que ce soit.",
+    q: "What does the language model see?",
+    a: "Only the excerpts a task needs, once authorized, sent through the single gateway to Phala Confidential AI. A colleague's full context is never sent to the model.",
   },
   {
-    q: "Mes équipes vont-elles valider toute la journée ?",
-    a: "Non : les accords permanents couvrent les usages récurrents (une équipe, un usage, une durée, une taille maximale par extrait). Ils sont signés une fois, révocables, et chaque usage est journalisé.",
+    q: "Why a Ledger?",
+    a: "Because its screen is out of reach of the agent, the browser and the server. With clear signing (EIP-712), what the owner reads is exactly what they sign, and the enclave verifies that signature before releasing anything.",
   },
   {
-    q: "Que se passe-t-il quand je révoque ?",
-    a: "La révocation est signée sur le Ledger et appliquée par l'enclave : tout usage suivant est refusé. Ce qui a déjà été remis à un agent ne peut pas être repris, c'est pourquoi l'accord se donne extrait par extrait.",
+    q: "Will my teams spend all day approving?",
+    a: "No: standing agreements cover recurring uses (one team, one purpose, one duration, a maximum size per excerpt). They are signed once, revocable, and every use is logged.",
   },
   {
-    q: "Comment savoir que c'est la bonne enclave ?",
-    a: "Chaque client vérifie l'attestation Intel avant d'échanger : TCB, compose hash, app id et mesures de l'image. Cette mesure figure aussi dans chaque message que le Ledger affiche et signe.",
+    q: "What happens when I revoke?",
+    a: "The revocation is signed on the Ledger and enforced by the enclave: every later use is rejected. What an agent already received can't be taken back, which is why consent is given excerpt by excerpt.",
   },
   {
-    q: "Et l'anonymat entre desks ?",
-    a: "Un desk partage avec une preuve Semaphore : elle montre qu'un membre inscrit a accepté, sans dire lequel, à partir de trois membres. La conformité peut lever l'anonymat avec son propre Ledger, et cette levée est journalisée.",
+    q: "How do I know it's the right enclave?",
+    a: "Every client verifies the Intel attestation before any exchange: TCB, compose hash, app id and image measurements. That measurement also appears in every message the Ledger displays and signs.",
   },
   {
-    q: "Ça marche avec nos agents ?",
-    a: "Oui. Badge se branche sur la harness de chaque employé par un serveur MCP local. L'agent peut demander et suivre une tâche, jamais approuver à la place de l'humain.",
+    q: "What about anonymity between desks?",
+    a: "A desk shares with a Semaphore proof: it shows that an enrolled member approved, without saying which one, once the desk has at least three members. Compliance can reveal the identity with its own Ledger, and that reveal is logged.",
+  },
+  {
+    q: "Does it work with our agents?",
+    a: "Yes. Badge plugs into each employee's harness through a local MCP server. The agent can request a task and follow it, but never approve in the human's place.",
   },
 ] as const;
 
@@ -46,13 +50,13 @@ export function Faq() {
             as="h2"
             id="faq-title"
             className="text-[clamp(38px,4vw,60px)] leading-[1.05] tracking-[-0.06em]"
-            text="Les questions des RSSI."
+            text="Questions your CISO will ask."
           />
           <p className="mt-4 text-[14px] text-ink-muted-2">
-            Ce que vos équipes sécurité et conformité demanderont en premier.
+            What your security and compliance teams will want to know first.
           </p>
           <TextLink href={GITHUB_URL} className="mt-6">
-            Lire le code
+            Read the code
           </TextLink>
         </div>
         <div className="lp-faq">

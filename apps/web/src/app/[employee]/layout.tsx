@@ -60,7 +60,7 @@ export default async function EmployeeLayout({
             <div className="ml-auto flex items-center gap-2 pr-1">
               {api.mode === "mock" && (
                 <Badge variant="chip" className="hidden sm:inline-flex">
-                  Enclave fictive (développement)
+                  Mock enclave (development)
                 </Badge>
               )}
               <AttestationBadge
@@ -74,7 +74,7 @@ export default async function EmployeeLayout({
         </div>
         <LedgerPanel
           employee={employee.id}
-          deviceLabel={`Ledger de ${employee.firstName} · Speculos :${speculosPort}`}
+          deviceLabel={`${employee.firstName}'s Ledger · Speculos :${speculosPort}`}
           rehearsal={serverConfig().rehearsal}
         />
       </div>

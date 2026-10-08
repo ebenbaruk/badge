@@ -6,7 +6,7 @@ import type { ActionResult } from "@/server/errors";
 
 /** A device review in progress, started from the UI (what the mirror shows a banner for). */
 export interface LedgerActivity {
-  /** What the user is asked to review, e.g. "Approuver le partage avec Alice". */
+  /** What the user is asked to review, e.g. "Approve the share with Alice". */
   label: string;
   startedAt: number;
 }

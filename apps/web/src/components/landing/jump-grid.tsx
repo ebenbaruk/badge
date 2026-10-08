@@ -12,40 +12,39 @@ const ENTRIES: readonly {
 }[] = [
   {
     slot: "tile-global",
-    title: "Contexte global",
-    description: "L'entreprise, ses clients, ses actualités : accessible à tous les agents, sans friction.",
-    action: "Voir le parcours",
-    href: "#fonctionnement",
+    title: "Company context",
+    description: "The business, its clients, its news: available to every agent, without friction.",
+    action: "See the flow",
+    href: "#how-it-works",
   },
   {
     slot: "tile-personal",
-    title: "Contexte personnel",
-    description:
-      "Les notes et rendez-vous de chacun. Un extrait ne sort qu'avec l'accord de son propriétaire.",
-    action: "Les moments clés",
+    title: "Personal context",
+    description: "Each employee's notes and meetings. An excerpt only leaves with its owner's consent.",
+    action: "Key moments",
     href: "#moments",
   },
   {
     slot: "tile-consent",
-    title: "Accord signé",
-    description: "Ponctuel ou permanent, lu et signé sur le Ledger, révocable, journalisé à chaque usage.",
-    action: "L'écran du Ledger",
-    href: "#fonctionnement",
+    title: "Signed consent",
+    description: "One-off or standing, read and signed on the Ledger, revocable, logged on every use.",
+    action: "The Ledger screen",
+    href: "#how-it-works",
   },
   {
     slot: "tile-enclave",
-    title: "Enclave attestée",
-    description: "Intel TDX sur Phala : le cloud ne voit rien, chaque client vérifie le code qui tourne.",
-    action: "L'architecture",
-    href: "#confiance",
+    title: "Attested enclave",
+    description: "Intel TDX on Phala: the cloud sees nothing, and every client verifies the code it runs.",
+    action: "The architecture",
+    href: "#trust",
   },
 ];
 
-/** "À découvrir": four entry points into the page, each with a pastel tile. */
+/** "Explore": four entry points into the page, each with a pastel tile. */
 export function JumpGrid() {
   return (
     <section aria-labelledby="jump-title" className={`${SECTION_X} pb-[100px] md:pb-[140px]`}>
-      <EditorialGrid aside={<span id="jump-title">À découvrir</span>}>
+      <EditorialGrid aside={<span id="jump-title">Explore</span>}>
         <Stagger as="ul" className="grid gap-6 sm:grid-cols-2" step={80}>
           {ENTRIES.map((entry) => (
             <a

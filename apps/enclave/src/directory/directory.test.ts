@@ -24,7 +24,7 @@ describe("demo directory", () => {
 
   it("names employees as the device shows them and resolves Ledger addresses", () => {
     const alice = directory.requireEmployee("alice");
-    expect(directory.displayName(alice)).toBe("Alice Martin (Ventes)");
+    expect(directory.displayName(alice)).toBe("Alice Martin (Sales)");
     expect(directory.byAddress("0x9858effd232b4033e47d90003d41ec34ecaeda94")?.id).toBe("alice");
     expect(directory.deskByName("Research")?.id).toBe("research");
   });
@@ -33,10 +33,10 @@ describe("demo directory", () => {
     expect(directory.rulesForRecipient("origination")).toEqual([
       {
         id: "rule-4",
-        label: "Regle 4 - marche capteurs",
+        label: "Rule 4 - sensor market",
         sourceDesk: "research",
         recipientDesk: "origination",
-        allowedTags: ["marche-capteurs", "prix-composants"],
+        allowedTags: ["sensor-market", "component-prices"],
       },
     ]);
   });

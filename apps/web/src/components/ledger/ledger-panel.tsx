@@ -14,8 +14,8 @@ function ActivityBanner() {
   if (activity === null) {
     return (
       <p className="text-xs leading-relaxed text-muted-foreground">
-        Les accords se signent ici, sur le Ledger de l&apos;employé : ce que l&apos;écran affiche est
-        exactement ce qui est signé.
+        Consent is signed here, on the employee&apos;s Ledger: what the screen shows is exactly what gets
+        signed.
       </p>
     );
   }
@@ -27,14 +27,12 @@ function ActivityBanner() {
     >
       <div className="flex items-center gap-2 mono-label text-signal-hover">
         <PulseDot tone="on" />
-        Signature attendue
+        Signature requested
       </div>
-      <div className="mt-2.5 text-[15px] leading-snug font-semibold tracking-[-0.03em]">
-        Vérifiez sur le Ledger
-      </div>
+      <div className="mt-2.5 text-[15px] leading-snug font-semibold tracking-[-0.03em]">Check the Ledger</div>
       <p className="mt-1 text-paper/75">{activity.label}</p>
       <p className="mt-2 border-t border-paper/15 pt-2 text-paper/60">
-        Faites défiler, puis maintenez « Hold to sign ».
+        Scroll through, then press &quot;Hold to sign&quot;.
       </p>
     </div>
   );

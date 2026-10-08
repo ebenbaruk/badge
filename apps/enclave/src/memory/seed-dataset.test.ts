@@ -12,10 +12,10 @@ describe("acme demo dataset", () => {
     expect(dataset.employees[0]?.ledgerAddress).toBe("0x9858EfFD232B4033E47d90003D41EC34EcaEda94");
   });
 
-  it("contains Bob's Orion conditions note verbatim", () => {
+  it("contains Bob's Orion terms note verbatim", () => {
     const note = dataset.notes.find((n) => n.id === "bob-orion-conditions-2025");
     expect(note?.ownerId).toBe("bob");
-    expect(note?.text).toContain("remise 12 % si volume > 40k unités, paiement 60 j fin de mois");
+    expect(note?.text).toContain("12% discount if volume > 40k units, payment at 60 days end of month");
   });
 
   it("keeps Chloe's sensitive HR note off the Orion topic", () => {

@@ -4,18 +4,18 @@ import { isDeviceAscii, MAX_REVOKE_LABEL_LENGTH, revocationTargetLabel } from ".
 describe("revocationTargetLabel", () => {
   it("names the real scope, including the team agreements of a revoke-all", () => {
     expect(
-      revocationTargetLabel({ kind: "recipient", recipientName: "Alice Martin", recipientTeam: "Ventes" }),
-    ).toBe("Tout ce que j'ai partage avec Alice Martin + accords equipe Ventes");
-    expect(revocationTargetLabel({ kind: "policy", granteeTeam: "Ventes", contextTag: "orion" })).toBe(
-      "Accord equipe Ventes - orion",
+      revocationTargetLabel({ kind: "recipient", recipientName: "Alice Martin", recipientTeam: "Sales" }),
+    ).toBe("Everything I shared with Alice Martin + Sales team agreements");
+    expect(revocationTargetLabel({ kind: "policy", granteeTeam: "Sales", contextTag: "orion" })).toBe(
+      "Sales team agreement - orion",
     );
     expect(
       revocationTargetLabel({
         kind: "grant",
-        recipientName: "Alice Martin (Ventes)",
-        excerptLabel: "Orion : AX-500",
+        recipientName: "Alice Martin (Sales)",
+        excerptLabel: "Orion: AX-500",
       }),
-    ).toBe("Alice Martin (Ventes) - Orion : AX-500");
+    ).toBe("Alice Martin (Sales) - Orion: AX-500");
   });
 
   it("is device ASCII and bounded whatever the names", () => {

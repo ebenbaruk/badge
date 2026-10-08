@@ -20,13 +20,13 @@ import {
 import { consentHistoryEntry } from "@/server/enclave/history";
 import { employeeFromParams, load } from "@/server/load";
 
-export const metadata: Metadata = { title: "Demandes d'accord" };
+export const metadata: Metadata = { title: "Consent requests" };
 
 const STATUS_LABEL: Record<RequestStatus, { label: string; className: string }> = {
-  pending: { label: "En attente", className: "text-warning" },
-  approved: { label: "Approuvé · signé sur Ledger", className: "text-success" },
-  rejected: { label: "Refusé", className: "text-danger" },
-  expired: { label: "Expiré", className: "text-muted-foreground" },
+  pending: { label: "Pending", className: "text-warning" },
+  approved: { label: "Approved · signed on Ledger", className: "text-success" },
+  rejected: { label: "Rejected", className: "text-danger" },
+  expired: { label: "Expired", className: "text-muted-foreground" },
 };
 
 function Fact({ label, children }: { label: string; children: React.ReactNode }) {
@@ -56,11 +56,11 @@ function PendingRequest({ request, owner }: { request: ConsentRequestView; owner
             <span className="font-semibold tracking-[-0.02em]">{requester.name}</span>
             <span className="text-muted-foreground">
               {" "}
-              ({requester.team}) demande un extrait de votre contexte
+              ({requester.team}) is asking for an excerpt of your context
             </span>
           </div>
           <p className="mt-1.5 flex flex-wrap items-center gap-2 text-[13px] text-muted-foreground">
-            Tâche de son agent :{" "}
+            Their agent&apos;s task:{" "}
             <span className="rounded-pill border bg-card px-2.5 py-0.5 font-mono text-[11.5px] text-foreground">
               {request.taskLabel}
             </span>
@@ -75,17 +75,17 @@ function PendingRequest({ request, owner }: { request: ConsentRequestView; owner
           {/* Shown first: the owner must see why the enclave flagged the request before anything else. */}
           <RiskFindings findings={request.findings} />
           <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
-            <Fact label="Destinataire">{request.message.recipientName}</Fact>
-            <Fact label="Extrait">{request.message.excerptLabel}</Fact>
-            <Fact label="Longueur">{formatLength(request.message.excerptLength)}</Fact>
-            <Fact label="Expire">
+            <Fact label="Recipient">{request.message.recipientName}</Fact>
+            <Fact label="Excerpt">{request.message.excerptLabel}</Fact>
+            <Fact label="Length">{formatLength(request.message.excerptLength)}</Fact>
+            <Fact label="Expires">
               {formatDateTime(expiresAt)}{" "}
               <span className="text-muted-foreground">({formatRelative(expiresAt)})</span>
             </Fact>
           </dl>
           <div>
             <div className="flex flex-wrap items-center gap-1.5 mono-label text-[10px] text-muted-foreground">
-              Ce qui sortirait de votre contexte
+              What would leave your context
               {request.excerpt.tags.map((tag) => (
                 <span
                   key={tag}
@@ -100,10 +100,10 @@ function PendingRequest({ request, owner }: { request: ConsentRequestView; owner
             </p>
           </div>
           <ApproveRejectButtons
-            reviewLabel={`Partager « ${request.message.excerptLabel} » avec ${requester.name}`}
+            reviewLabel={`Share "${request.message.excerptLabel}" with ${requester.name}`}
             approve={approveConsent.bind(null, { employee: owner.id, consentId: request.id })}
             reject={rejectConsent.bind(null, { employee: owner.id, consentId: request.id })}
-            approvedMessage={`Accord signé : ${requester.firstName} reçoit l'extrait.`}
+            approvedMessage={`Consent signed: ${requester.firstName} receives the excerpt.`}
           />
         </div>
         <DevicePreviewCard preview={devicePreview("ContextShare", request.message)} />
@@ -121,7 +121,7 @@ function HistoryRow({ request }: { request: ConsentHistoryView }) {
       <span className="min-w-0 flex-1 truncate text-muted-foreground">{request.excerptLabel}</span>
       {request.flagged && (
         <span className="rounded-pill border border-danger/35 px-2 py-0.5 mono-chip text-danger">
-          signalé
+          flagged
         </span>
       )}
       <span className={cn("font-semibold", status.className)}>{status.label}</span>
@@ -147,14 +147,14 @@ export default async function ConsentsPage({ params }: { params: Promise<{ emplo
   return (
     <div className="mx-auto max-w-5xl">
       <PageHeader
-        title="Demandes d'accord"
-        eyebrow="Boîte de réception · signature Ledger"
-        description="Les agents de vos collègues demandent ici des extraits de votre contexte personnel. Rien ne sort de l'enclave sans votre signature : vérifiez sur votre Ledger ce que vous partagez, avec qui, et jusqu'à quand."
+        title="Consent requests"
+        eyebrow="Inbox · Ledger signature"
+        description="Your colleagues' agents ask for excerpts of your personal context here. Nothing leaves the enclave without your signature: check on your Ledger what you share, with whom, and until when."
       />
-      <SectionTitle>En attente ({pending.length})</SectionTitle>
+      <SectionTitle>Pending ({pending.length})</SectionTitle>
       {pending.length === 0 ? (
-        <EmptyState icon={<Inbox />} title="Aucune demande en attente">
-          Quand l&apos;agent d&apos;un collègue a besoin de votre contexte, la demande apparaît ici.
+        <EmptyState icon={<Inbox />} title="No pending requests">
+          When a colleague&apos;s agent needs your context, the request shows up here.
         </EmptyState>
       ) : (
         <div className="space-y-6">
@@ -165,7 +165,7 @@ export default async function ConsentsPage({ params }: { params: Promise<{ emplo
       )}
       {history.length > 0 && (
         <section className="mt-10">
-          <SectionTitle>Historique</SectionTitle>
+          <SectionTitle>History</SectionTitle>
           <ul className="divide-y overflow-hidden rounded-3xl border bg-card">
             {history.map((request) => (
               <HistoryRow key={request.id} request={request} />

@@ -106,7 +106,7 @@ function withoutLedger(verdict: ExtractionVerdict): ExtractionVerdict {
       {
         code: "OWNER_CANNOT_CONSENT",
         severity: "block",
-        message: "Le propriétaire n'a pas de Ledger : son contexte ne peut pas être partagé.",
+        message: "The owner has no Ledger: their context cannot be shared.",
       },
     ],
   };
@@ -422,7 +422,7 @@ export class TaskService {
    */
   private requesterLabel(task: TaskRow, row: ExcerptRow, released: boolean): string {
     const visible = released || row.owner_id === task.requester_id || row.scope === "global";
-    return visible ? row.label : `Contexte personnel de ${this.ownerName(row.owner_id)}`;
+    return visible ? row.label : `Personal context of ${this.ownerName(row.owner_id)}`;
   }
 
   private ownerName(ownerId: string): string {

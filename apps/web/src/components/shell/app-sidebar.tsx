@@ -30,13 +30,13 @@ interface NavItem {
 
 const MAIN_NAV: readonly NavItem[] = [
   { section: "agent", label: "Agent", icon: Bot },
-  { section: "consents", label: "Demandes d'accord", icon: Inbox },
-  { section: "agreements", label: "Accords permanents", icon: FileSignature },
-  { section: "access", label: "Accès et révocation", icon: KeyRound },
+  { section: "consents", label: "Consent requests", icon: Inbox },
+  { section: "agreements", label: "Standing agreements", icon: FileSignature },
+  { section: "access", label: "Access & revocation", icon: KeyRound },
   { section: "desks", label: "Desks", icon: VenetianMask },
 ];
-const COMPLIANCE_ITEM: NavItem = { section: "compliance", label: "Conformité", icon: ScrollText };
-const SETUP_ITEM: NavItem = { section: "onboarding", label: "Configuration", icon: Settings2 };
+const COMPLIANCE_ITEM: NavItem = { section: "compliance", label: "Compliance", icon: ScrollText };
+const SETUP_ITEM: NavItem = { section: "onboarding", label: "Setup", icon: Settings2 };
 
 export interface SidebarCounts {
   consents: number;
@@ -85,7 +85,7 @@ function NavLink({
           {count}
         </span>
       )}
-      {attention === true && <PulseDot tone="live" label="À faire" className="size-2" />}
+      {attention === true && <PulseDot tone="live" label="To do" className="size-2" />}
     </Link>
   );
 }
@@ -107,8 +107,8 @@ export function AppSidebar({
         <div className="px-2 pb-8">
           <BrandLockup />
         </div>
-        <div className="mb-2 px-3 mono-label text-muted-foreground">Mon espace</div>
-        <nav className="flex flex-col gap-1" aria-label="Navigation principale">
+        <div className="mb-2 px-3 mono-label text-muted-foreground">My workspace</div>
+        <nav className="flex flex-col gap-1" aria-label="Main navigation">
           {MAIN_NAV.map((item) => (
             <NavLink
               key={item.section}
@@ -125,23 +125,23 @@ export function AppSidebar({
           ))}
           {isCompliance && (
             <>
-              <div className="mt-6 mb-2 px-3 mono-label text-muted-foreground">Conformité</div>
+              <div className="mt-6 mb-2 px-3 mono-label text-muted-foreground">Compliance</div>
               <NavLink employee={employee} item={COMPLIANCE_ITEM} />
             </>
           )}
         </nav>
         <div className="workspace-sidebar-note mt-auto mb-5 rounded-2xl border p-4">
           <Fingerprint className="mb-3 size-6 text-primary" />
-          <p className="text-xs font-semibold">Votre contexte vous appartient.</p>
+          <p className="text-xs font-semibold">Your context belongs to you.</p>
           <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
-            Chaque partage commence par votre accord.
+            Every share starts with your consent.
           </p>
         </div>
         <div className="flex flex-col gap-1 border-t pt-4">
           <NavLink employee={employee} item={SETUP_ITEM} attention={setupPending} />
         </div>
       </aside>
-      <nav aria-label="Navigation mobile" className="workspace-mobile-nav md:hidden">
+      <nav aria-label="Mobile navigation" className="workspace-mobile-nav md:hidden">
         {[...MAIN_NAV, ...(isCompliance ? [COMPLIANCE_ITEM] : []), SETUP_ITEM].map((item) => (
           <NavLink
             key={item.section}

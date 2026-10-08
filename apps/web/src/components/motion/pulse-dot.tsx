@@ -8,7 +8,7 @@ export interface PulseDotProps {
   className?: string;
 }
 
-/** Small status dot with a breathing halo ("Enclave en ligne", "Simulé"...). */
+/** Small status dot with a breathing halo ("Enclave online", "Simulated"...). */
 export function PulseDot({ tone = "live", label, className }: PulseDotProps) {
   return (
     <span

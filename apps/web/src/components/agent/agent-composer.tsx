@@ -15,11 +15,11 @@ import { startTask } from "@/server/actions/agent";
 
 const SUGGESTIONS: Readonly<Record<EmployeeId, readonly string[]>> = {
   alice: [
-    "Prépare-moi le brief du rendez-vous de demain avec le client Orion",
-    "Où en est le prospect Helios Froid ?",
+    "Prepare the brief for tomorrow's meeting with client Orion",
+    "Where do we stand with prospect Helios Froid?",
   ],
-  bob: ["Résume les conditions tarifaires en vigueur", "Quelles sont les actualités d'Acme ?"],
-  chloe: ["Quel est le modèle de contrat-cadre en vigueur ?", "Résume la politique tarifaire"],
+  bob: ["Summarize our current pricing terms", "What's new at Acme?"],
+  chloe: ["Which master agreement template is current?", "Summarize the pricing policy"],
 };
 
 /** The employee's agent prompt, with the "compromised agent" switch used to demo the injection defence. */
@@ -66,8 +66,8 @@ export function AgentComposer({ employee, targetName }: { employee: EmployeeId; 
         value={task}
         onChange={(event) => setTask(event.target.value)}
         onKeyDown={onKeyDown}
-        placeholder="Demandez quelque chose à votre agent…"
-        aria-label="Tâche pour l'agent"
+        placeholder="Ask your agent anything…"
+        aria-label="Task for the agent"
         className="min-h-24 resize-none rounded-3xl border-0 bg-transparent px-5 pt-4 text-[16px] font-medium shadow-none placeholder:text-muted-foreground/70 focus-visible:ring-0 dark:bg-transparent"
       />
       <div className="flex flex-wrap items-center gap-2 px-4 pt-1 pb-4">
@@ -99,20 +99,20 @@ export function AgentComposer({ employee, targetName }: { employee: EmployeeId; 
                   )}
                 >
                   <Skull className="size-3.5" />
-                  Agent compromis
+                  Compromised agent
                 </Label>
               </div>
             </TooltipTrigger>
             <TooltipContent className="max-w-64">
-              Simule une injection de prompt : l&apos;agent demande tout le contexte de {targetName} au lieu
-              de chercher pour la tâche.
+              Simulates a prompt injection: the agent asks for all of {targetName}&apos;s context instead of
+              searching for the task.
             </TooltipContent>
           </Tooltip>
           <Button
             type="submit"
             size="icon-lg"
             variant="night"
-            aria-label="Envoyer"
+            aria-label="Send"
             disabled={pending || task.trim().length === 0}
           >
             {pending ? <Loader2 className="animate-spin" /> : <ArrowUp />}

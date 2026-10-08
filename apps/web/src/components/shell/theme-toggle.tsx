@@ -11,7 +11,7 @@ export function ThemeToggle() {
     <Button
       variant="ghost"
       size="icon"
-      aria-label="Basculer le thème clair / sombre"
+      aria-label="Toggle light / dark theme"
       onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
     >
       <Sun className="scale-100 rotate-0 transition-transform dark:scale-0 dark:-rotate-90" />

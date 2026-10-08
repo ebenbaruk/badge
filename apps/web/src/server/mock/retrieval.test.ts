@@ -3,11 +3,11 @@ import { findCandidates, isExcludedPersonalData, tokenize } from "./retrieval";
 import { loadSeed } from "./seed";
 
 const { notes } = loadSeed();
-const ORION_TASK = "Prépare-moi le brief du rendez-vous de demain avec le client Orion";
+const ORION_TASK = "Prepare the brief for tomorrow's meeting with client Orion";
 
 describe("mock retrieval", () => {
   it("tokenizes without accents, stopwords or plural s", () => {
-    expect([...tokenize("Prépare les capteurs d'Orion")]).toEqual(["capteur", "orion"]);
+    expect([...tokenize("Prépare the sensors for Orión")]).toEqual(["sensor", "orion"]);
   });
 
   it("recalls the notes of the seed recall check and never the HR file", () => {

@@ -16,7 +16,7 @@ import {
 } from "@badge/consent";
 import type { Hex } from "viem";
 import { EMPLOYEES, type EmployeeId } from "@/lib/directory";
-import { estimateTokens, plural } from "@/lib/format";
+import { estimateTokens, plural, possessive } from "@/lib/format";
 import { EnclaveError } from "../errors";
 import { deviceLabel, deviceName, newNonce } from "../messages";
 import type {
@@ -75,7 +75,7 @@ function sourceFromNotes(
 function bundleLabel(owner: EmployeeId, notes: readonly SeedNote[]): string {
   const [first] = notes;
   if (notes.length === 1 && first !== undefined) return first.label;
-  return `Notes de ${EMPLOYEES[owner].firstName} (${notes.length})`;
+  return `${possessive(EMPLOYEES[owner].firstName)} notes (${notes.length})`;
 }
 
 function ownerTotalLength(state: MockState, owner: EmployeeId): number {
@@ -161,7 +161,7 @@ function requestForeignExcerpt(state: MockState, task: TaskRecord, request: Fore
     });
     addStep(task, {
       kind: "allowed",
-      title: `Accord déjà signé par ${EMPLOYEES[owner].firstName} réutilisé`,
+      title: `Consent already signed by ${EMPLOYEES[owner].firstName} reused`,
       detail: label,
     });
     return;
@@ -191,7 +191,7 @@ function requestForeignExcerpt(state: MockState, task: TaskRecord, request: Fore
     });
     addStep(task, {
       kind: "rule_block",
-      title: "Demande bloquée par les règles de l'enclave",
+      title: "Request blocked by enclave rules",
       detail: reason,
     });
     return;
@@ -205,7 +205,7 @@ function requestForeignExcerpt(state: MockState, task: TaskRecord, request: Fore
     });
     addStep(task, {
       kind: "rule_warn",
-      title: "Demande signalée par les règles de l'enclave",
+      title: "Request flagged by enclave rules",
       detail: evaluation.findings.map((f) => f.message).join(" "),
     });
   }
@@ -254,8 +254,8 @@ function requestForeignExcerpt(state: MockState, task: TaskRecord, request: Fore
   });
   addStep(task, {
     kind: "waiting_consent",
-    title: `En attente de l'accord de ${EMPLOYEES[owner].firstName}, sur son Ledger`,
-    detail: `${label} · ${plural(source.length, "caractère")}`,
+    title: `Waiting for ${possessive(EMPLOYEES[owner].firstName)} consent on their Ledger`,
+    detail: `${label} · ${plural(source.length, "character")}`,
   });
 }
 
@@ -263,14 +263,14 @@ function runSearch(state: MockState, task: TaskRecord): void {
   const notes = state.seed.notes;
   addStep(task, {
     kind: "search",
-    title: "Recherche dans la mémoire de l'enclave",
-    detail: `${plural(notes.length, "note")} indexées : contexte global et contextes personnels`,
+    title: "Searching the enclave's memory",
+    detail: `${plural(notes.length, "note")} indexed: company context and personal contexts`,
   });
   const candidates = findCandidates(task.task, notes);
   const owners = new Set(candidates.map((c) => c.note.owner));
   addStep(task, {
     kind: "candidates",
-    title: plural(candidates.length, "extrait candidat", "extraits candidats"),
+    title: plural(candidates.length, "candidate excerpt"),
     detail: [...owners].map(ownerName).join(", "),
   });
 
@@ -280,15 +280,15 @@ function runSearch(state: MockState, task: TaskRecord): void {
       owner: note.owner,
       label: note.label,
       length: excerptLength(note.text),
-      reason: "Donnée personnelle sans rapport avec la tâche (classifieur de l'enclave).",
+      reason: "Personal data unrelated to the task (enclave classifier).",
       kind: "classifier",
     });
   }
   if (excluded.length > 0) {
     addStep(task, {
       kind: "classified",
-      title: `${plural(excluded.length, "extrait écarté", "extraits écartés")} par le classifieur`,
-      detail: "Données personnelles hors sujet : elles ne quittent pas l'enclave.",
+      title: `${plural(excluded.length, "excerpt")} set aside by the classifier`,
+      detail: "Off-topic personal data: it never leaves the enclave.",
     });
   }
 
@@ -301,8 +301,8 @@ function runSearch(state: MockState, task: TaskRecord): void {
   if (direct.length > 0) {
     addStep(task, {
       kind: "allowed",
-      title: `${plural(direct.length, "extrait autorisé", "extraits autorisés")} d'office`,
-      detail: "Contexte global de l'entreprise et votre propre contexte.",
+      title: `${plural(direct.length, "excerpt")} allowed by default`,
+      detail: "The company context and your own context.",
     });
   }
 
@@ -322,8 +322,8 @@ function runSearch(state: MockState, task: TaskRecord): void {
       });
       addStep(task, {
         kind: "policy",
-        title: `Accord permanent de ${EMPLOYEES[owner].firstName} appliqué`,
-        detail: `${note.label} · usage « ${policy.policy.purpose} »`,
+        title: `${possessive(EMPLOYEES[owner].firstName)} standing agreement applied`,
+        detail: `${note.label} · purpose "${policy.policy.purpose}"`,
       });
       continue;
     }
@@ -344,13 +344,13 @@ function runTrap(state: MockState, task: TaskRecord, target: EmployeeId): void {
   const notes = state.seed.notes.filter((n) => n.owner === target);
   addStep(task, {
     kind: "search",
-    title: `Requête de l'agent : tout le contexte de ${EMPLOYEES[target].name}`,
-    detail: "Aucune recherche liée à une tâche : l'agent demande un export complet.",
+    title: `Agent request: the full context of ${EMPLOYEES[target].name}`,
+    detail: "No task-scoped search: the agent asks for a full export.",
   });
   requestForeignExcerpt(state, task, {
     owner: target,
     notes,
-    label: `Tout le contexte de ${EMPLOYEES[target].firstName}`,
+    label: `Full context of ${EMPLOYEES[target].name}`,
     distinctOwners: 1,
     fullContextRequest: true,
   });
@@ -363,8 +363,8 @@ function finalize(state: MockState, task: TaskRecord): TaskStatus {
     if (!task.steps.some((s) => s.kind === "refused")) {
       addStep(task, {
         kind: "refused",
-        title: "Aucun contexte autorisé : rien n'a quitté l'enclave",
-        detail: "La demande a été refusée ou bloquée.",
+        title: "No context allowed: nothing left the enclave",
+        detail: "The request was rejected or blocked.",
       });
     }
     return "refused";
@@ -374,8 +374,8 @@ function finalize(state: MockState, task: TaskRecord): TaskStatus {
     const tokens = estimateTokens(task.allowed.map((s) => s.text).join(EXCERPT_SEPARATOR));
     addStep(task, {
       kind: "brief",
-      title: "Brief rédigé dans l'enclave",
-      detail: `${plural(task.allowed.length, "source")} · ${plural(tokens, "token")} de contexte injectés`,
+      title: "Brief drafted inside the enclave",
+      detail: `${plural(task.allowed.length, "source")} · ${plural(tokens, "context token")} injected`,
     });
   }
   return "ready";
@@ -430,7 +430,7 @@ export function createTask(state: MockState, requester: EmployeeId, input: Creat
   });
   if (input.trap !== undefined) {
     if (input.trap.requestFullContextOf === requester) {
-      throw new EnclaveError("INVALID_REQUEST", "un agent piégé vise le contexte d'un autre employé");
+      throw new EnclaveError("INVALID_REQUEST", "a trapped agent targets another employee's context");
     }
     runTrap(state, task, input.trap.requestFullContextOf);
   } else {
@@ -441,17 +441,16 @@ export function createTask(state: MockState, requester: EmployeeId, input: Creat
 
 export function getTaskRecord(state: MockState, requester: EmployeeId, taskId: Hex): TaskRecord {
   const task = state.tasks.get(taskId);
-  if (task === undefined || task.requester !== requester)
-    throw new EnclaveError("NOT_FOUND", "tâche inconnue");
+  if (task === undefined || task.requester !== requester) throw new EnclaveError("NOT_FOUND", "unknown task");
   return task;
 }
 
 function consentRecord(state: MockState, owner: EmployeeId, consentId: string): ConsentRecord {
   const consent = state.consents.get(consentId);
   if (consent === undefined || consent.owner !== owner) {
-    throw new EnclaveError("NOT_FOUND", "demande d'accord inconnue");
+    throw new EnclaveError("NOT_FOUND", "unknown consent request");
   }
-  if (consent.status !== "pending") throw new EnclaveError("CONFLICT", `demande déjà ${consent.status}`);
+  if (consent.status !== "pending") throw new EnclaveError("CONFLICT", `request already ${consent.status}`);
   return consent;
 }
 
@@ -503,8 +502,8 @@ export async function approveConsent(
   task.allowed.push(sourceFromNotes(`${task.id}:${owner}`, owner, consent.label, consent.notes, "consent"));
   addStep(task, {
     kind: "consent_received",
-    title: `${EMPLOYEES[owner].firstName} a signé l'accord sur son Ledger`,
-    detail: `Signature vérifiée dans l'enclave · accord ${grantId.slice(0, 10)}…`,
+    title: `${EMPLOYEES[owner].firstName} signed the consent on their Ledger`,
+    detail: `Signature verified inside the enclave · grant ${grantId.slice(0, 10)}…`,
   });
 }
 
@@ -524,12 +523,12 @@ export function rejectConsent(state: MockState, owner: EmployeeId, consentId: st
     owner,
     label: consent.label,
     length: pending?.length ?? consent.message.excerptLength,
-    reason: `Refusé par ${EMPLOYEES[owner].firstName}.`,
+    reason: `Rejected by ${EMPLOYEES[owner].firstName}.`,
     kind: "rejected",
   });
   addStep(task, {
     kind: "consent_rejected",
-    title: `${EMPLOYEES[owner].firstName} a refusé le partage`,
+    title: `${EMPLOYEES[owner].firstName} rejected the share`,
     detail: consent.label,
   });
 }

@@ -14,8 +14,8 @@ import { createStandingAgreement } from "@/server/actions/agreements";
 const DURATIONS = [7, 30, 90] as const;
 const DEFAULT_DURATION_DAYS = 30;
 const DEFAULT_MAX_LENGTH = 800;
-const DEFAULT_PURPOSE = "briefs clients";
-/** The tag of the example above the form ("mes notes Orion"), preselected when the owner has it. */
+const DEFAULT_PURPOSE = "client briefs";
+/** The tag of the example above the form ("my Orion notes"), preselected when the owner has it. */
 const PREFERRED_CONTEXT_TAG = "orion";
 
 /**
@@ -47,7 +47,7 @@ export function PolicyForm({
     event.preventDefault();
     setBusy(true);
     await runOnLedger(
-      `Accord permanent : équipe ${granteeTeam}, contexte «\u00a0${contextTag}\u00a0»`,
+      `Standing agreement: ${granteeTeam} team, context "${contextTag}"`,
       () =>
         createStandingAgreement({
           employee,
@@ -57,7 +57,7 @@ export function PolicyForm({
           maxExcerptLength,
           durationDays,
         }),
-      { success: () => "Accord permanent signé et enregistré dans l'enclave." },
+      { success: () => "Standing agreement signed and recorded in the enclave." },
     );
     setBusy(false);
     router.refresh();
@@ -66,7 +66,7 @@ export function PolicyForm({
   return (
     <form onSubmit={(event) => void onSubmit(event)} className="grid gap-4 sm:grid-cols-2">
       <div className="grid gap-1.5">
-        <Label htmlFor="team">Équipe autorisée</Label>
+        <Label htmlFor="team">Allowed team</Label>
         <Select
           value={granteeTeam}
           onValueChange={(value) => setGranteeTeam(value as (typeof TEAMS)[number])}
@@ -84,10 +84,10 @@ export function PolicyForm({
         </Select>
       </div>
       <div className="grid gap-1.5">
-        <Label htmlFor="tag">Contexte partagé (étiquette)</Label>
+        <Label htmlFor="tag">Shared context (tag)</Label>
         <Select value={contextTag} onValueChange={setContextTag}>
           <SelectTrigger id="tag" className="w-full">
-            <SelectValue placeholder="Choisir une étiquette" />
+            <SelectValue placeholder="Choose a tag" />
           </SelectTrigger>
           <SelectContent>
             {tags.map((tag) => (
@@ -99,12 +99,12 @@ export function PolicyForm({
         </Select>
       </div>
       <div className="grid gap-1.5">
-        <Label htmlFor="purpose">Usage autorisé</Label>
+        <Label htmlFor="purpose">Allowed purpose</Label>
         <Input id="purpose" value={purpose} maxLength={60} onChange={(e) => setPurpose(e.target.value)} />
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="grid gap-1.5">
-          <Label htmlFor="max">Max par extrait (car.)</Label>
+          <Label htmlFor="max">Max per excerpt (chars)</Label>
           <Input
             id="max"
             type="number"
@@ -116,7 +116,7 @@ export function PolicyForm({
           />
         </div>
         <div className="grid gap-1.5">
-          <Label htmlFor="duration">Durée</Label>
+          <Label htmlFor="duration">Duration</Label>
           <Select value={String(durationDays)} onValueChange={(value) => setDurationDays(Number(value))}>
             <SelectTrigger id="duration" className="w-full">
               <SelectValue />
@@ -124,7 +124,7 @@ export function PolicyForm({
             <SelectContent>
               {DURATIONS.map((days) => (
                 <SelectItem key={days} value={String(days)}>
-                  {days} jours
+                  {days} days
                 </SelectItem>
               ))}
             </SelectContent>
@@ -133,14 +133,14 @@ export function PolicyForm({
       </div>
       <div className="flex items-center justify-between gap-3 sm:col-span-2">
         <p className="text-xs text-muted-foreground">
-          Signé une fois sur votre Ledger, révocable à tout moment, chaque usage est journalisé.
+          Signed once on your Ledger, revocable at any time, and every use is logged.
         </p>
         <Button
           type="submit"
           disabled={busy || activity !== null || contextTag === "" || purpose.trim().length < 3}
         >
           {busy ? <Loader2 className="animate-spin" /> : <PenLine />}
-          {busy ? "Vérifiez sur votre Ledger…" : "Signer l'accord sur mon Ledger"}
+          {busy ? "Check your Ledger…" : "Sign the agreement on my Ledger"}
         </Button>
       </div>
     </form>

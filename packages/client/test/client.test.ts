@@ -75,7 +75,7 @@ const task = {
       consentId: "c1",
       ownerId: "bob",
       ownerName: "Bob Durand",
-      excerptLabel: "Contexte personnel de Bob Durand",
+      excerptLabel: "Full context of Bob Durand",
       excerptLength: 120,
       risk: { level: "ok", reasons: [] },
     },
@@ -170,7 +170,7 @@ describe("request signing", () => {
 describe("responses", () => {
   it("decodes signed messages inside consent requests (bigints restored)", async () => {
     const share = {
-      recipientName: "Alice Martin (Ventes)",
+      recipientName: "Alice Martin (Sales)",
       excerptLabel: "Notes client Durand",
       excerptLength: 120,
       taskLabel: "Brief",
@@ -190,12 +190,12 @@ describe("responses", () => {
             id: "c1",
             status: "pending",
             taskId: task.id,
-            requester: { id: "alice", name: "Alice Martin", team: "Ventes" },
+            requester: { id: "alice", name: "Alice Martin", team: "Sales" },
             excerpt: { label: "Notes client Durand", length: 120, text: "...", tags: ["durand"] },
             message: share,
             risk: {
               level: "warn",
-              reasons: [{ code: "OWNER_SHARE_HIGH", severity: "warn", message: "90 % de votre contexte" }],
+              reasons: [{ code: "OWNER_SHARE_HIGH", severity: "warn", message: "90% of your context" }],
             },
             createdAt: 1,
           },
@@ -320,14 +320,14 @@ describe("createAgentSession", () => {
   it("creates a fresh key and an ASCII AgentSession bound to the enclave", () => {
     const now = new Date(NOW);
     const a = createAgentSession(ALICE, {
-      agentName: "Agent d'Élodie",
+      agentName: "Élodie's agent",
       enclaveMeasurement: MEASUREMENT,
       now,
     });
     const b = createAgentSession(ALICE, { agentName: "Agent", enclaveMeasurement: MEASUREMENT, now });
     expect(a.sessionKey.address).not.toBe(b.sessionKey.address);
     expect(a.message.nonce).not.toBe(b.message.nonce);
-    expect(a.message.agentName).toBe("Agent d'Elodie");
+    expect(a.message.agentName).toBe("Elodie's agent");
     expect(a.message.sessionKey).toBe(a.sessionKey.address);
     expect(a.message.employee).toBe(ALICE);
     expect(a.message.expiresAt).toBe(BigInt(NOW / 1000) + 8n * 3600n);

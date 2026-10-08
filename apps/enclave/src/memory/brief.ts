@@ -12,7 +12,7 @@ const BRIEF_MAX_OUTPUT_TOKENS = 1_200;
 export type AllowedExcerpt = Pick<CandidateExcerpt, "ownerId" | "scope" | "text">;
 
 const SYSTEM_PROMPT = [
-  "You write short, factual work briefs in French for an employee of the company.",
+  "You write short, factual work briefs in English for an employee of the company.",
   "Use ONLY the numbered excerpts provided. Do not add facts, figures or names that are not in them.",
   "Cite the excerpt number in brackets after each fact, e.g. [2].",
   "If the excerpts do not cover part of the task, say so in one line instead of guessing.",

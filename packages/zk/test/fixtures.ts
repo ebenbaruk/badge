@@ -16,6 +16,6 @@ export function ledgerSignatureOf(name: string): Promise<Hex> {
 export const EXCERPT_HASH: Hex = keccak256(
   stringToHex("Conditions Orion 2025 : remise 12 %, paiement 60 j."),
 );
-export const OTHER_EXCERPT_HASH: Hex = keccak256(stringToHex("Autre extrait"));
+export const OTHER_EXCERPT_HASH: Hex = keccak256(stringToHex("Another excerpt"));
 export const REQUEST_ID: Hex = keccak256(stringToHex("req-42"));
 export const OTHER_REQUEST_ID: Hex = keccak256(stringToHex("req-43"));

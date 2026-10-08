@@ -1,19 +1,19 @@
-# Images de la page d'accueil
+# Landing page images
 
-Les quatre grandes illustrations utilisent des sculptures SVG animées dans
-`src/components/landing/sculpture.tsx`, avec les mouvements dans `src/styles/sculptures.css`.
-Le héros présente une séquence d’interface animée (demande, accord, partage), sans image de fond.
-Le bandeau Agent garde un fond uni adapté au thème, sans image
-derrière le texte. Les fichiers WebP restent disponibles pour les petites tuiles, preuves et personnages.
-Les anciens rendus du héros et des quatre actes sont conservés, mais ne sont plus utilisés à ces endroits.
+The four large illustrations are animated SVG sculptures in
+`src/components/landing/sculpture.tsx`, with their motion in `src/styles/sculptures.css`.
+The hero shows an animated interface sequence (request, consent, share), with no background image.
+The Agent banner keeps a plain, theme-aware background, with no image
+behind the text. The WebP files remain in use for the small tiles, proofs and personas.
+The former hero and four-act renders are kept, but are no longer used in those places.
 
-Les spécifications ci-dessous conservent la direction artistique et les prompts de référence ; les tailles
-indiquées dans le tableau sont les cibles de production initiales.
+The specifications below keep the art direction and the reference prompts; the sizes
+in the table are the initial production targets.
 
-## Direction artistique commune
+## Shared art direction
 
-À placer **avant** chaque prompt, en remplaçant `<HEX>` par le fond du slot et `<PALETTE>` par ses
-couleurs :
+Place **before** each prompt, replacing `<HEX>` with the slot background and `<PALETTE>` with its
+colours:
 
 > Minimal soft 3D render, matte clay and frosted glass materials, isometric-ish three-quarter view, single
 > object centred with generous negative space, smooth studio lighting from top-left, very soft long
@@ -21,28 +21,28 @@ couleurs :
 > colour palette limited to <PALETTE>, crisp edges, subtle bevels, Swiss editorial poster feel, 8k, clean,
 > calm.
 
-## Emplacements
+## Slots
 
-| id                   | fichier                                     | taille              | emplacement                                                                                 | fond      |
-| -------------------- | ------------------------------------------- | ------------------- | ------------------------------------------------------------------------------------------- | --------- |
-| `hero-warp-poster`   | `hero-warp-poster.webp`                     | 2880×1800 (16:10)   | affiche fixe derrière le canvas du héros (mouvement réduit, avant JS) ; image OG de secours | `#060010` |
-| `act-memory`         | `act-memory.webp`                           | 1600×1600           | acte 1, carte lavande « Mémoire »                                                           | `#c8bef9` |
-| `act-ledger`         | `act-ledger.webp`                           | 1600×1600           | acte 2, carte gris brume « Demande »                                                        | `#e0e2e8` |
-| `act-refusal`        | `act-refusal.webp`                          | 1600×1600           | acte 3, carte pervenche « Refus »                                                           | `#9bb3eb` |
-| `act-attest`         | `act-attest.webp`                           | 1600×1600           | acte 4, carte pêche « Révocation et attestation »                                           | `#e9ab86` |
-| `tile-global`        | `tile-global.webp`                          | 460×460             | tuile « Contexte global »                                                                   | `#c8bef9` |
-| `tile-personal`      | `tile-personal.webp`                        | 460×460             | tuile « Contexte perso »                                                                    | `#1b2231` |
-| `tile-consent`       | `tile-consent.webp`                         | 460×460             | tuile « Accord signé »                                                                      | `#e9ab86` |
-| `tile-enclave`       | `tile-enclave.webp`                         | 460×460             | tuile « Enclave »                                                                           | `#dadce2` |
-| `consent-receipt`    | `consent-receipt.webp`                      | 1200×1200           | figure 1 « Chaque accord laisse une preuve »                                                | `#143c91` |
-| `attestation-report` | `attestation-report.webp`                   | 1200×1200           | figure 2, rapport d'attestation                                                             | `#143c91` |
-| `persona-alice`      | `persona-alice.webp`                        | 512×512             | sélecteur de persona (panneau démo)                                                         | `#c8bef9` |
-| `persona-bob`        | `persona-bob.webp`                          | 512×512             | sélecteur de persona                                                                        | `#9bb3eb` |
-| `persona-chloe`      | `persona-chloe.webp`                        | 512×512             | sélecteur de persona                                                                        | `#e9ab86` |
-| `og-image`           | `og.png`                                    | 1200×630            | carte de partage sur les réseaux                                                            | `#060010` |
-| `wordmark-xl`        | `badge-wordmark.svg` (+ `badge-symbol.svg`) | vectoriel, ~862×428 | logo géant du pied de page et marque de la barre de navigation                              | —         |
+| id                   | file                                        | size              | placement                                                                          | background |
+| -------------------- | ------------------------------------------- | ----------------- | ---------------------------------------------------------------------------------- | ---------- |
+| `hero-warp-poster`   | `hero-warp-poster.webp`                     | 2880×1800 (16:10) | still poster behind the hero canvas (reduced motion, before JS); fallback OG image | `#060010`  |
+| `act-memory`         | `act-memory.webp`                           | 1600×1600         | act 1, lavender "Memory" card                                                      | `#c8bef9`  |
+| `act-ledger`         | `act-ledger.webp`                           | 1600×1600         | act 2, mist grey "Request" card                                                    | `#e0e2e8`  |
+| `act-refusal`        | `act-refusal.webp`                          | 1600×1600         | act 3, periwinkle "Denied" card                                                    | `#9bb3eb`  |
+| `act-attest`         | `act-attest.webp`                           | 1600×1600         | act 4, peach "Revocation and attestation" card                                     | `#e9ab86`  |
+| `tile-global`        | `tile-global.webp`                          | 460×460           | "Company context" tile                                                             | `#c8bef9`  |
+| `tile-personal`      | `tile-personal.webp`                        | 460×460           | "Personal context" tile                                                            | `#1b2231`  |
+| `tile-consent`       | `tile-consent.webp`                         | 460×460           | "Signed consent" tile                                                              | `#e9ab86`  |
+| `tile-enclave`       | `tile-enclave.webp`                         | 460×460           | "Enclave" tile                                                                     | `#dadce2`  |
+| `consent-receipt`    | `consent-receipt.webp`                      | 1200×1200         | figure 1, "Every consent leaves proof"                                             | `#143c91`  |
+| `attestation-report` | `attestation-report.webp`                   | 1200×1200         | figure 2, attestation report                                                       | `#143c91`  |
+| `persona-alice`      | `persona-alice.webp`                        | 512×512           | persona picker (demo panel)                                                        | `#c8bef9`  |
+| `persona-bob`        | `persona-bob.webp`                          | 512×512           | persona picker                                                                     | `#9bb3eb`  |
+| `persona-chloe`      | `persona-chloe.webp`                        | 512×512           | persona picker                                                                     | `#e9ab86`  |
+| `og-image`           | `og.png`                                    | 1200×630          | social sharing card                                                                | `#060010`  |
+| `wordmark-xl`        | `badge-wordmark.svg` (+ `badge-symbol.svg`) | vector, ~862×428  | giant footer logo and navigation bar mark                                          | —          |
 
-## Prompts (après la direction artistique commune)
+## Prompts (after the shared art direction)
 
 **`hero-warp-poster`** — Background #060010. A deep-space tunnel of thin luminous streaks radiating from a
 bright pale-blue point at centre (#edf5ff to #5c99ff), about one in five streaks soft violet (#a8a0f4),
@@ -94,6 +94,6 @@ clipboard. No faces, no text.
 **`og-image`** — Background #060010 with the same blue/violet warp streaks converging on the right third,
 large empty left area for text overlay (added in code), no text in image.
 
-**`wordmark-xl`** — à dessiner à la main (pas de générateur d'images) : « Badge » en Montserrat 600,
-interlettrage -0.06em, avec un symbole en forme d'écusson arrondi ; remplissage blanc pour le pied de page
-sombre, `filter: brightness(0)` sur la barre de navigation claire.
+**`wordmark-xl`** — drawn by hand (no image generator): "Badge" in Montserrat 600, letter-spacing
+-0.06em, with a rounded crest symbol; white fill for the dark footer, `filter: brightness(0)` on the
+light navigation bar.

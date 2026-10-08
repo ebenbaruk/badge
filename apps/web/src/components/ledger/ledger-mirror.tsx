@@ -124,7 +124,7 @@ export function LedgerMirror({
       try {
         await postJson(`/api/devices/${employee}/input`, body);
       } catch (error) {
-        toast.error("Geste non transmis au Ledger", { description: String(error) });
+        toast.error("Gesture not sent to the Ledger", { description: String(error) });
       }
     },
     [employee],
@@ -179,7 +179,7 @@ export function LedgerMirror({
     try {
       await postJson(`/api/devices/${employee}/review`, { decision });
     } catch (error) {
-      toast.error("La revue automatique n'a pas abouti", { description: String(error) });
+      toast.error("Auto review did not complete", { description: String(error) });
     } finally {
       setReviewing(null);
     }
@@ -200,7 +200,7 @@ export function LedgerMirror({
           )}
         >
           <Radio className={cn("size-3", live && !offline && "animate-pulse")} />
-          {offline ? "Injoignable" : live ? "En direct" : "Veille"}
+          {offline ? "Unreachable" : live ? "Live" : "Idle"}
         </span>
       </div>
 
@@ -217,7 +217,7 @@ export function LedgerMirror({
           <div
             ref={screenRef}
             role="application"
-            aria-label={`Écran du Ledger : cliquer pour toucher, maintenir pour « Hold to sign », glisser vers la gauche pour la page suivante`}
+            aria-label="Ledger screen: click to tap, press and hold for Hold to sign, swipe left for the next page"
             className="relative cursor-pointer touch-none overflow-hidden rounded-[16px] bg-white select-none"
             style={{ aspectRatio: `${FLEX_SCREEN_SIZE.width} / ${FLEX_SCREEN_SIZE.height}` }}
             onPointerEnter={() => setHovered(true)}
@@ -264,7 +264,7 @@ export function LedgerMirror({
 
       <p className="flex items-center gap-1.5 text-center text-[11px] leading-tight text-muted-foreground/90">
         <Hand className="size-3 shrink-0" />
-        Cliquer pour toucher · maintenir pour signer · glisser pour défiler
+        Click to tap · hold to sign · swipe to scroll
       </p>
 
       {rehearsal && (
@@ -279,11 +279,11 @@ export function LedgerMirror({
                 onClick={() => void review("approve")}
               >
                 {reviewing === "approve" ? <Loader2 className="animate-spin" /> : <Wand2 />}
-                Revue auto
+                Auto review
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              Répétition : parcourt la revue affichée et maintient « Hold to sign ».
+              Rehearsal: walks through the review on screen and holds &quot;Hold to sign&quot;.
             </TooltipContent>
           </Tooltip>
           <Tooltip>
@@ -295,10 +295,10 @@ export function LedgerMirror({
                 onClick={() => void review("reject")}
               >
                 {reviewing === "reject" ? <Loader2 className="animate-spin" /> : <X />}
-                Refuser
+                Reject
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Répétition : refuse la revue affichée sur l&apos;appareil.</TooltipContent>
+            <TooltipContent>Rehearsal: rejects the review shown on the device.</TooltipContent>
           </Tooltip>
         </div>
       )}

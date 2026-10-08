@@ -146,7 +146,7 @@ print_next_steps() {
     pnpm --filter @badge/enclave start
     pnpm desks:seed   # once the enclave is up: David and Emma join the Research desk with their Ledgers
     BADGE_CAL_TEST_KEY=\$PWD/infra/keys/cal-test.pem pnpm --filter @badge/web dev
-    # rehearsals only ("Revue auto" on the device mirror): prefix the web server with BADGE_REHEARSAL=1
+    # rehearsals only ("Auto review" on the device mirror): prefix the web server with BADGE_REHEARSAL=1
 
   Click path and troubleshooting: docs/DEMO.md
   Stop everything: infra/speculos.sh stop && infra/dstack-sim.sh stop && infra/stack.sh down

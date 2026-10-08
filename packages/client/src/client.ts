@@ -92,7 +92,7 @@ interface CallOptions<T> {
 export interface CreateTaskInput {
   /** Free-text task given to the agent (stays in the enclave). */
   task: string;
-  /** Short ASCII label, shown on the owners' Ledgers ("Tache"). */
+  /** Short ASCII label, shown on the owners' Ledgers ("Task"). */
   taskLabel: string;
   /**
    * Explicitly asks for an employee's entire context (e.g. "everything about Bob"). Never needed for a normal task;

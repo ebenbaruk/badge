@@ -9,19 +9,19 @@ import { cn } from "@/lib/utils";
  * Example `ContextShare` as Bob's Ledger Flex shows it: the labels are the real ASCII labels of the
  * EIP-712 display descriptor (`@badge/consent`), the values are an illustrative brief request.
  */
-const CONTEXT_SHARE_INTENT = "Partager un extrait";
+const CONTEXT_SHARE_INTENT = "Share an excerpt";
 const CONTEXT_SHARE_PAGES: readonly (readonly (readonly [label: string, value: string])[])[] = [
   [
-    ["Partager avec", "Alice Martin (Ventes)"],
-    ["Extrait", "Notes RDV Orion"],
+    ["Share with", "Alice Martin (Sales)"],
+    ["Excerpt", "Orion meeting notes"],
   ],
   [
-    ["Longueur (car.)", "412"],
-    ["Tache", "Brief RDV Orion"],
+    ["Length (chars)", "412"],
+    ["Task", "Orion meeting brief"],
   ],
   [
-    ["Expire le", "2026-10-16 18:00 UTC"],
-    ["Empreinte", "0x3a9f...c21e"],
+    ["Expires", "2026-10-16 18:00 UTC"],
+    ["Fingerprint", "0x3a9f...c21e"],
   ],
   [["Enclave", "0x9f2b...77d4"]],
 ];
@@ -133,15 +133,15 @@ function screenKey(screen: Screen): string {
 function describe(screen: Screen): string {
   switch (screen.kind) {
     case "idle":
-      return "Écran du Ledger de Bob : en attente";
+      return "Bob's Ledger screen: waiting";
     case "incoming":
-      return `Écran du Ledger : revoir le message « ${CONTEXT_SHARE_INTENT} »`;
+      return `Ledger screen: review message "${CONTEXT_SHARE_INTENT}"`;
     case "page":
-      return `Écran du Ledger : ${(CONTEXT_SHARE_PAGES[screen.index] ?? []).map(([l, v]) => `${l} ${v}`).join(", ")}`;
+      return `Ledger screen: ${(CONTEXT_SHARE_PAGES[screen.index] ?? []).map(([l, v]) => `${l} ${v}`).join(", ")}`;
     case "hold":
-      return "Écran du Ledger : maintenir pour signer";
+      return "Ledger screen: hold to sign";
     case "signed":
-      return "Écran du Ledger : message signé";
+      return "Ledger screen: message signed";
   }
 }
 
@@ -153,7 +153,7 @@ function ScreenContent({ screen }: { screen: Screen }) {
           <ShieldGlyph />
           <p className="lp-flex-title mt-[6cqw]">Badge</p>
           <p className="lp-flex-label mt-[1.5cqw]">Acme · Bob Durand</p>
-          <p className="lp-flex-foot justify-center">Pret</p>
+          <p className="lp-flex-foot justify-center">Ready</p>
         </div>
       );
     case "incoming":
@@ -205,11 +205,11 @@ function ScreenContent({ screen }: { screen: Screen }) {
       return (
         <div className="lp-flex-page items-center justify-center text-center">
           <span aria-hidden="true" className="lp-flex-stamp">
-            <b>SIGNE</b>
+            <b>SIGNED</b>
             <small>EIP-712</small>
           </span>
           <p className="lp-flex-title mt-[8cqw]">Message signed</p>
-          <p className="lp-flex-label mt-[2cqw]">Envoye a l&apos;enclave</p>
+          <p className="lp-flex-label mt-[2cqw]">Sent to the enclave</p>
         </div>
       );
   }

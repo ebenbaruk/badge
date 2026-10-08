@@ -6,10 +6,10 @@ const RELEVANT: ExcerptClassification = {
   relevant: true,
   relevance: 0.9,
   containsPersonalData: false,
-  reason: "Conditions du client Orion.",
+  reason: "Terms of client Orion.",
 };
-const BOB_ORION = { ownerId: "bob", tags: ["orion", "conditions"] };
-const BOB_LEAVE = { ownerId: "bob", tags: ["perso"] };
+const BOB_ORION = { ownerId: "bob", tags: ["orion", "terms"] };
+const BOB_LEAVE = { ownerId: "bob", tags: ["personal"] };
 
 describe("servesTask", () => {
   it("keeps a colleague's note that clearly serves the task", () => {
@@ -36,11 +36,11 @@ describe("servesTask", () => {
     // The demo case: Bob's leave reminder names the Orion meeting, a lenient model may call it relevant.
     expect(servesTask(BOB_LEAVE, RELEVANT, "alice")).toBe(false);
     expect(servesTask(BOB_ORION, { ...RELEVANT, containsPersonalData: true }, "alice")).toBe(false);
-    expect(servesTask({ ownerId: "chloe", tags: ["rh", "confidentiel"] }, RELEVANT, "alice")).toBe(false);
+    expect(servesTask({ ownerId: "chloe", tags: ["hr", "confidential"] }, RELEVANT, "alice")).toBe(false);
   });
 
   it("recognises private tags whatever their case or accents", () => {
-    for (const tags of [["RH"], ["Perso"], ["CONFIDENTIEL"], ["Confidentièl"], [" rh "]]) {
+    for (const tags of [["HR"], ["Personal"], ["CONFIDENTIAL"], ["Confidéntial"], [" hr "]]) {
       expect(servesTask({ ownerId: "bob", tags }, RELEVANT, "alice")).toBe(false);
     }
   });

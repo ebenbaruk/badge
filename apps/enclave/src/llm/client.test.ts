@@ -72,7 +72,7 @@ describe("OpenAiCompatibleClient.structuredCompletion", () => {
   });
 
   it("gives up after the resamples with a diagnostic that names the call and the field, not the output", async () => {
-    const mismatch = chatResponse('{"ok":"Bob est en arret maladie","note":null}');
+    const mismatch = chatResponse('{"ok":"Bob is on sick leave","note":null}');
     const { impl, requests } = fakeFetch([{ body: mismatch }, { body: mismatch }]);
     const client = new OpenAiCompatibleClient(testProfile(), { fetch: impl, maxOutputRetries: 1 });
     const error = await client

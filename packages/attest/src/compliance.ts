@@ -30,10 +30,10 @@ function assertPrintableAscii(value: string, label: string): void {
 export function complianceKeyDeriveMessage(company: string): string {
   assertPrintableAscii(company, "company");
   return [
-    "Badge - cle de conformite",
-    `Entreprise : ${company}`,
-    "Ne signez ce message que dans Badge.",
-    "Cette signature est secrete : ne la partagez pas.",
+    "Badge - compliance key",
+    `Company: ${company}`,
+    "Only sign this message in Badge.",
+    "This signature is secret: do not share it.",
   ].join("\n");
 }
 
@@ -41,7 +41,7 @@ export function complianceKeyDeriveMessage(company: string): string {
 export function complianceKeyRegistrationMessage(company: string, publicKey: string): string {
   assertPrintableAscii(company, "company");
   const key = toHex(decodeHex(publicKey, "publicKey", 32));
-  return ["Badge - enregistrer ma cle de conformite", `Entreprise : ${company}`, `Cle : ${key}`].join("\n");
+  return ["Badge - register my compliance key", `Company: ${company}`, `Key: ${key}`].join("\n");
 }
 
 /**

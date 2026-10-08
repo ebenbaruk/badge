@@ -26,13 +26,13 @@ const CONTEXT_SHARE_FIXTURE = {
   schemaHash: "8686e0671f7c02cf3815b418ab36390a3fcd1fff642372fdc09f21c9",
   messageInfo:
     "b70000000000000001000000000000000000000000000000000000bad98686e0671f7c02cf3815b418ab36390a3fcd1fff642372fdc0" +
-    "9f21c907506172746167657220756e2065787472616974",
+    "9f21c907536861726520616e2065786365727074",
   rawRecipientName:
     "480000000000000001000000000000000000000000000000000000bad98686e0671f7c02cf3815b418ab36390a3fcd1fff642372fdc0" +
-    "9f21c9726563697069656e744e616d6550617274616765722061766563",
+    "9f21c9726563697069656e744e616d6553686172652077697468",
   datetimeExpiresAt:
     "210000000000000001000000000000000000000000000000000000bad98686e0671f7c02cf3815b418ab36390a3fcd1fff642372fdc0" +
-    "9f21c9657870697265734174457870697265206c65",
+    "9f21c965787069726573417445787069726573",
 };
 
 const KINDS = Object.keys(BADGE_TYPES) as BadgeMessageKind[];
@@ -77,16 +77,16 @@ describe("schema hash", () => {
 
 describe("filter payloads", () => {
   it("encodes the message info byte for byte", () => {
-    expect(messageInfoPayload(binding, "Partager un extrait", 7).toString("hex")).toBe(
+    expect(messageInfoPayload(binding, "Share an excerpt", 7).toString("hex")).toBe(
       CONTEXT_SHARE_FIXTURE.messageInfo,
     );
   });
 
   it("encodes raw and datetime field filters byte for byte", () => {
-    const raw = fieldFilterPayload(binding, { path: "recipientName", label: "Partager avec", format: "raw" });
+    const raw = fieldFilterPayload(binding, { path: "recipientName", label: "Share with", format: "raw" });
     const datetime = fieldFilterPayload(binding, {
       path: "expiresAt",
-      label: "Expire le",
+      label: "Expires",
       format: "datetime",
     });
     expect(raw.toString("hex")).toBe(CONTEXT_SHARE_FIXTURE.rawRecipientName);
@@ -129,8 +129,8 @@ describe("compileClearSignContext", () => {
   it("refuses non-ASCII labels (the device would garble them)", () => {
     const { signer } = testKey();
     const descriptor = {
-      intent: "Partager",
-      fields: [{ path: "a", label: "Tâche", format: "raw" as const }],
+      intent: "Share",
+      fields: [{ path: "a", label: "Task →", format: "raw" as const }],
     };
     expect(() => compileClearSignContext(descriptor, binding, signer)).toThrow(ClearSignSetupError);
   });

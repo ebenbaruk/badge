@@ -4,24 +4,24 @@ export function WorkspaceIntro({ firstName }: { firstName: string }) {
   return (
     <section className="workspace-intro" aria-labelledby="workspace-welcome">
       <div className="workspace-intro-copy">
-        <p className="mono-label">Votre espace de travail confidentiel</p>
+        <p className="mono-label">Your confidential workspace</p>
         <h2 id="workspace-welcome">
-          Bonjour {firstName}.<br />
+          Hello {firstName}.<br />
           <span>
-            Une longueur d’avance,
-            <br className="sm:hidden" /> en toute confiance.
+            One step ahead,
+            <br className="sm:hidden" /> with full trust.
           </span>
         </h2>
-        <p>Les bonnes informations. Au bon moment. Avec le bon accord.</p>
+        <p>The right context. At the right time. With the right consent.</p>
         <div className="workspace-principles">
           <span>
-            <Layers3 /> Mémoire partagée
+            <Layers3 /> Shared memory
           </span>
           <span>
-            <Fingerprint /> Accord signé
+            <Fingerprint /> Signed consent
           </span>
           <span>
-            <ShieldCheck /> Enclave confidentielle
+            <ShieldCheck /> Confidential enclave
           </span>
         </div>
       </div>

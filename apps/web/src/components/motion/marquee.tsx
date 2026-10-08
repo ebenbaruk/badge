@@ -51,7 +51,7 @@ export function Marquee({
           type="button"
           className="marquee-pause mb-4 inline-flex size-[34px] items-center justify-center rounded-full border border-border text-foreground transition-colors duration-300 ease-out-soft hover:bg-muted"
           aria-pressed={paused}
-          aria-label={paused ? "Reprendre le défilement" : "Mettre le défilement en pause"}
+          aria-label={paused ? "Resume scrolling" : "Pause scrolling"}
           onClick={() => setPaused((value) => !value)}
         >
           {paused ? <PlayIcon className="size-3" /> : <PauseIcon className="size-3" />}

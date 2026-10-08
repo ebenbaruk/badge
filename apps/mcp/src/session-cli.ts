@@ -31,9 +31,9 @@ const SECONDS_PER_HOUR = 3600;
 const MILLIS_PER_SECOND = 1000;
 const MAX_TTL_HOURS = Number(ENCLAVE_MAX_SESSION_TTL_SECONDS) / SECONDS_PER_HOUR;
 
-const USAGE = `Usage :
-  session create --employee <adresse Ledger> --out <fichier> [--agent <nom>] [--ttl-hours <h>] [--force]
-  session open --file <fichier> (--signature <0x...> | --ledger <url Speculos>)`;
+const USAGE = `Usage:
+  session create --employee <Ledger address> --out <file> [--agent <name>] [--ttl-hours <h>] [--force]
+  session open --file <file> (--signature <0x...> | --ledger <Speculos url>)`;
 
 class UsageError extends Error {
   override readonly name = "UsageError";
@@ -60,11 +60,11 @@ async function create(args: string[]): Promise<void> {
   });
   const employee = values.employee;
   if (employee === undefined || !isAddress(employee))
-    throw new UsageError("--employee <adresse Ledger> requis");
-  if (values.out === undefined) throw new UsageError("--out <fichier> requis");
+    throw new UsageError("--employee <Ledger address> is required");
+  if (values.out === undefined) throw new UsageError("--out <file> is required");
   const ttlHours = Number(values["ttl-hours"]);
   if (!Number.isInteger(ttlHours) || ttlHours < 1 || ttlHours > MAX_TTL_HOURS) {
-    throw new UsageError(`--ttl-hours doit être un entier entre 1 et ${MAX_TTL_HOURS}`);
+    throw new UsageError(`--ttl-hours must be an integer between 1 and ${MAX_TTL_HOURS}`);
   }
 
   const config = loadEnclaveConfig();
@@ -82,13 +82,13 @@ async function create(args: string[]): Promise<void> {
 }
 
 function printToSign(file: string, message: AgentSession): void {
-  console.log(`Fichier de session créé (droits 600) : ${file}`);
-  console.log("\nMessage AgentSession à signer sur le Ledger de l'employé (EIP-712, clear signing) :");
+  console.log(`Session file created (mode 600): ${file}`);
+  console.log("\nAgentSession message to sign on the employee's Ledger (EIP-712, clear signing):");
   console.log(JSON.stringify(encodeBadgeMessage("AgentSession", message), null, 2));
-  console.log(`\nEmpreinte EIP-712 : ${hashBadgeMessage("AgentSession", message)}`);
-  console.log("\nPuis ouvrez la session avec la signature obtenue (application web ou @badge/ledger) :");
+  console.log(`\nEIP-712 fingerprint: ${hashBadgeMessage("AgentSession", message)}`);
+  console.log("\nThen open the session with the resulting signature (web app or @badge/ledger):");
   console.log(`  pnpm --filter @badge/mcp session open --file ${file} --signature 0x...`);
-  console.log("ou signez directement sur un Speculos :");
+  console.log("or sign directly on a Speculos device:");
   console.log(`  pnpm --filter @badge/mcp session open --file ${file} --ledger http://localhost:5001`);
 }
 
@@ -97,7 +97,7 @@ async function signOnLedger(speculosUrl: string, message: AgentSession): Promise
   const { LedgerSigner } = await import("@badge/ledger");
   const signer = await LedgerSigner.connect(speculosUrl);
   try {
-    console.log("Validez la session sur l'appareil...");
+    console.log("Approve the session on the device...");
     return await signer.signBadgeMessage("AgentSession", message);
   } finally {
     await signer.close();
@@ -110,17 +110,16 @@ async function open(args: string[]): Promise<void> {
     options: { file: { type: "string" }, signature: { type: "string" }, ledger: { type: "string" } },
     strict: true,
   });
-  if (values.file === undefined) throw new UsageError("--file <fichier> requis");
+  if (values.file === undefined) throw new UsageError("--file <file> is required");
   if ((values.signature === undefined) === (values.ledger === undefined)) {
-    throw new UsageError("donnez soit --signature, soit --ledger");
+    throw new UsageError("pass either --signature or --ledger");
   }
   const stored = await readSessionFile(values.file);
   const { message } = stored;
   let signature: Hex;
   if (values.signature !== undefined) {
     const parsed = signatureSchema.safeParse(values.signature);
-    if (!parsed.success)
-      throw new UsageError("--signature doit être une signature hexadécimale de 65 octets");
+    if (!parsed.success) throw new UsageError("--signature must be a 65-byte hex signature");
     signature = parsed.data;
   } else {
     signature = await signOnLedger(values.ledger as string, message);
@@ -135,15 +134,15 @@ async function open(args: string[]): Promise<void> {
   });
   await writeSessionFile(values.file, { ...stored, signature }, { overwrite: true });
   const expires = new Date(session.expiresAt * MILLIS_PER_SECOND).toISOString();
-  console.log(`Session ouverte pour ${session.employeeId} (« ${session.agentName} ») jusqu'au ${expires}.`);
-  console.log(`Le serveur MCP peut démarrer avec BADGE_SESSION_KEY_FILE=${values.file}`);
+  console.log(`Session opened for ${session.employeeId} ("${session.agentName}") until ${expires}.`);
+  console.log(`The MCP server can start with BADGE_SESSION_KEY_FILE=${values.file}`);
 }
 
 async function main(argv: string[]): Promise<void> {
   const [command, ...rest] = argv;
   if (command === "create") return create(rest);
   if (command === "open") return open(rest);
-  throw new UsageError(command === undefined ? "commande manquante" : `commande inconnue : ${command}`);
+  throw new UsageError(command === undefined ? "missing command" : `unknown command: ${command}`);
 }
 
 main(process.argv.slice(2)).then(

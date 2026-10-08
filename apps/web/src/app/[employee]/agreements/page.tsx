@@ -11,7 +11,7 @@ import { revokeGrant } from "@/server/actions/agreements";
 import { enclave } from "@/server/enclave";
 import { employeeFromParams, load } from "@/server/load";
 
-export const metadata: Metadata = { title: "Accords permanents" };
+export const metadata: Metadata = { title: "Standing agreements" };
 
 export default async function AgreementsPage({ params }: { params: Promise<{ employee: string }> }) {
   const owner = await employeeFromParams(params);
@@ -26,16 +26,15 @@ export default async function AgreementsPage({ params }: { params: Promise<{ emp
   return (
     <div className="mx-auto max-w-5xl">
       <PageHeader
-        title="Accords permanents"
-        eyebrow="Signé une fois · révocable"
-        description="Contre la fatigue de validation : autorisez une équipe à utiliser une partie étiquetée de votre contexte, pour un usage précis et une durée bornée. Les extraits restent plafonnés, chaque usage est compté et journalisé."
+        title="Standing agreements"
+        eyebrow="Signed once · revocable"
+        description="A cure for approval fatigue: let a team use a tagged part of your context, for a specific purpose and a limited time. Excerpts stay capped, and every use is counted and logged."
       />
       <Card className="app-enter rounded-3xl [--card-spacing:--spacing(6)]">
         <CardHeader>
-          <CardTitle className="text-[22px] tracking-[-0.045em]">Nouvel accord</CardTitle>
+          <CardTitle className="text-[22px] tracking-[-0.045em]">New agreement</CardTitle>
           <CardDescription>
-            Exemple : « l&apos;équipe Ventes peut utiliser mes notes Orion pour des briefs clients, 30 jours
-            ».
+            Example: &quot;the Sales team can use my Orion notes for client briefs, for 30 days&quot;.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -44,23 +43,23 @@ export default async function AgreementsPage({ params }: { params: Promise<{ emp
       </Card>
 
       <section className="mt-10">
-        <SectionTitle>Mes accords ({policies.data.length})</SectionTitle>
+        <SectionTitle>My agreements ({policies.data.length})</SectionTitle>
         {policies.data.length === 0 ? (
-          <EmptyState icon={<FileSignature />} title="Aucun accord permanent">
-            Sans accord, chaque usage de votre contexte personnel vous est demandé au cas par cas.
+          <EmptyState icon={<FileSignature />} title="No standing agreements">
+            Without one, every use of your personal context is asked of you case by case.
           </EmptyState>
         ) : (
           <div className="app-enter overflow-hidden rounded-3xl border bg-card">
             <Table>
               <TableHeader className="bg-surface/60 [&_th]:mono-label [&_th]:text-[10px] [&_th]:text-muted-foreground">
                 <TableRow>
-                  <TableHead className="pl-4">Équipe</TableHead>
-                  <TableHead>Contexte</TableHead>
-                  <TableHead>Usage</TableHead>
-                  <TableHead className="text-right">Max / extrait</TableHead>
-                  <TableHead>Expire</TableHead>
-                  <TableHead className="text-right">Utilisations</TableHead>
-                  <TableHead className="pr-4 text-right">Statut</TableHead>
+                  <TableHead className="pl-4">Team</TableHead>
+                  <TableHead>Context</TableHead>
+                  <TableHead>Purpose</TableHead>
+                  <TableHead className="text-right">Max / excerpt</TableHead>
+                  <TableHead>Expires</TableHead>
+                  <TableHead className="text-right">Uses</TableHead>
+                  <TableHead className="pr-4 text-right">Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -83,17 +82,17 @@ export default async function AgreementsPage({ params }: { params: Promise<{ emp
                     <TableCell className="pr-4 text-right">
                       {policy.status !== "active" ? (
                         <span className="rounded-pill border px-2 py-0.5 mono-chip text-muted-foreground">
-                          {policy.status === "revoked" ? "Révoqué" : "Expiré"}
+                          {policy.status === "revoked" ? "Revoked" : "Expired"}
                         </span>
                       ) : (
                         <LedgerActionButton
-                          label="Révoquer"
+                          label="Revoke"
                           size="sm"
                           variant="outline"
                           icon={<Undo2 />}
-                          reviewLabel={`Révoquer l'accord avec l'équipe ${policy.granteeTeam}`}
+                          reviewLabel={`Revoke the agreement with the ${policy.granteeTeam} team`}
                           action={revokeGrant.bind(null, { employee: owner.id, grantId: policy.id })}
-                          successMessage="Accord révoqué : la clé de vos données a été renouvelée."
+                          successMessage="Agreement revoked: your data key has been rotated."
                         />
                       )}
                     </TableCell>

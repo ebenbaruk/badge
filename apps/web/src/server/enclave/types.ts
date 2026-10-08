@@ -164,7 +164,7 @@ export interface ConsentRequestView {
   taskId: Hex;
   owner: EmployeeId;
   requester: EmployeeId;
-  /** The task as the owner's device shows it ("Tache"). */
+  /** The task as the owner's device shows it ("Task"). */
   taskLabel: string;
   createdAt: string;
   status: RequestStatus;
@@ -295,7 +295,7 @@ export interface ChainVerification {
   brokenAt?: number;
   /**
    * Set when the signed head does not extend the last head this officer accepted (truncation, rollback, rewrite) or
-   * cannot be checked: a French explanation. The log is then shown as untrusted even if it verifies from genesis.
+   * cannot be checked: a plain-English explanation. The log is then shown as untrusted even if it verifies from genesis.
    */
   anchorProblem?: string;
   /**

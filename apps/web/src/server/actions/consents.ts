@@ -28,12 +28,12 @@ export async function approveConsent(input: {
     const api = enclave();
     const request = (await api.listConsents(employee)).find((c) => c.id === consentId);
     if (request === undefined || request.status !== "pending") {
-      throw new EnclaveError("NOT_FOUND", "demande introuvable ou déjà traitée");
+      throw new EnclaveError("NOT_FOUND", "request not found or already handled");
     }
     // Decode strictly (canonical ASCII, ranges) and refuse a message that does not name this owner.
     const message = decodeBadgeMessage("ContextShare", request.message);
     if (!isAddressEqual(message.owner, EMPLOYEES[employee].address)) {
-      throw new EnclaveError("FORBIDDEN", "cette demande ne vous est pas adressée");
+      throw new EnclaveError("FORBIDDEN", "this request is not addressed to you");
     }
     try {
       const signed = await signOnDevice(employee, "ContextShare", message);

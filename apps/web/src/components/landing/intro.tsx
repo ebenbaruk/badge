@@ -5,28 +5,28 @@ import { CountUp } from "./count-up";
 import { EditorialGrid, SECTION_X } from "./primitives";
 
 const FACTS = [
-  { value: 1, label: "signature sur le Ledger par extrait d'un collègue" },
-  { value: 0, label: "texte personnel envoyé sans accord du propriétaire" },
-  { value: 3, label: "membres minimum pour partager sous l'anonymat d'un desk" },
+  { value: 1, label: "Ledger signature per excerpt of a colleague's context" },
+  { value: 0, label: "personal text sent without its owner's consent" },
+  { value: 3, label: "members minimum to share anonymously as a desk" },
 ] as const;
 
 const CONTRAST = [
   {
-    title: "Aujourd'hui",
+    title: "Today",
     tone: "text-ink-muted-2",
     items: [
-      "Un serveur central ingère tout le contexte et le voit en clair.",
-      "Un agent piégé peut tout aspirer, personne ne le remarque.",
-      "Le consentement est une case cochée une fois, jamais relue.",
+      "Either a central server ingests everyone's context and sees it in the clear...",
+      "...or rigid guardrails keep agents in the dark, and they burn tokens guessing.",
+      "Consent is a box ticked once and never revisited.",
     ],
   },
   {
-    title: "Avec Badge",
+    title: "With Badge",
     tone: "text-cobalt",
     items: [
-      "La mémoire vit dans une enclave matérielle que chacun vérifie.",
-      "Chaque extrait d'un collègue attend sa signature, sur son appareil.",
-      "Chaque usage est journalisé, chaque accord révocable d'un geste.",
+      "One memory knows the company and every employee, sealed in an enclave anyone can verify.",
+      "It injects the right context for each task; a colleague's excerpt waits for their signature.",
+      "Every use is logged, every consent revocable in one move.",
     ],
   },
 ] as const;
@@ -35,19 +35,20 @@ const CONTRAST = [
 export function Intro() {
   return (
     <section aria-labelledby="intro-title" className={`${SECTION_X} py-[100px] md:py-[140px]`}>
-      <EditorialGrid aside="Pour les entreprises AI native">
+      <EditorialGrid aside="For AI-native companies">
         <RevealText
           as="h2"
           id="intro-title"
           className="text-heading-xl"
-          text="Les agents ont besoin de contexte. Le contexte de chacun a besoin de son accord."
+          text="Agents run on context. Personal context runs on consent."
         />
         <Reveal as="p" delay={120} className="mt-8 max-w-[38em] text-lede-lg text-ink-muted-2">
-          Il y a le contexte <strong className="font-semibold text-ink">global</strong> : l&apos;entreprise,
-          ses clients, ses actualités, ouvert à tous. Et le contexte{" "}
-          <strong className="font-semibold text-ink">personnel</strong> de chacun : ses notes, ses
-          rendez-vous, ses échanges. C&apos;est lui qui rend un agent vraiment utile, et c&apos;est lui
-          qu&apos;on ne peut pas confier à un serveur qui voit tout.
+          Context is the most valuable asset of the AI era: the right context for the right task saves tokens
+          and gets the job done. There is the <strong className="font-semibold text-ink">company</strong>{" "}
+          context: the business, its clients, its news, open to everyone. And each employee&apos;s{" "}
+          <strong className="font-semibold text-ink">personal</strong> context: notes, meetings,
+          conversations. That is what makes an agent truly useful, and it is exactly what you can&apos;t hand
+          to a server that sees everything.
         </Reveal>
 
         <Stagger as="ul" className="mt-12 grid gap-6 md:grid-cols-2 md:gap-10" itemClassName="list-none">

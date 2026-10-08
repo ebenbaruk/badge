@@ -4,12 +4,12 @@ import { OpenAiCompatibleClient } from "../llm/client";
 import { LlmOutputError } from "../llm/errors";
 import { classifyExcerpt } from "./classifier";
 
-const EXCERPT = { ownerId: "bob", scope: "personal" as const, text: "Conditions Orion 2025 : remise 12 %" };
+const EXCERPT = { ownerId: "bob", scope: "personal" as const, text: "Orion 2025 terms: 12% discount" };
 const VALID = {
   relevant: true,
   relevance: 0.9,
   containsPersonalData: false,
-  reason: "Conditions du client Orion.",
+  reason: "Terms of client Orion.",
 };
 
 describe("classifyExcerpt", () => {

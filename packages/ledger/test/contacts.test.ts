@@ -12,7 +12,7 @@ import {
 import { ClearSignSetupError } from "../src/errors";
 
 const proof: ContactProof = ContactProofSchema.parse({
-  contactName: "Alice (Ventes)",
+  contactName: "Alice (Sales)",
   scope: "Badge",
   address: "0x9858effd232b4033e47d90003d41ec34ecaeda94",
   chainId: 1,

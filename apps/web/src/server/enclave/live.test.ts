@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 import { verifyDeskDelivery } from "./live";
 
 const REQUEST_ID: Hex = `0x${"0a".repeat(32)}`;
-const EXCERPT = "Le marche europeen des capteurs croit de 8 % par an.";
+const EXCERPT = "The European sensor market grows 8% a year.";
 
 async function identity(name: string) {
   const account = privateKeyToAccount(keccak256(stringToHex(`badge-web-test:${name}`)));
@@ -28,7 +28,7 @@ describe("verifyDeskDelivery (requester side)", () => {
     expect(await verifyDeskDelivery(REQUEST_ID, snapshot, delivery)).toBe(true);
     // A text the proof and the DeskShare signature do not cover is never shown as verified.
     expect(
-      await verifyDeskDelivery(REQUEST_ID, snapshot, { ...delivery, excerpt: `${EXCERPT} (modifie)` }),
+      await verifyDeskDelivery(REQUEST_ID, snapshot, { ...delivery, excerpt: `${EXCERPT} (edited)` }),
     ).toBe(false);
     // The desk's current root after a later join is not the one the proof was made against.
     const later = buildDeskGroup([david.commitment, emma.commitment, bob.commitment, 42n]).root.toString();

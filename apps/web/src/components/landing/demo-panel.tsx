@@ -18,42 +18,42 @@ const PERSONAS: readonly {
   {
     employee: EMPLOYEES.alice,
     slot: "persona-alice",
-    role: "Demande un brief à son agent",
+    role: "Asks her agent for a brief",
     href: "/alice/agent" as Route,
   },
   {
     employee: EMPLOYEES.bob,
     slot: "persona-bob",
-    role: "Approuve ou refuse sur son Ledger",
+    role: "Approves or rejects on his Ledger",
     href: "/bob/consents" as Route,
   },
   {
     employee: EMPLOYEES.chloe,
     slot: "persona-chloe",
-    role: "Vérifie le journal et les alertes",
+    role: "Reviews the log and alerts",
     href: "/chloe/compliance" as Route,
   },
 ];
 
 const FLOW = [
-  "Choisir une tâche dans l'agent d'Alice",
-  "Signer sur le Ledger de Bob (Speculos)",
-  "Lire le brief et sa provenance",
+  "Pick a task in Alice's agent",
+  "Sign on Bob's Ledger (Speculos)",
+  "Read the brief and its provenance",
 ] as const;
 
 /**
- * "Essayez Badge": the royal-blue panel grows out of a nav-sized pill as it scrolls in (clip-path on
+ * "Try Badge": the royal-blue panel grows out of a nav-sized pill as it scrolls in (clip-path on
  * `--unfold`), then offers the three personas of the demo.
  */
 export function DemoPanel() {
   return (
     <section id="demo" aria-labelledby="demo-title" className={`${SECTION_X} pb-[100px] md:pb-[140px]`}>
       <div className="mx-auto max-w-[760px] text-center">
-        <p className="text-meta text-ink-muted-2">La démo</p>
-        <RevealText as="h2" id="demo-title" className="mt-4 text-display-xl" text="Essayez Badge." />
+        <p className="text-meta text-ink-muted-2">The demo</p>
+        <RevealText as="h2" id="demo-title" className="mt-4 text-display-xl" text="Try Badge." />
         <Reveal as="p" delay={100} className="mx-auto mt-6 max-w-[34em] text-[17px] text-ink-muted-2">
-          Trois employés d&apos;Acme, trois Ledger Flex (Speculos), une enclave. Choisissez un rôle et suivez
-          le parcours de bout en bout.
+          Three Acme employees, three Ledger Flex devices (Speculos), one enclave. Pick a role and follow the
+          flow end to end.
         </Reveal>
       </div>
 
@@ -63,12 +63,10 @@ export function DemoPanel() {
       >
         <div className="lp-unfold-content p-4 md:p-8">
           <div className="flex flex-wrap items-center justify-between gap-4 px-2 pt-2">
-            <h3 className="text-[clamp(29px,3vw,44px)] leading-[1.2] tracking-[-0.055em]">
-              Choisissez un rôle
-            </h3>
+            <h3 className="text-[clamp(29px,3vw,44px)] leading-[1.2] tracking-[-0.055em]">Pick a role</h3>
             <span className="inline-flex items-center gap-2 text-meta text-[#c4cee2]">
               <PulseDot tone="live" />
-              Démo locale · Ledger Speculos
+              Local demo · Speculos Ledger
             </span>
           </div>
 
@@ -118,7 +116,7 @@ export function DemoPanel() {
             href={DEMO_ROUTE}
             className="mt-3 flex min-h-14 w-full items-center justify-between rounded-pill bg-signal px-6 py-[18px] text-[15px] font-semibold text-on-signal transition-colors duration-300 hover:bg-signal-hover"
           >
-            <RollingText>Ouvrir la démo</RollingText>
+            <RollingText>Open the demo</RollingText>
             <NudgeArrow className="text-[22px] leading-none" />
           </Link>
         </div>

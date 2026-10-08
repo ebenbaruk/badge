@@ -90,7 +90,7 @@ describe("compliance key", () => {
     expect(() => complianceKeyFromSignature("0x1234")).toThrow(/65 bytes/);
     expect(() => complianceKeyDeriveMessage("Acmé")).toThrow(/ASCII/);
     const registration = complianceKeyRegistrationMessage("Acme", `0x${"AB".repeat(32)}`);
-    expect(registration).toContain(`Cle : ${"ab".repeat(32)}`);
+    expect(registration).toContain(`Key: ${"ab".repeat(32)}`);
     expect(() => complianceKeyRegistrationMessage("Acme", "00")).toThrow(/32 bytes/);
   });
 });

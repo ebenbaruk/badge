@@ -7,7 +7,7 @@ export function DevicePreviewCard({ preview }: { preview: DevicePreview }) {
     <div className="self-start overflow-hidden rounded-2xl border bg-surface">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b px-4 py-3">
         <ScanEye className="size-3.5 text-muted-foreground" />
-        <span className="mono-label text-[10px] text-muted-foreground">Ce que votre Ledger affichera</span>
+        <span className="mono-label text-[10px] text-muted-foreground">What your Ledger will display</span>
         <span className="ml-auto rounded-pill bg-card px-2.5 py-1 mono-chip text-foreground">
           {preview.intent}
         </span>

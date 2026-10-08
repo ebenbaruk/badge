@@ -28,7 +28,7 @@ import {
 } from "./harness";
 
 const PROOF_TIMEOUT_MS = 60_000;
-const MARKET_TASK = { fromDesk: "origination", task: "Tendances marche-capteurs et prix des composants" };
+const MARKET_TASK = { fromDesk: "origination", task: "Industrial sensor-market trends and component-prices" };
 
 async function deskIdentity(who: DemoEmployee): Promise<Identity> {
   return deriveDeskIdentity(await ledgers[who].signMessage({ message: deskIdentityDeriveMessage("Acme") }));
@@ -148,7 +148,7 @@ describe("anonymous desk share", () => {
   it("prepares a DeskShare for Bob under the exchange rule, without naming him to Alice", async () => {
     const created = await call(h, "POST", "/v1/desk-requests", { as: "alice", body: MARKET_TASK });
     expect(created.status).toBe(201);
-    expect(created.json).toMatchObject({ status: "waiting_share", ruleLabel: "Regle 4 - marche capteurs" });
+    expect(created.json).toMatchObject({ status: "waiting_share", ruleLabel: "Rule 4 - sensor market" });
     expect(JSON.stringify(created.json)).not.toMatch(/bob/i);
     const share = await pendingDeskShare(h, "bob");
     expect(share.message).toMatchObject({ recipientDesk: "Origination", sourceDesk: "Research" });
@@ -211,7 +211,7 @@ describe("anonymous desk share", () => {
 
       const delivery = (await call(h, "GET", `/v1/desk-requests/${share.requestId}`, { as: "alice" })).json;
       expect(delivery.status).toBe("delivered");
-      expect(delivery.deliveries[0].excerpt).toContain("marché européen des capteurs");
+      expect(delivery.deliveries[0].excerpt).toContain("European market for connected industrial sensors");
       expect(delivery.deliveries[0].proof.merkleTreeDepth).toBe(16);
       expect(JSON.stringify(delivery)).not.toMatch(/bob|58A57|Durand/i);
       expect((await call(h, "GET", `/v1/desk-requests/${share.requestId}`, { as: "bob" })).status).toBe(404);

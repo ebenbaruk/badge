@@ -47,7 +47,7 @@ async function main(): Promise<void> {
         measurement: enclaveMeasurement,
         desk: RESEARCH_DESK,
       });
-      console.log(`${people[who].name} a rejoint le desk ${desk.name} : ${desk.members} membre(s) Ledger.`);
+      console.log(`${people[who].name} joined the ${desk.name} desk: ${desk.members} Ledger member(s).`);
     } finally {
       await ledger.close();
     }

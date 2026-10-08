@@ -5,7 +5,7 @@ import type { RuleFinding } from "@/server/enclave/types";
 /** Findings of the enclave's deterministic rules, in red: the owner must see them before deciding. */
 export function RiskFindings({
   findings,
-  title = "Signalé par les règles de l'enclave",
+  title = "Flagged by enclave rules",
   className,
 }: {
   findings: readonly RuleFinding[];

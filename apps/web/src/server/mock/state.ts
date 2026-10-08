@@ -180,7 +180,7 @@ export function createMockState(measurement: Hex, deskCommitments: Map<DeskId, b
 /** Rejects a replayed (signer, nonce) pair, then records it (fail closed: checked before any state change). */
 export function consumeNonce(state: MockState, signer: Address, nonce: bigint): void {
   const key = `${signer.toLowerCase()}:${nonce}`;
-  if (state.usedNonces.has(key)) throw new EnclaveError("CONFLICT", "nonce déjà utilisé (rejeu refusé)");
+  if (state.usedNonces.has(key)) throw new EnclaveError("CONFLICT", "nonce already used (replay refused)");
   state.usedNonces.add(key);
 }
 
@@ -195,7 +195,7 @@ export async function verifySignedBy<K extends BadgeMessageKind>(
 
 export function employeeByAddress(address: Address): EmployeeId {
   const match = Object.values(EMPLOYEES).find((e) => e.address.toLowerCase() === address.toLowerCase());
-  if (match === undefined) throw new EnclaveError("FORBIDDEN", `adresse ${address} absente de l'annuaire`);
+  if (match === undefined) throw new EnclaveError("FORBIDDEN", `address ${address} is not in the directory`);
   return match.id;
 }
 

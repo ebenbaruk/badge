@@ -40,7 +40,7 @@ const config: EnclaveConfig = {
 function task(status: Task["status"]): Task {
   return {
     id: TASK_ID,
-    taskLabel: "Brief Durand",
+    taskLabel: "Durand brief",
     status,
     allowed: [],
     pending:
@@ -51,14 +51,14 @@ function task(status: Task["status"]): Task {
               consentId: "c1",
               ownerId: "bob",
               ownerName: "Bob Durand",
-              excerptLabel: "Contexte personnel de Bob Durand",
+              excerptLabel: "Personal context of Bob Durand",
               excerptLength: 420,
               risk: { level: "ok", reasons: [] },
             },
           ],
     blocked: [],
     refused: [],
-    brief: status === "ready" ? "Brief redige dans l'enclave" : null,
+    brief: status === "ready" ? "Brief drafted in the enclave" : null,
     tokenStats: status === "ready" ? { selectedTokens: 1, allContextTokens: 2 } : null,
     createdAt: 1,
   };
@@ -141,14 +141,14 @@ describe("MCP server through the attested channel (dstack simulator)", () => {
 
     const pending = await client.callTool({
       name: "badge_get_context",
-      arguments: { task: "Preparer le rendez-vous Durand", taskLabel: "Brief Durand" },
+      arguments: { task: "Prepare the Durand meeting", taskLabel: "Durand brief" },
     });
-    expect(textOf(pending)).toContain("En attente de l'accord de Bob Durand sur son Ledger");
+    expect(textOf(pending)).toContain("Waiting for Bob Durand to approve on their Ledger");
     const ready = await client.callTool({ name: "badge_task_status", arguments: { taskId: TASK_ID } });
-    expect(textOf(ready)).toContain("Brief redige dans l'enclave");
+    expect(textOf(ready)).toContain("Brief drafted in the enclave");
     const attestation = await client.callTool({ name: "badge_attestation", arguments: {} });
-    expect(textOf(attestation)).toContain("Enclave SIMULÉE");
-    expect(textOf(attestation)).toContain("identique à l'enclave attestée");
+    expect(textOf(attestation)).toContain("SIMULATED enclave");
+    expect(textOf(attestation)).toContain("matches the attested enclave");
 
     // Only the channel routes ever crossed "the network": every API call was sealed.
     expect(seenPaths.every((path) => path.startsWith(CHANNEL_PATHS.prefix))).toBe(true);

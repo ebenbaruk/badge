@@ -12,17 +12,15 @@ import { revokeAllFor, revokeGrant } from "@/server/actions/agreements";
 import { enclave, type GrantView } from "@/server/enclave";
 import { employeeFromParams, load } from "@/server/load";
 
-export const metadata: Metadata = { title: "Accès et révocation" };
+export const metadata: Metadata = { title: "Access & revocation" };
 
 function isActive(grant: GrantView, now: Date): boolean {
   return grant.status === "active" && new Date(grant.expiresAt) > now;
 }
 
 function typeLabel(grant: GrantView): string {
-  if (grant.kind === "share") return "Ponctuel";
-  return grant.uses === undefined
-    ? "Permanent"
-    : `Permanent · ${grant.uses} usage${grant.uses > 1 ? "s" : ""}`;
+  if (grant.kind === "share") return "One-time";
+  return grant.uses === undefined ? "Standing" : `Standing · ${grant.uses} use${grant.uses === 1 ? "" : "s"}`;
 }
 
 function GrantsTable({ grants, owner, active }: { grants: GrantView[]; owner: EmployeeId; active: boolean }) {
@@ -31,11 +29,11 @@ function GrantsTable({ grants, owner, active }: { grants: GrantView[]; owner: Em
       <Table className="table-fixed">
         <TableHeader className="bg-surface/60 [&_th]:mono-label [&_th]:text-[10px] [&_th]:text-muted-foreground">
           <TableRow>
-            <TableHead className="w-40 pl-4">Bénéficiaire</TableHead>
-            <TableHead>Accès</TableHead>
+            <TableHead className="w-40 pl-4">Recipient</TableHead>
+            <TableHead>Access</TableHead>
             <TableHead className="w-24">Type</TableHead>
-            <TableHead className="w-32">{active ? "Expire" : "Fin"}</TableHead>
-            <TableHead className="w-28">Identifiant</TableHead>
+            <TableHead className="w-32">{active ? "Expires" : "Ended"}</TableHead>
+            <TableHead className="w-28">ID</TableHead>
             {active && <TableHead className="w-30 pr-4 text-right" />}
           </TableRow>
         </TableHeader>
@@ -56,8 +54,8 @@ function GrantsTable({ grants, owner, active }: { grants: GrantView[]; owner: Em
                 {active
                   ? formatRelative(grant.expiresAt)
                   : grant.status === "revoked"
-                    ? "Révoqué"
-                    : `Expiré le ${formatDateTime(grant.expiresAt)}`}
+                    ? "Revoked"
+                    : `Expired ${formatDateTime(grant.expiresAt)}`}
               </TableCell>
               <TableCell>
                 <CopyableHash value={grant.id} />
@@ -65,13 +63,13 @@ function GrantsTable({ grants, owner, active }: { grants: GrantView[]; owner: Em
               {active && (
                 <TableCell className="pr-4 text-right">
                   <LedgerActionButton
-                    label="Révoquer"
+                    label="Revoke"
                     size="sm"
                     variant="outline"
                     icon={<Undo2 />}
-                    reviewLabel={`Révoquer l'accès de ${grant.recipientLabel}`}
+                    reviewLabel={`Revoke access for ${grant.recipientLabel}`}
                     action={revokeGrant.bind(null, { employee: owner, grantId: grant.id })}
-                    successMessage="Accès révoqué. La prochaine demande exigera un nouvel accord."
+                    successMessage="Access revoked. The next request will need new consent."
                   />
                 </TableCell>
               )}
@@ -91,13 +89,13 @@ function RevokeAllBar({ owner, recipients }: { owner: EmployeeId; recipients: re
       {recipients.map((recipient) => (
         <LedgerActionButton
           key={recipient}
-          label={`Tout révoquer pour ${EMPLOYEES[recipient].firstName}`}
+          label={`Revoke everything for ${EMPLOYEES[recipient].firstName}`}
           size="sm"
           variant="destructive"
           icon={<Undo2 />}
-          reviewLabel={`Révoquer tout ce que j'ai partagé avec ${EMPLOYEES[recipient].name}`}
+          reviewLabel={`Revoke everything I shared with ${EMPLOYEES[recipient].name}`}
           action={revokeAllFor.bind(null, { employee: owner, recipient })}
-          successMessage={`Tout ce que vous partagiez avec ${EMPLOYEES[recipient].firstName} est révoqué ; la clé de vos données a été renouvelée.`}
+          successMessage={`Everything you shared with ${EMPLOYEES[recipient].firstName} is revoked; your data key has been rotated.`}
         />
       ))}
     </div>
@@ -114,23 +112,23 @@ export default async function AccessPage({ params }: { params: Promise<{ employe
   return (
     <div className="mx-auto max-w-5xl">
       <PageHeader
-        title="Accès et révocation"
-        eyebrow="Un geste et tout s'arrête"
-        description="Tout ce que vous avez accordé, au même endroit. Une révocation est signée sur votre Ledger : l'enclave invalide l'accord et renouvelle la clé de chiffrement de vos données, la demande suivante exigera un nouvel accord."
+        title="Access & revocation"
+        eyebrow="One signature stops it all"
+        description="Everything you have granted, in one place. A revocation is signed on your Ledger: the enclave voids the consent and rotates the encryption key of your data, so the next request needs new consent."
       />
       <div className="mb-10 flex items-start gap-4 rounded-3xl bg-periwinkle p-5 text-[13px] leading-relaxed text-periwinkle-ink">
         <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-white/45 ring-1 ring-white/50">
           <RotateCcwKey className="size-4" />
         </span>
         <p className="pt-1.5">
-          Un accord ponctuel couvre un extrait précis (par son empreinte) pour une tâche ; un accord permanent
-          couvre une étiquette de contexte pour une équipe. Les deux se révoquent de la même façon.
+          A one-time consent covers one specific excerpt (by its fingerprint) for one task; a standing
+          agreement covers a context tag for a team. Both are revoked the same way.
         </p>
       </div>
-      <SectionTitle>Accès actifs ({active.length})</SectionTitle>
+      <SectionTitle>Active access ({active.length})</SectionTitle>
       {active.length === 0 ? (
-        <EmptyState icon={<KeyRound />} title="Aucun accès actif">
-          Personne ne peut utiliser votre contexte personnel en ce moment.
+        <EmptyState icon={<KeyRound />} title="No active access">
+          Nobody can use your personal context right now.
         </EmptyState>
       ) : (
         <>
@@ -143,7 +141,7 @@ export default async function AccessPage({ params }: { params: Promise<{ employe
       )}
       {ended.length > 0 && (
         <section className="mt-10">
-          <SectionTitle>Révoqués ou expirés</SectionTitle>
+          <SectionTitle>Revoked or expired</SectionTitle>
           <GrantsTable grants={ended} owner={owner.id} active={false} />
         </section>
       )}

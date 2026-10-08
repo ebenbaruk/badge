@@ -71,7 +71,7 @@ describe(`clear signing on ${SPECULOS_URL}`, () => {
     const first = capturingApprover("DeskIdentityDerive");
     const signature = await signer.signPersonalMessage(text, { onProgress: first.onProgress });
     const { spaced } = flatten(await first.done());
-    expect(spaced).toContain("Badge - identite anonyme de desk");
+    expect(spaced).toContain("Badge - anonymous desk identity");
     expect(spaced).toContain("Acme");
     expect(await recoverMessageAddress({ message: text, signature })).toBe(address);
 

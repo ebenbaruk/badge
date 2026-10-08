@@ -208,75 +208,75 @@ export interface ClearSignDescriptor {
 }
 
 /**
- * Display descriptors (labels in French, ASCII only). Fields not listed are signed but not displayed.
+ * Display descriptors (English labels, ASCII only). Fields not listed are signed but not displayed.
  * The enclave measurement is shown in full on purpose: it is what pins the consent to the attested enclave.
  */
 export const BADGE_DESCRIPTORS: { [K in BadgeMessageKind]: ClearSignDescriptor } = {
   EmployeeEnroll: {
-    intent: "Rejoindre Badge",
+    intent: "Join Badge",
     fields: [
-      { path: "company", label: "Entreprise", format: "raw" },
-      { path: "employeeName", label: "Identite", format: "raw" },
-      { path: "team", label: "Equipe", format: "raw" },
+      { path: "company", label: "Company", format: "raw" },
+      { path: "employeeName", label: "Identity", format: "raw" },
+      { path: "team", label: "Team", format: "raw" },
       { path: "enclaveMeasurement", label: "Enclave", format: "raw" },
     ],
   },
   AgentSession: {
-    intent: "Autoriser mon agent",
+    intent: "Authorize my agent",
     fields: [
       { path: "agentName", label: "Agent", format: "raw" },
-      { path: "access", label: "Acces", format: "raw" },
-      { path: "expiresAt", label: "Expire le", format: "datetime" },
-      { path: "sessionKey", label: "Cle de l'agent", format: "raw" },
+      { path: "access", label: "Access", format: "raw" },
+      { path: "expiresAt", label: "Expires", format: "datetime" },
+      { path: "sessionKey", label: "Agent key", format: "raw" },
     ],
   },
   ContextShare: {
-    intent: "Partager un extrait",
+    intent: "Share an excerpt",
     fields: [
-      { path: "recipientName", label: "Partager avec", format: "raw" },
-      { path: "excerptLabel", label: "Extrait", format: "raw" },
-      { path: "excerptLength", label: "Longueur (car.)", format: "raw" },
-      { path: "taskLabel", label: "Tache", format: "raw" },
-      { path: "expiresAt", label: "Expire le", format: "datetime" },
-      { path: "excerptHash", label: "Empreinte", format: "raw" },
+      { path: "recipientName", label: "Share with", format: "raw" },
+      { path: "excerptLabel", label: "Excerpt", format: "raw" },
+      { path: "excerptLength", label: "Length (chars)", format: "raw" },
+      { path: "taskLabel", label: "Task", format: "raw" },
+      { path: "expiresAt", label: "Expires", format: "datetime" },
+      { path: "excerptHash", label: "Fingerprint", format: "raw" },
       { path: "enclaveMeasurement", label: "Enclave", format: "raw" },
     ],
   },
   ContextPolicy: {
-    intent: "Accord permanent",
+    intent: "Standing agreement",
     fields: [
-      { path: "granteeTeam", label: "Equipe autorisee", format: "raw" },
-      { path: "contextTag", label: "Contexte", format: "raw" },
-      { path: "purpose", label: "Usage", format: "raw" },
-      { path: "maxExcerptLength", label: "Max par extrait", format: "raw" },
-      { path: "expiresAt", label: "Expire le", format: "datetime" },
+      { path: "granteeTeam", label: "Allowed team", format: "raw" },
+      { path: "contextTag", label: "Context", format: "raw" },
+      { path: "purpose", label: "Purpose", format: "raw" },
+      { path: "maxExcerptLength", label: "Max per excerpt", format: "raw" },
+      { path: "expiresAt", label: "Expires", format: "datetime" },
       { path: "enclaveMeasurement", label: "Enclave", format: "raw" },
     ],
   },
   ContextRevoke: {
-    intent: "Revoquer un acces",
+    intent: "Revoke access",
     fields: [
-      { path: "targetLabel", label: "Revoquer", format: "raw" },
-      { path: "issuedAt", label: "Le", format: "datetime" },
+      { path: "targetLabel", label: "Revoke", format: "raw" },
+      { path: "issuedAt", label: "On", format: "datetime" },
     ],
   },
   DeskJoin: {
-    intent: "Rejoindre un desk",
+    intent: "Join a desk",
     fields: [
       { path: "deskName", label: "Desk", format: "raw" },
-      { path: "company", label: "Entreprise", format: "raw" },
-      { path: "identityCommitment", label: "Identite anonyme", format: "raw" },
+      { path: "company", label: "Company", format: "raw" },
+      { path: "identityCommitment", label: "Anonymous identity", format: "raw" },
     ],
   },
   DeskShare: {
-    intent: "Partage anonyme",
+    intent: "Anonymous share",
     fields: [
-      { path: "recipientDesk", label: "Vers le desk", format: "raw" },
-      { path: "excerptLabel", label: "Extrait", format: "raw" },
-      { path: "excerptLength", label: "Longueur (car.)", format: "raw" },
-      { path: "ruleLabel", label: "Regle", format: "raw" },
-      { path: "expiresAt", label: "Expire le", format: "datetime" },
-      { path: "excerptHash", label: "Empreinte", format: "raw" },
+      { path: "recipientDesk", label: "To desk", format: "raw" },
+      { path: "excerptLabel", label: "Excerpt", format: "raw" },
+      { path: "excerptLength", label: "Length (chars)", format: "raw" },
+      { path: "ruleLabel", label: "Rule", format: "raw" },
+      { path: "expiresAt", label: "Expires", format: "datetime" },
+      { path: "excerptHash", label: "Fingerprint", format: "raw" },
       { path: "enclaveMeasurement", label: "Enclave", format: "raw" },
     ],
   },
@@ -291,8 +291,8 @@ export const BADGE_DESCRIPTORS: { [K in BadgeMessageKind]: ClearSignDescriptor }
  */
 export function deskIdentityDeriveMessage(company: string): string {
   return [
-    "Badge - identite anonyme de desk",
-    `Entreprise : ${toDeviceAscii(company)}`,
-    "Ne signez ce message que dans Badge.",
+    "Badge - anonymous desk identity",
+    `Company: ${toDeviceAscii(company)}`,
+    "Only sign this message in Badge.",
   ].join("\n");
 }

@@ -50,7 +50,7 @@ export const sessionSchema = z.object({
 });
 export type Session = z.infer<typeof sessionSchema>;
 
-/** One deterministic mass-extraction rule that fired, with a French explanation for the owner. */
+/** One deterministic mass-extraction rule that fired, with a plain-English explanation for the owner. */
 export const riskReasonSchema = z.object({
   /** Stable rule id, e.g. `FULL_CONTEXT_REQUEST`, `OWNER_SHARE_HIGH`, `EXCERPT_OVER_CAP`. */
   code: z.string(),
@@ -76,7 +76,7 @@ export type RefusedReason = (typeof REFUSED_REASONS)[number];
 
 /**
  * Fields shared by every excerpt of a task. `ownerId` is an employee id or `company` (global context). The requester
- * only learns the real label of an excerpt released to them; until then it reads "Contexte personnel de <name>".
+ * only learns the real label of an excerpt released to them; until then it reads "Full context of <name>".
  */
 const taskExcerptFields = {
   ownerId: z.string(),

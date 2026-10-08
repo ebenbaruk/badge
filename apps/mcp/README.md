@@ -1,80 +1,79 @@
 # @badge/mcp
 
-Serveur MCP qui branche Badge sur la « harness » d'agent de chaque employé (Claude Code, Cursor…). Il agit pour
-**un seul employé**, avec la clé de session que cet employé a déléguée à son agent en signant un `AgentSession` sur
-son Ledger, et parle à l'enclave par le canal attesté de `@badge/client`.
+MCP server that plugs Badge into each employee's agent harness (Claude Code, Cursor...). It acts for **a single
+employee**, with the session key that employee delegated to their agent by signing an `AgentSession` on their Ledger,
+and talks to the enclave over the attested channel of `@badge/client`.
 
-## Outils
+## Tools
 
-| Outil                    | Entrée              | Ce que l'agent obtient                                                                                                                                                                                                   |
-| ------------------------ | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `badge_get_context`      | `{task, taskLabel}` | Crée une tâche ; renvoie le brief rédigé dans l'enclave et la provenance de chaque extrait, ou la liste des accords en attente (« en attente de l'accord de Bob Durand sur son Ledger ») avec l'identifiant de la tâche. |
-| `badge_task_status`      | `{taskId}`          | Statut de la tâche ; brief et provenance dès que plus rien n'est en attente.                                                                                                                                             |
-| `badge_list_my_consents` | aucune              | Demandes de partage adressées à l'employé (demandeur, extrait, tâche, risque). L'agent ne peut pas les approuver : l'employé signe sur son Ledger.                                                                       |
-| `badge_attestation`      | aucune              | Mesure de l'enclave et résumé de l'attestation (TDX vérifiée ou simulée, compose hash, TCB), comparés à la mesure signée dans la session.                                                                                |
+| Tool                     | Input               | What the agent gets                                                                                                                                                                          |
+| ------------------------ | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `badge_get_context`      | `{task, taskLabel}` | Creates a task; returns the brief drafted in the enclave and the provenance of each excerpt, or the pending consents ("Waiting for Bob Durand to approve on their Ledger") with the task id. |
+| `badge_task_status`      | `{taskId}`          | Task status; brief and provenance once nothing is pending anymore.                                                                                                                           |
+| `badge_list_my_consents` | none                | Share requests addressed to the employee (requester, excerpt, task, risk). The agent cannot approve them: the employee signs on their Ledger.                                                |
+| `badge_attestation`      | none                | Enclave measurement and attestation summary (verified TDX or simulated, compose hash, TCB), compared with the measurement signed in the session.                                             |
 
-Les descriptions sont rédigées pour un LLM, en français et en anglais. Les refus de l'enclave (session inconnue,
-règles anti-aspiration…) reviennent comme erreurs d'outil lisibles, pas comme pannes du protocole.
+Descriptions are written for an LLM, in English. Enclave refusals (unknown session, mass-extraction rules...) come
+back as readable tool errors, not protocol failures.
 
-## Garanties
+## Guarantees
 
-- **Rien d'autre que ce que l'enclave a remis** : le texte d'un collègue n'apparaît que dans un brief rédigé par
-  l'enclave à partir d'extraits libérés (accord signé, accord permanent). Le brief est encadré
-  (`<<<BADGE_CONTEXT … BADGE_CONTEXT>>>`) et signalé comme données, pas instructions.
-- **Échec fermé au démarrage** : en mode `tdx`, le serveur refuse de démarrer si l'attestation échoue (enclave
-  injoignable comprise) ; dans tous les modes, une attestation rejetée ou une mesure différente de celle signée dans
-  l'`AgentSession` l'empêche de démarrer. Le transport `plain` (sans attestation) n'est accepté qu'avec le simulateur.
-- **Clé de session** : lue dans un fichier en `600` (refusé s'il est lisible par d'autres), jamais journalisée ni
-  affichée. Elle ne donne que le droit de _demander_ du contexte : chaque partage reste signé sur le Ledger du
-  propriétaire.
-- **Mode HTTP** : écoute uniquement sur `127.0.0.1`, protection contre le DNS rebinding (en-tête `Host`) et refus de
-  toute requête portant un en-tête `Origin` (une page web ne peut pas piloter la session de l'agent).
+- **Nothing but what the enclave released**: a colleague's text only appears in a brief the enclave drafted from
+  released excerpts (signed consent, standing agreement). The brief is fenced
+  (`<<<BADGE_CONTEXT ... BADGE_CONTEXT>>>`) and flagged as data, not instructions.
+- **Fail closed at startup**: in `tdx` mode, the server refuses to start if attestation fails (including an
+  unreachable enclave); in every mode, a rejected attestation or a measurement different from the one signed in the
+  `AgentSession` stops it from starting. The `plain` transport (no attestation) is only accepted with the simulator.
+- **Session key**: read from a `600` file (refused if readable by others), never logged nor printed. It only grants
+  the right to _request_ context: every share is still signed on the owner's Ledger.
+- **HTTP mode**: listens on `127.0.0.1` only, DNS rebinding protection (`Host` header) and refusal of any request
+  carrying an `Origin` header (a web page cannot drive the agent's session).
 
-## Mise en place (une fois par employé et par agent)
+## Setup (once per employee and per agent)
 
-1. Créer la clé de session et le message à signer (l'enclave est attestée pour y lire sa mesure) :
+1. Create the session key and the message to sign (the enclave is attested to read its measurement):
 
    ```sh
    BADGE_ATTESTATION_MODE=simulated pnpm --filter @badge/mcp session create \
      --employee 0x9858EfFD232B4033E47d90003D41EC34EcaEda94 --out ~/.badge/alice-claude.json --agent "Claude Code"
    ```
 
-   Le fichier (droits `600`) contient la clé privée et l'`AgentSession` ; la commande affiche le message (format
-   filaire `@badge/consent`) et son empreinte EIP-712. Durée : 8 h par défaut, 12 h au plus (`--ttl-hours`).
+   The file (mode `600`) holds the private key and the `AgentSession`; the command prints the message (`@badge/consent`
+   wire format) and its EIP-712 fingerprint. Lifetime: 8 h by default, 12 h at most (`--ttl-hours`).
 
-2. Faire signer l'`AgentSession` sur le Ledger de l'employé et ouvrir la session dans l'enclave :
+2. Have the `AgentSession` signed on the employee's Ledger and open the session in the enclave:
 
    ```sh
-   # signature obtenue ailleurs (application web, @badge/ledger) :
-   pnpm --filter @badge/mcp session open --file ~/.badge/alice-claude.json --signature 0x…
-   # ou directement sur un Speculos (validation à l'écran de l'appareil) :
+   # signature obtained elsewhere (web app, @badge/ledger):
+   pnpm --filter @badge/mcp session open --file ~/.badge/alice-claude.json --signature 0x...
+   # or directly on a Speculos device (approve on the device screen):
    pnpm --filter @badge/mcp session open --file ~/.badge/alice-claude.json --ledger http://localhost:5001
    ```
 
-   La signature est vérifiée localement (elle doit venir de l'adresse de l'employé) avant l'envoi. Avec `--ledger`,
-   la clé CAL de test est lue dans `infra/keys/cal-test.pem` ou `BADGE_CAL_TEST_KEY` (voir `@badge/ledger`).
+   The signature is checked locally (it must come from the employee's address) before it is sent. With `--ledger`,
+   the test CAL key is read from `infra/keys/cal-test.pem` or `BADGE_CAL_TEST_KEY` (see `@badge/ledger`).
 
 ## Configuration
 
-| Variable                             | Défaut                  | Rôle                                                                                                |
-| ------------------------------------ | ----------------------- | --------------------------------------------------------------------------------------------------- |
-| `BADGE_SESSION_KEY_FILE`             | (obligatoire)           | Fichier de session ; `--session <fichier>` le remplace.                                             |
-| `BADGE_ENCLAVE_URL`                  | `http://127.0.0.1:8787` | Origine de l'enclave.                                                                               |
-| `BADGE_ENCLAVE_TRANSPORT`            | `channel`               | `channel` (canal attesté) ou `plain` (développement, simulateur requis).                            |
-| `BADGE_ATTESTATION_MODE`             | `tdx`                   | `tdx` (vrai TEE) ou `simulated` (simulateur dstack).                                                |
-| `BADGE_ENCLAVE_COMPOSE_HASH`         | —                       | Compose hash épinglé (sinon lu dans le fichier d'épingles).                                         |
-| `BADGE_ENCLAVE_APP_ID`               | —                       | App id dstack épinglé (sinon lu dans le fichier d'épingles).                                        |
-| `BADGE_ENCLAVE_OS_MEASUREMENTS_FILE` | —                       | `infra/cvm/expected-measurements.json` ; en `tdx`, compose hash, app id et mesures OS obligatoires. |
-| `BADGE_MCP_TRANSPORT`                | `stdio`                 | `stdio` ou `http` (`--http`).                                                                       |
-| `BADGE_MCP_HTTP_PORT`                | `8790`                  | Port HTTP local (`--port`).                                                                         |
+| Variable                             | Default                 | Role                                                                                                 |
+| ------------------------------------ | ----------------------- | ---------------------------------------------------------------------------------------------------- |
+| `BADGE_SESSION_KEY_FILE`             | (required)              | Session file; `--session <file>` overrides it.                                                       |
+| `BADGE_ENCLAVE_URL`                  | `http://127.0.0.1:8787` | Enclave origin.                                                                                      |
+| `BADGE_ENCLAVE_TRANSPORT`            | `channel`               | `channel` (attested channel) or `plain` (development, simulator required).                           |
+| `BADGE_ATTESTATION_MODE`             | `tdx`                   | `tdx` (real TEE) or `simulated` (dstack simulator).                                                  |
+| `BADGE_ENCLAVE_COMPOSE_HASH`         | -                       | Pinned compose hash (otherwise read from the pins file).                                             |
+| `BADGE_ENCLAVE_APP_ID`               | -                       | Pinned dstack app id (otherwise read from the pins file).                                            |
+| `BADGE_ENCLAVE_OS_MEASUREMENTS_FILE` | -                       | `infra/cvm/expected-measurements.json`; in `tdx`, compose hash, app id and OS measurements required. |
+| `BADGE_MCP_TRANSPORT`                | `stdio`                 | `stdio` or `http` (`--http`).                                                                        |
+| `BADGE_MCP_HTTP_PORT`                | `8790`                  | Local HTTP port (`--port`).                                                                          |
 
-Les journaux vont sur la sortie d'erreur : en stdio, la sortie standard ne porte que le protocole MCP.
+Logs go to stderr: in stdio mode, stdout only carries the MCP protocol.
 
-## Brancher sur une harness
+## Plug into a harness
 
-`tsx` est fourni par le dépôt : `<badge>` désigne le chemin absolu du dépôt.
+`tsx` ships with the repo: `<badge>` is the absolute path of the repo.
 
-**Claude Code** (stdio) :
+**Claude Code** (stdio):
 
 ```sh
 claude mcp add badge --scope user \
@@ -83,17 +82,17 @@ claude mcp add badge --scope user \
   -- <badge>/node_modules/.bin/tsx <badge>/apps/mcp/src/main.ts
 ```
 
-En production, remplacer `BADGE_ATTESTATION_MODE=simulated` par `-e BADGE_ATTESTATION_MODE=tdx
+In production, replace `BADGE_ATTESTATION_MODE=simulated` with `-e BADGE_ATTESTATION_MODE=tdx
 -e BADGE_ENCLAVE_OS_MEASUREMENTS_FILE=<badge>/infra/cvm/expected-measurements.json -e BADGE_ENCLAVE_URL=https://<enclave>`
-(le fichier publié épingle compose hash, app id, mesures de l'OS et KMS).
+(the published file pins compose hash, app id, OS measurements and KMS).
 
-Claude Code en HTTP (serveur lancé à part avec `pnpm --filter @badge/mcp start --http`) :
+Claude Code over HTTP (server started separately with `pnpm --filter @badge/mcp start --http`):
 
 ```sh
 claude mcp add --transport http badge http://127.0.0.1:8790/mcp
 ```
 
-**Cursor** (`~/.cursor/mcp.json` ou `.cursor/mcp.json` du projet) :
+**Cursor** (`~/.cursor/mcp.json` or the project's `.cursor/mcp.json`):
 
 ```json
 {
@@ -110,12 +109,12 @@ claude mcp add --transport http badge http://127.0.0.1:8790/mcp
 }
 ```
 
-Une clé de session par agent : Claude Code et Cursor de la même employée ont chacun leur fichier, révocable
-séparément.
+One session key per agent: the same employee's Claude Code and Cursor each have their own file, revocable
+separately.
 
 ## Tests
 
 ```sh
-pnpm vitest run --project mcp           # outils (faux BadgeClient), client MCP en mémoire, HTTP, fichier de session
-pnpm --filter @badge/mcp test:sim       # bout en bout par le canal attesté (infra/dstack-sim.sh start)
+pnpm vitest run --project mcp           # tools (fake BadgeClient), in-memory MCP client, HTTP, session file
+pnpm --filter @badge/mcp test:sim       # end to end over the attested channel (infra/dstack-sim.sh start)
 ```

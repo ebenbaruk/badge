@@ -55,7 +55,7 @@ export interface StepResult {
   readonly ms: number;
 }
 
-/** Prints the scenario as numbered French steps with their outcome, and keeps a summary. */
+/** Prints the scenario as numbered steps with their outcome, and keeps a summary. */
 export class Narrator {
   readonly steps: StepResult[] = [];
 
@@ -82,18 +82,18 @@ export class Narrator {
 
   fail(error: unknown): void {
     const message = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
-    console.error(paint("red", `\n[ÉCHEC] ${message}`));
+    console.error(paint("red", `\n[FAILED] ${message}`));
   }
 
   summary(): void {
     const total = this.steps.reduce((sum, step) => sum + step.ms, 0);
-    console.log(`\n${paint("bold", "Résumé")}`);
+    console.log(`\n${paint("bold", "Summary")}`);
     for (const [index, step] of this.steps.entries()) {
       console.log(
         `  [OK] ${String(index + 1).padStart(2, " ")}. ${step.title} (${(step.ms / 1000).toFixed(1)} s)`,
       );
     }
-    console.log(paint("bold", `\n${this.steps.length} étapes réussies en ${(total / 1000).toFixed(0)} s.`));
+    console.log(paint("bold", `\n${this.steps.length} steps passed in ${(total / 1000).toFixed(0)} s.`));
   }
 }
 

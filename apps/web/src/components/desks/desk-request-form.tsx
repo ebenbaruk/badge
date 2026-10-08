@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { DESK_NAMES, type DeskId, type EmployeeId } from "@/lib/directory";
 import { requestFromDesk } from "@/server/actions/desks";
 
-const DEFAULT_QUESTION = "Tendances du marché des capteurs industriels et prix des composants";
+const DEFAULT_QUESTION = "Industrial sensor market trends and component prices";
 
 /** Asks another desk across an exchange rule; the answer comes back without the sharer's identity. */
 export function DeskRequestForm({
@@ -33,7 +33,7 @@ export function DeskRequestForm({
         toast.error(result.message, result.detail === undefined ? {} : { description: result.detail });
         return;
       }
-      toast.success(`Demande envoyée au desk ${DESK_NAMES[toDesk]}.`);
+      toast.success(`Request sent to the ${DESK_NAMES[toDesk]} desk.`);
       router.refresh();
     });
   };
@@ -44,12 +44,12 @@ export function DeskRequestForm({
         value={task}
         onChange={(event) => setTask(event.target.value)}
         className="min-h-16 resize-none"
-        aria-label={`Question pour le desk ${DESK_NAMES[toDesk]}`}
+        aria-label={`Question for the ${DESK_NAMES[toDesk]} desk`}
       />
       <div className="flex justify-end">
         <Button type="submit" disabled={pending || task.trim().length < 3}>
           {pending ? <Loader2 className="animate-spin" /> : <Send />}
-          Demander au desk {DESK_NAMES[toDesk]}
+          Ask the {DESK_NAMES[toDesk]} desk
         </Button>
       </div>
     </form>

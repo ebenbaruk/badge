@@ -24,7 +24,7 @@ import { assertStringFieldsAscii, badgeTypedData, toDmkTypedData, toViemTypedDat
 const account: PrivateKeyAccount = privateKeyToAccount(`0x${"42".repeat(32)}`);
 
 const share: ContextShare = {
-  recipientName: "Alice (Ventes)",
+  recipientName: "Alice (Sales)",
   excerptLabel: "conditions Orion 2025",
   excerptLength: 87,
   taskLabel: "brief Orion",
@@ -70,7 +70,7 @@ describe("badgeTypedData", () => {
 
   it("refuses non-ASCII displayed strings", () => {
     expect(() =>
-      assertStringFieldsAscii("ContextShare", { ...share, taskLabel: "brief Orion — générales" }),
+      assertStringFieldsAscii("ContextShare", { ...share, taskLabel: "Orion brief — café" }),
     ).toThrow(NonAsciiFieldError);
     expect(() => assertStringFieldsAscii("ContextShare", share)).not.toThrow();
   });

@@ -37,7 +37,7 @@ export interface SeedNote {
   owner: ContextOwner;
   tags: string[];
   text: string;
-  /** Human label (UI) and its ASCII form is what the device shows as "Extrait". */
+  /** Human label (UI) and its ASCII form is what the device shows as "Excerpt". */
   label: string;
 }
 
@@ -49,21 +49,21 @@ export interface SeedDesk {
 
 /** Display labels of the seeded notes; a note without one falls back to its tags. */
 const NOTE_LABELS: Readonly<Record<string, string>> = {
-  "company-presentation": "Présentation d'Acme",
-  "company-catalogue-2026": "Catalogue 2026",
-  "company-politique-tarifaire": "Politique tarifaire",
-  "company-organisation": "Organisation commerciale",
-  "company-client-orion": "Fiche client Orion Logistique",
-  "company-actualite-salon": "Salon Global Industrie 2027",
-  "alice-objectif-orion": "Objectif du rendez-vous Orion",
-  "alice-prospect-helios": "Prospect Helios Froid",
-  "bob-orion-conditions-2025": "Conditions Orion 2025",
-  "bob-orion-reunion-septembre": "Réunion Orion du 22 septembre",
-  "bob-orion-points-attention": "Orion : points d'attention",
-  "bob-perso-conges": "Congés d'octobre",
-  "bob-research-marche-capteurs": "Marché des capteurs (desk Research)",
-  "chloe-revue-contrats": "Nouveau modèle de contrat-cadre",
-  "chloe-rh-prudhommes": "Dossier RH confidentiel",
+  "company-presentation": "About Acme",
+  "company-catalogue-2026": "2026 catalog",
+  "company-politique-tarifaire": "Pricing policy",
+  "company-organisation": "Sales organization",
+  "company-client-orion": "Client profile: Orion Logistique",
+  "company-actualite-salon": "Global Industrie trade show 2027",
+  "alice-objectif-orion": "Goal of the Orion meeting",
+  "alice-prospect-helios": "Prospect: Helios Froid",
+  "bob-orion-conditions-2025": "Orion 2025 terms",
+  "bob-orion-reunion-septembre": "Orion meeting, September 22",
+  "bob-orion-points-attention": "Orion: watch-outs",
+  "bob-perso-conges": "October leave",
+  "bob-research-marche-capteurs": "Sensor market (Research desk)",
+  "chloe-revue-contrats": "New framework agreement template",
+  "chloe-rh-prudhommes": "Confidential HR case",
 };
 
 export interface SeedData {

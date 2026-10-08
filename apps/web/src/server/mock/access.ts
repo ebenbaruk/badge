@@ -74,16 +74,16 @@ export async function openSession(
   signed: SignedMessage<"AgentSession">,
 ): Promise<EnrollmentView> {
   if (!state.enrollments.has(employee)) {
-    throw new EnclaveError("NOT_ENROLLED", `${EMPLOYEES[employee].name} n'a pas encore rejoint Badge`);
+    throw new EnclaveError("NOT_ENROLLED", `${EMPLOYEES[employee].name} has not joined Badge yet`);
   }
   if (!isAddressEqual(signed.message.employee, EMPLOYEES[employee].address)) {
-    throw new EnclaveError("FORBIDDEN", "session signée pour un autre employé");
+    throw new EnclaveError("FORBIDDEN", "session signed for another employee");
   }
   await verifySignedBy(signed, employee);
   const now = nowSeconds();
   checkAgentSession(signed.message, { now, enclaveMeasurement: state.measurement });
   if (signed.message.expiresAt - now > ENCLAVE_MAX_SESSION_TTL_SECONDS) {
-    throw new EnclaveError("INVALID_REQUEST", "une session d'agent dure au plus 12 h");
+    throw new EnclaveError("INVALID_REQUEST", "an agent session lasts at most 12 hours");
   }
   consumeNonce(state, signed.message.employee, signed.message.nonce);
   state.sessions.set(employee, {
@@ -126,7 +126,7 @@ export async function createPolicy(
   signed: SignedMessage<"ContextPolicy">,
 ): Promise<PolicyView> {
   if (!isAddressEqual(signed.message.owner, EMPLOYEES[owner].address)) {
-    throw new EnclaveError("FORBIDDEN", "accord signé pour un autre propriétaire");
+    throw new EnclaveError("FORBIDDEN", "agreement signed for another owner");
   }
   await verifySignedBy(signed, owner);
   checkContextPolicy(signed.message, { now: nowSeconds(), enclaveMeasurement: state.measurement });
@@ -174,7 +174,7 @@ export function listGrants(state: MockState, owner: EmployeeId): GrantView[] {
     id: p.id,
     kind: "policy",
     owner,
-    recipientLabel: `Équipe ${p.granteeTeam}`,
+    recipientLabel: `${p.granteeTeam} team`,
     label: `${p.contextTag} · ${p.purpose}`,
     createdAt: p.createdAt,
     expiresAt: p.expiresAt,
@@ -231,7 +231,7 @@ export function prepareRevocation(
       }),
     };
   }
-  throw new EnclaveError("NOT_FOUND", "accord introuvable");
+  throw new EnclaveError("NOT_FOUND", "agreement not found");
 }
 
 /**
@@ -245,7 +245,7 @@ export async function revoke(
 ): Promise<{ revoked: number }> {
   const message = signed.message;
   if (!isAddressEqual(message.owner, EMPLOYEES[owner].address)) {
-    throw new EnclaveError("FORBIDDEN", "révocation signée pour un autre propriétaire");
+    throw new EnclaveError("FORBIDDEN", "revocation signed for another owner");
   }
   await verifySignedBy(signed, owner);
   checkContextRevoke(message, { now: nowSeconds() });
@@ -270,7 +270,7 @@ export async function revoke(
     policy.revokedAt = now;
     revoked += 1;
   }
-  if (revoked === 0) throw new EnclaveError("NOT_FOUND", "aucun accord actif ne correspond");
+  if (revoked === 0) throw new EnclaveError("NOT_FOUND", "no active agreement matches");
   state.audit.append({
     type: "revoke",
     actor: owner,

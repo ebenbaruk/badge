@@ -20,19 +20,19 @@ const TONE_STYLES: Record<
   { label: string; className: string; iconClass: string; Icon: typeof ShieldCheck }
 > = {
   attested: {
-    label: "Enclave attestée",
+    label: "Attested enclave",
     className: "border-success/30 bg-success/10 text-success",
     iconClass: "text-success",
     Icon: ShieldCheck,
   },
   simulated: {
-    label: "TEE simulé",
+    label: "Simulated TEE",
     className: "border-warning/35 bg-warning/10 text-warning",
     iconClass: "text-warning",
     Icon: ShieldAlert,
   },
   failed: {
-    label: "Attestation indisponible",
+    label: "Attestation unavailable",
     className: "border-danger/30 bg-danger/10 text-danger",
     iconClass: "text-danger",
     Icon: ShieldX,
@@ -82,7 +82,7 @@ export function AttestationBadge({
         </button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-[400px] rounded-2xl p-5">
-        <div className="mono-label text-muted-foreground">Attestation de l&apos;enclave</div>
+        <div className="mono-label text-muted-foreground">Enclave attestation</div>
         <div className="mt-2 mb-3 flex items-center gap-2">
           <span
             className={cn("flex size-7 items-center justify-center rounded-full bg-current/10", iconClass)}
@@ -92,31 +92,31 @@ export function AttestationBadge({
           <div className="font-heading text-lg leading-tight font-medium tracking-[-0.04em]">{label}</div>
         </div>
         {attestation === null ? (
-          <p className="text-xs text-muted-foreground">{failure ?? "L'enclave n'a pas répondu."}</p>
+          <p className="text-xs text-muted-foreground">{failure ?? "The enclave did not respond."}</p>
         ) : (
           <>
             <p className="mb-2 text-xs text-muted-foreground">
               {attestation.mode === "tdx"
-                ? "Quote Intel TDX vérifiée (DCAP), journal d'événements rejoué : l'enclave exécute exactement ce code."
-                : "Simulateur dstack : la quote et le journal d'événements sont vérifiés de la même façon, mais sans aucune garantie matérielle."}
+                ? "Intel TDX quote verified (DCAP), event log replayed: the enclave runs exactly this code."
+                : "dstack simulator: the quote and event log are verified the same way, but with no hardware guarantee."}
             </p>
             <div className="divide-y">
-              <Row label="Mesure (compose hash)">
+              <Row label="Measurement (compose hash)">
                 <CopyableHash value={attestation.measurement} full />
               </Row>
-              <Row label="Statut TCB">
+              <Row label="TCB status">
                 <span className="font-mono">{attestation.tcbStatus}</span>
               </Row>
               <Row label="App ID">
                 <CopyableHash value={attestation.appId} full />
               </Row>
-              <Row label="Mode">{attestation.mode === "tdx" ? "Intel TDX (Phala dstack)" : "Simulé"}</Row>
+              <Row label="Mode">{attestation.mode === "tdx" ? "Intel TDX (Phala dstack)" : "Simulated"}</Row>
               {attestation.keyProvider !== undefined && (
-                <Row label="Fournisseur de clés">
+                <Row label="Key provider">
                   <span className="font-mono">{attestation.keyProvider}</span>
                 </Row>
               )}
-              <Row label="Vérifiée le">{formatDateTime(attestation.checkedAt)}</Row>
+              <Row label="Verified at">{formatDateTime(attestation.checkedAt)}</Row>
             </div>
             {attestation.warnings.length > 0 && (
               <ul className="mt-3 space-y-1 rounded-md bg-surface p-3 text-[11px] text-muted-foreground">
@@ -126,7 +126,7 @@ export function AttestationBadge({
               </ul>
             )}
             <p className="mt-3 text-[11px] text-muted-foreground">
-              Chaque message signé sur un Ledger porte cette mesure : un accord ne vaut que pour cette
+              Every message signed on a Ledger carries this measurement: a consent is only valid for this
               enclave.
             </p>
           </>

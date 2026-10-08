@@ -13,7 +13,7 @@ export const ENCLAVE_MAX_SESSION_TTL_SECONDS = 12n * HOUR_SECONDS;
 /** Default delegation: a working day, comfortably under the cap even with some clock drift. */
 export const DEFAULT_AGENT_SESSION_TTL_SECONDS = 8n * HOUR_SECONDS;
 /** Access summary shown on the Ledger (ASCII, see the AgentSession descriptor). */
-export const DEFAULT_AGENT_ACCESS = "Demander du contexte";
+export const DEFAULT_AGENT_ACCESS = "Requests only";
 const NONCE_BYTES = 32;
 
 export interface CreateAgentSessionOptions {
@@ -21,7 +21,7 @@ export interface CreateAgentSessionOptions {
   agentName: string;
   /** bytes32 measurement of the attested enclave (`AttestationResult.enclaveMeasurement` or `measurement()`). */
   enclaveMeasurement: Hex;
-  /** Shown on the Ledger ("Acces"); folded to device ASCII. */
+  /** Shown on the Ledger ("Access"); folded to device ASCII. */
   access?: string;
   ttlSeconds?: bigint;
   /** Injected for tests. */

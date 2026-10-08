@@ -61,8 +61,8 @@ export const EXCHANGE_RULES = [
     id: "R-01",
     sourceDesk: "research",
     recipientDesk: "origination",
-    allowedTopics: ["marche-capteurs", "prix-composants"],
-    label: "Research vers Origination : marche",
+    allowedTopics: ["sensor-market", "component-prices"],
+    label: "Rule 4 - sensor market",
   },
 ] as const satisfies ReadonlyArray<{
   id: string;
@@ -85,7 +85,7 @@ export function initialDeskCommitments(): Map<DeskId, bigint[]> {
 
 function deskByName(name: string): DeskId {
   const desk = DESK_IDS.find((id) => toDeviceAscii(DESK_NAMES[id]) === name);
-  if (desk === undefined) throw new EnclaveError("NOT_FOUND", `desk inconnu : ${name}`);
+  if (desk === undefined) throw new EnclaveError("NOT_FOUND", `unknown desk: ${name}`);
   return desk;
 }
 
@@ -121,7 +121,7 @@ export async function joinDesk(
 ): Promise<DeskView> {
   const message = signed.message;
   if (!isAddressEqual(message.employee, EMPLOYEES[employee].address)) {
-    throw new EnclaveError("FORBIDDEN", "adhésion signée pour un autre employé");
+    throw new EnclaveError("FORBIDDEN", "desk membership signed for another employee");
   }
   await verifySignedBy(signed, employee);
   checkDeskJoin(message);
@@ -129,12 +129,12 @@ export async function joinDesk(
   if (!directoryMembers(state, desk).includes(employee)) {
     throw new EnclaveError(
       "FORBIDDEN",
-      `${EMPLOYEES[employee].name} n'est pas membre du desk ${DESK_NAMES[desk]}`,
+      `${EMPLOYEES[employee].name} is not a member of the ${DESK_NAMES[desk]} desk`,
     );
   }
   const commitments = state.deskCommitments.get(desk) ?? [];
   if (commitments.includes(message.identityCommitment)) {
-    throw new EnclaveError("CONFLICT", "identité déjà enregistrée dans ce desk");
+    throw new EnclaveError("CONFLICT", "identity already registered in this desk");
   }
   consumeNonce(state, message.employee, message.nonce);
   commitments.push(message.identityCommitment);
@@ -191,13 +191,13 @@ export function createDeskRequest(
   input: { fromDesk: DeskId; toDesk: DeskId; task: string },
 ): DeskRequestView {
   if (!EMPLOYEES[requester].desks.includes(input.fromDesk)) {
-    throw new EnclaveError("FORBIDDEN", `vous n'êtes pas membre du desk ${DESK_NAMES[input.fromDesk]}`);
+    throw new EnclaveError("FORBIDDEN", `you are not a member of the ${DESK_NAMES[input.fromDesk]} desk`);
   }
   const rule = EXCHANGE_RULES.find(
     (r) => r.sourceDesk === input.toDesk && r.recipientDesk === input.fromDesk,
   );
   if (rule === undefined) {
-    throw new EnclaveError("FORBIDDEN", "aucune règle d'échange n'autorise ce flux entre desks");
+    throw new EnclaveError("FORBIDDEN", "no exchange rule allows this flow between desks");
   }
   const sourceMembers = directoryMembers(state, input.toDesk).filter((m) => m !== requester);
   const topics = new Set<string>(rule.allowedTopics);
@@ -210,7 +210,7 @@ export function createDeskRequest(
   );
   const [best] = findCandidates(input.task, eligible);
   if (best === undefined || best.note.owner === "company") {
-    throw new EnclaveError("NOT_FOUND", "aucun extrait du desk ne correspond à cette demande et à la règle");
+    throw new EnclaveError("NOT_FOUND", "no desk excerpt matches this request and the rule");
   }
   const note = best.note;
   const id = randomBytes32();
@@ -261,8 +261,8 @@ export function listDeskRequests(state: MockState, viewer: EmployeeId): DeskRequ
 
 function pendingRequest(state: MockState, owner: EmployeeId, requestId: Hex): DeskRequestRecord {
   const record = state.deskRequests.get(requestId);
-  if (record === undefined || record.owner !== owner) throw new EnclaveError("NOT_FOUND", "demande inconnue");
-  if (record.status !== "pending") throw new EnclaveError("CONFLICT", `demande déjà ${record.status}`);
+  if (record === undefined || record.owner !== owner) throw new EnclaveError("NOT_FOUND", "unknown request");
+  if (record.status !== "pending") throw new EnclaveError("CONFLICT", `request already ${record.status}`);
   return record;
 }
 
@@ -273,7 +273,7 @@ function pendingRequest(state: MockState, owner: EmployeeId, requestId: Hex): De
 function sealIdentity(state: MockState, employee: EmployeeId, requestId: Hex, excerptHash: Hex): SealedBox {
   const key = state.complianceKey;
   if (key === undefined) {
-    throw new EnclaveError("CONFLICT", "aucune clé de conformité enregistrée : partage anonyme impossible");
+    throw new EnclaveError("CONFLICT", "no compliance key registered: anonymous sharing is unavailable");
   }
   const signer = { employeeId: employee, address: EMPLOYEES[employee].address, requestId, excerptHash };
   return sealToPublicKey(key.publicKey, JSON.stringify(signer));
@@ -294,10 +294,13 @@ export async function approveDeskRequest(
   const record = pendingRequest(state, owner, requestId);
   // The owner must sign exactly the message the enclave prepared, not a variant of it.
   if (hashBadgeMessage("DeskShare", signed.message) !== hashBadgeMessage("DeskShare", record.message)) {
-    throw new EnclaveError("SIGNATURE_REJECTED", "le message signé diffère de celui préparé par l'enclave");
+    throw new EnclaveError(
+      "SIGNATURE_REJECTED",
+      "the signed message differs from the one the enclave prepared",
+    );
   }
   if (!(state.deskJoined.get(owner)?.has(record.toDesk) ?? false)) {
-    throw new EnclaveError("FORBIDDEN", `rejoignez d'abord le desk ${DESK_NAMES[record.toDesk]}`);
+    throw new EnclaveError("FORBIDDEN", `join the ${DESK_NAMES[record.toDesk]} desk first`);
   }
   await verifySignedBy(signed, owner);
   checkDeskShare(record.message, {

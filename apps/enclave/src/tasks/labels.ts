@@ -24,7 +24,7 @@ export function deviceLabel(text: string, maxChars: number = DEVICE_LABEL_MAX_CH
   return toDeviceAscii(`${head.replace(/[\s.,;:-]+$/, "")}${ELLIPSIS}`);
 }
 
-/** Label of an explicit request for someone's entire context, e.g. "Tout le contexte de Bob Durand". */
+/** Label of an explicit request for someone's entire context, e.g. "Full context of Bob Durand". */
 export function fullContextLabel(ownerName: string): string {
-  return deviceLabel(`Tout le contexte de ${ownerName}`);
+  return deviceLabel(`Full context of ${ownerName}`);
 }

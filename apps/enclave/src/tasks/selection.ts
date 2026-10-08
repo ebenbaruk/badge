@@ -18,9 +18,9 @@ export const MIN_COLLEAGUE_RELEVANCE = 0.7;
  * Tags an owner puts on private notes (the seed uses them; the web mock applies the same list). Such a note is never
  * proposed for someone else's task, whatever the classifier says. Compared in device ASCII, lower case.
  */
-export const PRIVATE_TAGS: ReadonlySet<string> = new Set(["perso", "rh", "confidentiel"]);
+export const PRIVATE_TAGS: ReadonlySet<string> = new Set(["personal", "hr", "confidential"]);
 
-/** Whether `tag` is a private tag, however it is spelled ("RH", "Perso", "Confidentiel", "confidentièl"...). */
+/** Whether `tag` is a private tag, however it is spelled ("HR", "Personal", "Confidential", "confidéntial"...). */
 export function isPrivateTag(tag: string): boolean {
   return PRIVATE_TAGS.has(toDeviceAscii(tag).toLowerCase());
 }

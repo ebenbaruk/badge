@@ -1,7 +1,7 @@
 /**
  * Pure mappings from the enclave's wire shapes (@badge/client) to the web app's views. The enclave is the authority:
  * risk levels, reasons and statuses are shown as it reports them, never recomputed here. Only presentation is
- * derived (timeline wording, brief layout, French copy).
+ * derived (timeline wording, brief layout, UI copy).
  */
 import type { AttestationResult } from "@badge/attest";
 import type {
@@ -28,6 +28,7 @@ import {
   type DeskId,
   type EmployeeId,
 } from "@/lib/directory";
+import { reasonForThirdParty } from "@/lib/format";
 import { EnclaveError } from "../errors";
 import type {
   AllowedBy,
@@ -87,6 +88,11 @@ function ownerOf(id: string): ContextOwner {
 const firstNameOf = (owner: ContextOwner): string =>
   owner === COMPANY_OWNER ? "Acme" : EMPLOYEES[owner].firstName;
 
+const ownerNameOf = (ownerId: string): string | null => {
+  const owner = ownerOf(ownerId);
+  return owner === COMPANY_OWNER ? null : EMPLOYEES[owner].name;
+};
+
 const plural = (count: number, word: string): string => `${count} ${word}${count > 1 ? "s" : ""}`;
 
 // ---- Attestation ----
@@ -132,9 +138,9 @@ const REFUSED_KIND: Readonly<Record<RefusedReason, BlockedExcerptView["kind"]>> 
 };
 
 const REFUSED_REASON_TEXT: Readonly<Record<RefusedReason, string>> = {
-  rejected: "Refusé par son propriétaire.",
-  revoked: "Accord révoqué par son propriétaire : l'extrait n'est plus utilisé.",
-  expired: "Demande expirée sans réponse.",
+  rejected: "Rejected by its owner.",
+  revoked: "Consent revoked by its owner: the excerpt is no longer used.",
+  expired: "Request expired without an answer.",
 };
 
 export function findingsOf(risk: Risk): RuleFinding[] {
@@ -147,7 +153,7 @@ export function findingsOf(risk: Risk): RuleFinding[] {
 
 const CITATION = /\s*\[(\d+(?:\s*[,;]\s*\d+)*)\]/g;
 const BULLET_PREFIX = /^(?:[-*•–]|\d+[.)])\s+/;
-const RECOMMENDATION_PREFIX = /^recommandation\s*:?\s*/i;
+const RECOMMENDATION_PREFIX = /^recommendation\s*:?\s*/i;
 const MARKDOWN_NOISE = /\*\*|__|^#+\s*/g;
 
 /**
@@ -260,14 +266,14 @@ function taskSteps(task: Task, record: TaskRecord): TaskStep[] {
       ? {
           kind: "search",
           at: isoFromSeconds(task.createdAt),
-          title: "L'agent demande tout un contexte personnel",
-          detail: "Pas de recherche liée à la tâche : la demande est soumise aux règles et au propriétaire.",
+          title: "The agent asks for an entire personal context",
+          detail: "No task-scoped search: the request goes through the rules and the owner.",
         }
       : {
           kind: "search",
           at: isoFromSeconds(task.createdAt),
-          title: "Recherche dans la mémoire de l'enclave",
-          detail: "Contexte global et contextes personnels, sans que rien n'en sorte.",
+          title: "Searching the enclave's memory",
+          detail: "Company context and personal contexts, without anything leaving.",
         },
   ];
   const byVia = (via: AllowedVia) => task.allowed.filter((e) => e.via === via);
@@ -275,24 +281,24 @@ function taskSteps(task: Task, record: TaskRecord): TaskStep[] {
   if (direct.length > 0) {
     steps.push({
       kind: "allowed",
-      title: `${plural(direct.length, "extrait")} autorisé${direct.length > 1 ? "s" : ""} d'office`,
-      detail: "Contexte global de l'entreprise et vos propres notes.",
+      title: `${plural(direct.length, "excerpt")} allowed by default`,
+      detail: "The company context and your own notes.",
     });
   }
   const reused = byVia("grant_reused");
   if (reused.length > 0) {
     steps.push({
       kind: "allowed",
-      title: `${plural(reused.length, "extrait")} déjà accordé${reused.length > 1 ? "s" : ""}`,
-      detail: `Accord ponctuel toujours valable : ${ownersOf(reused)}.`,
+      title: `${plural(reused.length, "excerpt")} already granted`,
+      detail: `One-off consent still valid: ${ownersOf(reused)}.`,
     });
   }
   const viaPolicy = byVia("policy");
   if (viaPolicy.length > 0) {
     steps.push({
       kind: "policy",
-      title: `Accord permanent de ${ownersOf(viaPolicy)}`,
-      detail: `${plural(viaPolicy.length, "extrait")} sans nouvelle signature ; chaque usage est journalisé.`,
+      title: `Standing agreement from ${ownersOf(viaPolicy)}`,
+      detail: `${plural(viaPolicy.length, "excerpt")} with no new signature; every use is logged.`,
     });
   }
   for (const excerpt of [...task.pending, ...task.blocked]) {
@@ -301,17 +307,20 @@ function taskSteps(task: Task, record: TaskRecord): TaskStep[] {
       kind: excerpt.risk.level === "block" ? "rule_block" : "rule_warn",
       title:
         excerpt.risk.level === "block"
-          ? `Bloqué par les règles avant d'atteindre ${firstNameOf(ownerOf(excerpt.ownerId))}`
-          : `Signalé à ${firstNameOf(ownerOf(excerpt.ownerId))} par les règles de l'enclave`,
-      detail: excerpt.risk.reasons.map((r) => r.message).join(" "),
+          ? `Blocked by the rules before reaching ${firstNameOf(ownerOf(excerpt.ownerId))}`
+          : `Flagged to ${firstNameOf(ownerOf(excerpt.ownerId))} by enclave rules`,
+      // Reasons address the owner ("your context"); this timeline is the requester's, so they name the owner.
+      detail: excerpt.risk.reasons
+        .map((r) => reasonForThirdParty(r.message, ownerNameOf(excerpt.ownerId)))
+        .join(" "),
     });
   }
   const consented = byVia("consent");
   if (consented.length > 0) {
     steps.push({
       kind: "consent_received",
-      title: `Accord signé sur le Ledger de ${ownersOf(consented)}`,
-      detail: plural(consented.length, "extrait"),
+      title: `Consent signed on ${ownersOf(consented)}'s Ledger`,
+      detail: plural(consented.length, "excerpt"),
     });
   }
   for (const excerpt of task.refused) {
@@ -319,30 +328,30 @@ function taskSteps(task: Task, record: TaskRecord): TaskStep[] {
       kind: "consent_rejected",
       title:
         excerpt.reason === "rejected"
-          ? `${firstNameOf(ownerOf(excerpt.ownerId))} a refusé le partage`
+          ? `${firstNameOf(ownerOf(excerpt.ownerId))} rejected the share`
           : excerpt.reason === "revoked"
-            ? `${firstNameOf(ownerOf(excerpt.ownerId))} a révoqué son accord`
-            : "Demande expirée",
+            ? `${firstNameOf(ownerOf(excerpt.ownerId))} revoked their consent`
+            : "Request expired",
       detail: excerpt.excerptLabel,
     });
   }
   if (task.pending.length > 0) {
     steps.push({
       kind: "waiting_consent",
-      title: `En attente de l'accord de ${ownersOf(task.pending)}`,
-      detail: "Sur son Ledger, qui affiche en clair ce qui sortirait et pour qui.",
+      title: `Waiting for consent from ${ownersOf(task.pending)}`,
+      detail: "On their Ledger, which shows in clear what would leave and for whom.",
     });
   } else if (task.allowed.length === 0) {
     steps.push({
       kind: "refused",
-      title: "Aucun contexte autorisé : rien n'a quitté l'enclave",
-      detail: "Aucun extrait n'a été injecté dans le modèle.",
+      title: "No context allowed: nothing left the enclave",
+      detail: "No excerpt was injected into the model.",
     });
   } else if (task.brief !== null) {
     steps.push({
       kind: "brief",
-      title: "Brief rédigé dans l'enclave",
-      detail: `À partir des ${plural(task.allowed.length, "source")} autorisée${task.allowed.length > 1 ? "s" : ""}, et d'elles seules.`,
+      title: "Brief drafted inside the enclave",
+      detail: `From the ${plural(task.allowed.length, "allowed source")}, and from them alone.`,
     });
   }
   return steps;
@@ -418,7 +427,7 @@ export function grantViews(
     id: policy.id,
     kind: "policy",
     owner,
-    recipientLabel: `Équipe ${policy.granteeTeam}`,
+    recipientLabel: `${policy.granteeTeam} team`,
     label: `${policy.contextTag} · ${policy.purpose}`,
     createdAt: policy.createdAt,
     expiresAt: policy.expiresAt,
@@ -466,7 +475,7 @@ export function auditView(log: AuditLog, revealedSigners: ReadonlyMap<number, Em
       seq: entry.seq,
       ts: entry.ts,
       sourceDesk: deskIdOf(data.sourceDesk),
-      label: `Vers le desk ${isDeskId(data.recipientDesk) ? DESK_NAMES[data.recipientDesk] : data.recipientDesk}`,
+      label: `To the ${isDeskId(data.recipientDesk) ? DESK_NAMES[data.recipientDesk] : data.recipientDesk} desk`,
       sealed: sealedFingerprint(data.sealedSigner.ciphertext),
     };
     const revealedAt = reveals.get(entry.seq);

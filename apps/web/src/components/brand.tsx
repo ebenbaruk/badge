@@ -21,7 +21,7 @@ export function BrandLockup() {
       <BadgeMark />
       <div className="leading-none">
         <div className="text-[15px] font-semibold tracking-tight">Badge</div>
-        <div className="mt-0.5 text-[11px] text-muted-foreground">Acme · mémoire confidentielle</div>
+        <div className="mt-0.5 text-[11px] text-muted-foreground">Acme · confidential memory</div>
       </div>
     </div>
   );

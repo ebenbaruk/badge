@@ -5,17 +5,19 @@ import { attestationView, auditView, deskIdOf, parseBrief, taskView, type TaskRe
 
 const TASK_ID = `0x${"ab".repeat(32)}` as const;
 const CREATED_AT = 1_791_100_800;
-const RECORD: TaskRecord = { id: TASK_ID, requester: "alice", task: "Brief Orion", trapped: false };
+const RECORD: TaskRecord = { id: TASK_ID, requester: "alice", task: "Orion brief", trapped: false };
 
 const warn = {
   level: "warn" as const,
-  reasons: [{ code: "FULL_CONTEXT_REQUEST", severity: "warn" as const, message: "Tout le contexte de Bob." }],
+  reasons: [
+    { code: "FULL_CONTEXT_REQUEST", severity: "warn" as const, message: "Full context of Bob Durand." },
+  ],
 };
 
 function task(overrides: Partial<Task>): Task {
   return {
     id: TASK_ID,
-    taskLabel: "Brief RDV Orion",
+    taskLabel: "Orion meeting brief",
     status: "ready",
     allowed: [],
     pending: [],
@@ -31,21 +33,21 @@ function task(overrides: Partial<Task>): Task {
 describe("parseBrief", () => {
   it("links [n] citations to the numbered sources and keeps the title", () => {
     const brief = parseBrief(
-      "**Brief : rendez-vous Orion**\n- Client depuis 2021 [1]\n- Remise de 12 % en 2025 [2, 3]\n- Hors sujet [9]",
+      "**Brief: Orion meeting**\n- Client since 2021 [1]\n- 12% discount in 2025 [2, 3]\n- Off topic [9]",
       ["1", "2", "3"],
     );
-    expect(brief.title).toBe("Brief : rendez-vous Orion");
+    expect(brief.title).toBe("Brief: Orion meeting");
     expect(brief.bullets).toEqual([
-      { text: "Client depuis 2021", sourceIds: ["1"] },
-      { text: "Remise de 12 % en 2025", sourceIds: ["2", "3"] },
-      { text: "Hors sujet", sourceIds: [] },
+      { text: "Client since 2021", sourceIds: ["1"] },
+      { text: "12% discount in 2025", sourceIds: ["2", "3"] },
+      { text: "Off topic", sourceIds: [] },
     ]);
   });
 
   it("falls back to a default title and extracts a recommendation", () => {
-    const brief = parseBrief("- Fait [1]\nRecommandation : proposer -15 % [1]", ["1"]);
+    const brief = parseBrief("- Fact [1]\nRecommendation: offer 15% off [1]", ["1"]);
     expect(brief.title).toBe("Brief");
-    expect(brief.recommendation).toBe("proposer -15 %");
+    expect(brief.recommendation).toBe("offer 15% off");
   });
 });
 
@@ -58,7 +60,7 @@ describe("taskView", () => {
           {
             ownerId: "bob",
             ownerName: "Bob Durand",
-            excerptLabel: "Tout le contexte de Bob",
+            excerptLabel: "Full context of Bob Durand",
             excerptLength: 1800,
             consentId: "c1",
             risk: warn,
@@ -68,7 +70,7 @@ describe("taskView", () => {
       { ...RECORD, trapped: true },
     );
     expect(view.pending[0]?.findings).toEqual([
-      { rule: "FULL_CONTEXT_REQUEST", outcome: "warn", message: "Tout le contexte de Bob." },
+      { rule: "FULL_CONTEXT_REQUEST", outcome: "warn", message: "Full context of Bob Durand." },
     ]);
     expect(view.trapped).toBe(true);
     expect(view.steps.map((s) => s.kind)).toEqual(["search", "rule_warn", "waiting_consent"]);
@@ -78,7 +80,13 @@ describe("taskView", () => {
     const view = taskView(
       task({
         refused: [
-          { ownerId: "bob", ownerName: "Bob", excerptLabel: "Tout", excerptLength: 10, reason: "rejected" },
+          {
+            ownerId: "bob",
+            ownerName: "Bob",
+            excerptLabel: "Everything",
+            excerptLength: 10,
+            reason: "rejected",
+          },
         ],
       }),
       RECORD,
@@ -95,13 +103,13 @@ describe("taskView", () => {
           {
             ownerId: "company",
             ownerName: "Acme",
-            excerptLabel: "Fiche Orion",
+            excerptLabel: "Orion client profile",
             excerptLength: 200,
             via: "company",
           },
-          { ownerId: "bob", ownerName: "Bob", excerptLabel: "Conditions", excerptLength: 300, via: "policy" },
+          { ownerId: "bob", ownerName: "Bob", excerptLabel: "Terms", excerptLength: 300, via: "policy" },
         ],
-        brief: "Brief Orion\n- Remise 12 % [2]",
+        brief: "Orion brief\n- 12% discount [2]",
         tokenStats: { selectedTokens: 120, allContextTokens: 1200 },
       }),
       RECORD,
@@ -174,7 +182,7 @@ describe("auditView", () => {
     expect(anonymous.sealed[0]).toMatchObject({
       seq: 2,
       sourceDesk: "research",
-      label: "Vers le desk Origination",
+      label: "To the Origination desk",
     });
     expect(anonymous.sealed[0]?.revealed?.employee).toBeUndefined();
     expect(anonymous.chain).toEqual({ ok: true, length: 3, headHash: "h3" });

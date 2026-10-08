@@ -26,7 +26,7 @@ describe.runIf(enabled)("phala profile", () => {
         { role: "system", content: "Extract the deal terms. Answer in the JSON schema." },
         {
           role: "user",
-          content: "Conditions Orion 2025 : remise 12 % si volume > 40k unites, paiement 60 j.",
+          content: "Orion 2025 terms: 12% discount if volume > 40k units, payment at 60 days.",
         },
       ],
       { name: "deal_terms", maxOutputTokens: 100 },
@@ -38,7 +38,7 @@ describe.runIf(enabled)("phala profile", () => {
     const notes = loadSeedDataset().notes;
     const text = (id: string) => notes.find((n) => n.id === id)?.text ?? "";
     const [task, orion, hr] = await llm.embed([
-      "brief du rendez-vous de demain avec le client Orion",
+      "brief for tomorrow's meeting with client Orion",
       text("bob-orion-conditions-2025"),
       text("chloe-rh-prudhommes"),
     ]);

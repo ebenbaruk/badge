@@ -15,15 +15,15 @@ import { Trust } from "@/components/landing/trust";
 import "@/components/landing/landing.css";
 
 const DESCRIPTION =
-  "Badge : la mémoire d'entreprise pour les agents, dans une enclave attestée. Chaque extrait du contexte d'un collègue n'en sort qu'avec sa signature sur son Ledger.";
+  "Badge: company memory for AI agents, sealed in an attested enclave. No excerpt of a colleague's context leaves without their signature on their Ledger.";
 
 export const metadata: Metadata = {
-  title: { absolute: "Badge · Le Ledger, badge d'entreprise de l'ère des agents" },
+  title: { absolute: "Badge · The Ledger, your company badge for the agent era" },
   description: DESCRIPTION,
   openGraph: {
-    title: "Badge · Votre contexte. Votre accord.",
+    title: "Badge · Your context. Your consent.",
     description: DESCRIPTION,
-    locale: "fr_FR",
+    locale: "en_US",
     type: "website",
   },
 };
@@ -33,11 +33,11 @@ export default function Landing() {
   return (
     <div className="lp">
       <SmoothScroll />
-      <a href="#contenu" className="lp-skip">
-        Aller au contenu
+      <a href="#content" className="lp-skip">
+        Skip to content
       </a>
       <NavPill />
-      <main id="contenu">
+      <main id="content">
         <Hero />
         <Intro />
         <JumpGrid />

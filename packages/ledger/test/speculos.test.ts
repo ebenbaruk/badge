@@ -91,7 +91,7 @@ describe("SpeculosDevice.approveReview", () => {
     const { device, fingers } = fakeSpeculos([
       ["Enable Transaction Check?", "Maybe later"],
       ["Review typed message", "Swipe to review"],
-      ["Contract", "Partager un extrait", "Partager avec", "Alice (Ventes)"],
+      ["Contract", "Share an excerpt", "Share with", "Alice (Sales)"],
       ["Sign typed message?", "Hold to sign"],
       ["Ethereum", "This app enables signing"],
     ]);
@@ -103,7 +103,7 @@ describe("SpeculosDevice.approveReview", () => {
       "Contract",
       "Sign typed message?",
     ]);
-    expect(pages.flatMap((page) => page.texts)).toContain("Alice (Ventes)");
+    expect(pages.flatMap((page) => page.texts)).toContain("Alice (Sales)");
     expect(fingers.at(-2)?.body.action).toBe("press");
     expect(fingers.at(-1)?.body.action).toBe("release");
     for (const call of fingers) {

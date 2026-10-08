@@ -17,7 +17,7 @@ import {
   type LlmClient,
 } from "../../src";
 
-const ORION_TASK = "brief du rendez-vous de demain avec le client Orion";
+const ORION_TASK = "brief for tomorrow's meeting with client Orion";
 const dataset = loadSeedDataset();
 const noteById = (id: string) => {
   const note = dataset.notes.find((n) => n.id === id);
@@ -79,6 +79,6 @@ describe("memory layer on the local stack", () => {
     expect(brief).toMatch(/12\s?%/);
     expect(brief).toMatch(/60/);
     // Facts from notes that were not released must not appear.
-    expect(brief).not.toMatch(/Lef[eè]vre|Julien|prud/i);
+    expect(brief).not.toMatch(/Lef[eè]vre|Julien|labor court|dismissal/i);
   });
 });

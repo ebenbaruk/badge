@@ -38,7 +38,7 @@ export function EmployeeSwitcher({ current }: { current: EmployeeId }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="h-10 gap-2.5 pr-3 pl-1" aria-label="Changer d'employé">
+        <Button variant="ghost" className="h-10 gap-2.5 pr-3 pl-1" aria-label="Switch employee">
           <EmployeeAvatar employee={current} />
           <span className="hidden text-left leading-tight sm:block">
             <span className="block text-[13px] font-semibold tracking-[-0.02em]">{employee.name}</span>
@@ -48,7 +48,7 @@ export function EmployeeSwitcher({ current }: { current: EmployeeId }) {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-64">
-        <DropdownMenuLabel className="mono-label text-muted-foreground">Agir en tant que</DropdownMenuLabel>
+        <DropdownMenuLabel className="mono-label text-muted-foreground">Act as</DropdownMenuLabel>
         <DropdownMenuSeparator />
         {EMPLOYEE_IDS.map((id) => (
           <DropdownMenuItem key={id} onSelect={() => switchTo(id)} className="gap-2.5 py-2">

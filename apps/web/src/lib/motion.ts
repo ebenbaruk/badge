@@ -13,7 +13,7 @@ export interface RevealWord {
 
 /**
  * Splits a heading into words and letters for the staggered reveal. Letters are split by code
- * point (`Array.from`) so accented French characters and emoji are never cut in half.
+ * point (`Array.from`) so accented characters and emoji are never cut in half.
  */
 export function splitForReveal(text: string): RevealWord[] {
   const words: RevealWord[] = [];

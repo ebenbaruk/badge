@@ -21,7 +21,7 @@ import { employeeIdSchema } from "./schemas";
 
 const DESK_SHARE = "desk.share";
 /** Logged with every reveal: the demo has a single reason, a real deployment would ask for a case reference. */
-const REVEAL_REASON = "Controle de conformite";
+const REVEAL_REASON = "Compliance review";
 
 const employeeSchema = z.object({ employee: employeeIdSchema });
 const revealSchema = z.object({ employee: employeeIdSchema, seq: z.number().int().positive() });
@@ -75,7 +75,7 @@ export async function revealDeskShare(input: {
     const { employee, seq } = revealSchema.parse(input);
     const api = enclave();
     const entry = (await api.audit(employee)).entries.find((e) => e.seq === seq && e.type === DESK_SHARE);
-    if (entry === undefined) throw new EnclaveError("NOT_FOUND", `aucun partage anonyme à l'entrée ${seq}`);
+    if (entry === undefined) throw new EnclaveError("NOT_FOUND", `no anonymous share at entry ${seq}`);
     const { secretKey } = await deriveComplianceKey(employee);
     let plaintext: Uint8Array;
     try {
@@ -86,10 +86,10 @@ export async function revealDeskShare(input: {
     const signer = sealedSignerSchema.parse(JSON.parse(new TextDecoder().decode(plaintext)));
     // The sealed identity must name a directory employee with their own Ledger address, for this very request.
     if (!isAddressEqual(signer.address as `0x${string}`, EMPLOYEES[signer.employeeId].address)) {
-      throw new EnclaveError("SIGNATURE_REJECTED", "l'identité scellée ne correspond pas à l'annuaire");
+      throw new EnclaveError("SIGNATURE_REJECTED", "the sealed identity does not match the directory");
     }
     if (signer.requestId.toLowerCase() !== entry.subject.toLowerCase()) {
-      throw new EnclaveError("SIGNATURE_REJECTED", "l'identité scellée vise une autre demande");
+      throw new EnclaveError("SIGNATURE_REJECTED", "the sealed identity targets another request");
     }
     const view = await api.revealNotice(employee, { seq, reason: REVEAL_REASON, signer: signer.employeeId });
     revalidatePath(`/${employee}`, "layout");

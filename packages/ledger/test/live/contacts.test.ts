@@ -1,5 +1,5 @@
 /**
- * Live test of contact names on the device (app-ethereum develop): register "Alice (Ventes)" on chloe's device,
+ * Live test of contact names on the device (app-ethereum develop): register "Alice (Sales)" on chloe's device,
  * then sign a ContextShare whose recipient is displayed through the address book.
  */
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -47,11 +47,11 @@ describe(`contact names on ${URL_UNDER_TEST}`, () => {
   it("registers a contact confirmed on the device", async () => {
     const approver = capturing("Contact-register");
     contact = await signer.registerContact(
-      { contactName: "Alice (Ventes)", address: ALICE_ADDRESS },
+      { contactName: "Alice (Sales)", address: ALICE_ADDRESS },
       { onProgress: approver.onProgress },
     );
     const { spaced } = flatten(await approver.done());
-    expect(spaced).toContain("Alice (Ventes)");
+    expect(spaced).toContain("Alice (Sales)");
     expect(contact.address).toBe(ALICE_ADDRESS);
   });
 
@@ -64,7 +64,7 @@ describe(`contact names on ${URL_UNDER_TEST}`, () => {
       onProgress: approver.onProgress,
     });
     const { spaced } = flatten(await approver.done());
-    expect(spaced).toContain("Destinataire Alice (Ventes)");
+    expect(spaced).toContain("Recipient Alice (Sales)");
   });
 
   it("falls back to the raw address for an unknown recipient", async () => {
@@ -76,7 +76,7 @@ describe(`contact names on ${URL_UNDER_TEST}`, () => {
       onProgress: approver.onProgress,
     });
     const { spaced, compact } = flatten(await approver.done());
-    expect(spaced).toContain("Destinataire");
+    expect(spaced).toContain("Recipient");
     expect(compact).toContain(UNKNOWN_ADDRESS.slice(2));
   });
 });

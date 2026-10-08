@@ -25,7 +25,7 @@ Clé attendue dans `infra/keys/cal-test.pem` (récupérée par `infra/setup.sh`,
 ## Noms de contacts (carnet d'adresses de l'appareil)
 
 Option `contactFields` de `LedgerSigner.connect` (ex. `SUGGESTED_CONTACT_FIELDS`) : le champ adresse
-`ContextShare.recipient` s'affiche « Destinataire : Alice (Ventes) » au lieu de `0x…`, et l'adresse brute si aucun
+`ContextShare.recipient` s'affiche « Recipient: Alice (Sales) » au lieu de `0x…`, et l'adresse brute si aucun
 contact ne correspond. Le nom est certifié par l'appareil (HMAC), pas par l'hôte :
 
 1. `registerContact({ contactName, address })` : le propriétaire confirme le contact sur l'appareil ; l'hôte

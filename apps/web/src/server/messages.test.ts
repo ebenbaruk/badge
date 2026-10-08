@@ -16,14 +16,14 @@ const NOW = 1_791_100_800n;
 
 describe("device messages", () => {
   it("names people in device ASCII", () => {
-    expect(deviceName(EMPLOYEES.chloe)).toBe("Chloe Bernard (Juridique & conformite)");
+    expect(deviceName(EMPLOYEES.chloe)).toBe("Chloe Bernard (Legal & Compliance)");
   });
 
   it("truncates labels to the device limit and keeps them canonical", () => {
-    const label = deviceLabel(`Réunion Orion ${"très ".repeat(20)}longue`);
+    const label = deviceLabel(`Orion meeting with Chloé ${"very ".repeat(20)}long`);
     expect(label.length).toBeLessThanOrEqual(MAX_DEVICE_LABEL_LENGTH);
     expect(isDeviceAscii(label)).toBe(true);
-    expect(deviceLabel("   ")).toBe("extrait");
+    expect(deviceLabel("   ")).toBe("excerpt");
   });
 
   it("builds messages that survive the strict wire format", () => {
@@ -35,9 +35,9 @@ describe("device messages", () => {
     const policy = buildContextPolicy(
       EMPLOYEES.bob,
       {
-        granteeTeam: "Juridique & conformité",
+        granteeTeam: "Legal & Compliance",
         contextTag: "orion",
-        purpose: "revue des contrats",
+        purpose: "contract review",
         maxExcerptLength: 500,
         durationDays: 30,
       },
@@ -45,7 +45,7 @@ describe("device messages", () => {
       NOW,
       2n,
     );
-    expect(policy.granteeTeam).toBe("Juridique & conformite");
+    expect(policy.granteeTeam).toBe("Legal & Compliance");
     expect(decodeBadgeMessage("ContextPolicy", encodeBadgeMessage("ContextPolicy", policy))).toEqual(policy);
   });
 
@@ -56,7 +56,7 @@ describe("device messages", () => {
       new Date(Number(NOW) * 1000),
     );
     expect(message.expiresAt - NOW).toBe(AGENT_SESSION_TTL_SECONDS);
-    expect(message.agentName).toBe("Agent Badge de Alice");
+    expect(message.agentName).toBe("Alice's Badge agent");
     expect(message.sessionKey).toBe(sessionKey.address);
     expect(message.employee).toBe(EMPLOYEES.alice.address);
   });

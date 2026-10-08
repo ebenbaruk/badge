@@ -1,5 +1,5 @@
 /**
- * The canonical text a ContextRevoke shows on the device ("Revoquer: ..."). grantId and recipient are signed but
+ * The canonical text a ContextRevoke shows on the device ("Revoke: ..."). grantId and recipient are signed but
  * not displayed, so the label is the only thing the owner reads: the enclave prepares it from the real target and
  * refuses any other label, which binds what the owner reads to what actually gets revoked.
  */
@@ -10,7 +10,7 @@ export const MAX_REVOKE_LABEL_LENGTH = 200;
 
 /** What a revocation targets, described with the names the owner knows. */
 export type RevocationTarget =
-  /** One one-off share: its recipient (as signed in the ContextShare, e.g. "Alice Martin (Ventes)") and excerpt. */
+  /** One one-off share: its recipient (as signed in the ContextShare, e.g. "Alice Martin (Sales)") and excerpt. */
   | { kind: "grant"; recipientName: string; excerptLabel: string }
   /** One standing agreement (granted to a team, for one context tag). */
   | { kind: "policy"; granteeTeam: string; contextTag: string }
@@ -28,10 +28,10 @@ export function revocationTargetLabel(target: RevocationTarget): string {
       label = `${target.recipientName} - ${target.excerptLabel}`;
       break;
     case "policy":
-      label = `Accord equipe ${target.granteeTeam} - ${target.contextTag}`;
+      label = `${target.granteeTeam} team agreement - ${target.contextTag}`;
       break;
     case "recipient":
-      label = `Tout ce que j'ai partage avec ${target.recipientName} + accords equipe ${target.recipientTeam}`;
+      label = `Everything I shared with ${target.recipientName} + ${target.recipientTeam} team agreements`;
       break;
   }
   return toDeviceAscii(toDeviceAscii(label).slice(0, MAX_REVOKE_LABEL_LENGTH));

@@ -21,20 +21,19 @@ export const SESSION: SessionSummary = {
   expiresAt: EXPIRES_AT,
 };
 
-export const BRIEF =
-  "Durand SA renouvelle son contrat capteurs en novembre ; Bob conseille de parler du delai.";
+export const BRIEF = "Durand SA renews its sensor contract in November; Bob advises raising the lead time.";
 
 /** Alice's task waiting for Bob's Ledger. */
 export function waitingTask(): Task {
   return {
     id: TASK_ID,
-    taskLabel: "Brief Durand",
+    taskLabel: "Durand brief",
     status: "waiting_consent",
     allowed: [
       {
         ownerId: "company",
         ownerName: "Acme",
-        excerptLabel: "Catalogue capteurs 2026",
+        excerptLabel: "Sensor catalog 2026",
         excerptLength: 900,
         via: "company",
       },
@@ -44,7 +43,7 @@ export function waitingTask(): Task {
         consentId: "consent-1",
         ownerId: "bob",
         ownerName: "Bob Durand",
-        excerptLabel: "Contexte personnel de Bob Durand",
+        excerptLabel: "Personal context of Bob Durand",
         excerptLength: 420,
         risk: { level: "ok", reasons: [] },
       },
@@ -66,14 +65,14 @@ export function readyTask(): Task {
       {
         ownerId: "company",
         ownerName: "Acme",
-        excerptLabel: "Catalogue capteurs 2026",
+        excerptLabel: "Sensor catalog 2026",
         excerptLength: 900,
         via: "company",
       },
       {
         ownerId: "bob",
         ownerName: "Bob Durand",
-        excerptLabel: "Notes rendez-vous Durand",
+        excerptLabel: "Durand meeting notes",
         excerptLength: 420,
         via: "consent",
       },
@@ -90,18 +89,18 @@ export function contextShareConsent(): ConsentRequest {
     id: "consent-2",
     status: "pending",
     taskId: TASK_ID,
-    requester: { id: "alice", name: "Alice Martin", team: "Ventes" },
+    requester: { id: "alice", name: "Alice Martin", team: "Sales" },
     excerpt: {
-      label: "Notes rendez-vous Durand",
+      label: "Durand meeting notes",
       length: 420,
-      text: "Durand SA renouvelle en novembre.",
+      text: "Durand SA renews in November.",
       tags: ["clients"],
     },
     message: {
-      recipientName: "Alice Martin (Ventes)",
-      excerptLabel: "Notes rendez-vous Durand",
+      recipientName: "Alice Martin (Sales)",
+      excerptLabel: "Durand meeting notes",
       excerptLength: 420,
-      taskLabel: "Brief Durand",
+      taskLabel: "Durand brief",
       expiresAt: EXPIRES_AT,
       excerptHash: `0x${"cd".repeat(32)}`,
       enclaveMeasurement: MEASUREMENT,
@@ -116,7 +115,7 @@ export function contextShareConsent(): ConsentRequest {
         {
           code: "OWNER_SHARE_HIGH",
           severity: "warn",
-          message: "la tache demande presque tout votre contexte",
+          message: "the task asks for almost all of your context",
         },
       ],
     },
@@ -131,13 +130,13 @@ export function deskShareConsent(): ConsentRequest {
     status: "pending",
     recipientDesk: "Origination",
     sourceDesk: "Research",
-    ruleLabel: "Regle 4 - marche capteurs",
-    excerpt: { label: "Prix composants T4", length: 300, text: "Prix composants en hausse au T4." },
+    ruleLabel: "Rule 4 - sensor market",
+    excerpt: { label: "Q4 component prices", length: 300, text: "Component prices rising in Q4." },
     message: {
       recipientDesk: "Origination",
-      excerptLabel: "Prix composants T4",
+      excerptLabel: "Q4 component prices",
       excerptLength: 300,
-      ruleLabel: "Regle 4 - marche capteurs",
+      ruleLabel: "Rule 4 - sensor market",
       expiresAt: EXPIRES_AT,
       excerptHash: `0x${"ef".repeat(32)}`,
       enclaveMeasurement: MEASUREMENT,

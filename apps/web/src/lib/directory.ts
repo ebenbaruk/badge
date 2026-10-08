@@ -34,7 +34,7 @@ export const EMPLOYEES: Readonly<Record<EmployeeId, Employee>> = {
     id: "alice",
     name: "Alice Martin",
     firstName: "Alice",
-    team: "Ventes",
+    team: "Sales",
     role: "employee",
     address: "0x9858EfFD232B4033E47d90003D41EC34EcaEda94",
     desks: ["origination"],
@@ -44,7 +44,7 @@ export const EMPLOYEES: Readonly<Record<EmployeeId, Employee>> = {
     id: "bob",
     name: "Bob Durand",
     firstName: "Bob",
-    team: "Grands comptes",
+    team: "Key Accounts",
     role: "employee",
     address: "0x58A57ed9d8d624cBD12e2C467D34787555bB1b25",
     desks: ["research"],
@@ -54,7 +54,7 @@ export const EMPLOYEES: Readonly<Record<EmployeeId, Employee>> = {
     id: "chloe",
     name: "Chloé Bernard",
     firstName: "Chloé",
-    team: "Juridique & conformité",
+    team: "Legal & Compliance",
     role: "compliance",
     address: "0x3061750d3dF69ef7B8d4407CB7f3F879Fd9d2398",
     desks: [],
@@ -68,7 +68,7 @@ export const DESK_NAMES: Readonly<Record<DeskId, string>> = {
 };
 
 /** Teams that can be granted a standing agreement, in display form. */
-export const TEAMS = ["Ventes", "Grands comptes", "Juridique & conformité"] as const;
+export const TEAMS = ["Sales", "Key Accounts", "Legal & Compliance"] as const;
 
 /** Whose whole context each employee's compromised agent asks for in the demo (always a colleague). */
 export const COMPROMISED_AGENT_TARGET: Readonly<Record<EmployeeId, EmployeeId>> = {

@@ -6,7 +6,6 @@ import { TaskThread } from "@/components/agent/task-thread";
 import { EnclaveUnavailable } from "@/components/enclave-unavailable";
 import { EmptyState, PageHeader } from "@/components/page-header";
 import { COMPROMISED_AGENT_TARGET, EMPLOYEES } from "@/lib/directory";
-import { ofName } from "@/lib/format";
 import { enclave } from "@/server/enclave";
 import { employeeFromParams, load } from "@/server/load";
 
@@ -19,9 +18,9 @@ export default async function AgentPage({ params }: { params: Promise<{ employee
     <div className="mx-auto max-w-5xl">
       <WorkspaceIntro firstName={employee.firstName} />
       <PageHeader
-        title={`Agent ${ofName(employee.firstName)}`}
-        eyebrow="Agent · mémoire confidentielle"
-        description="Votre agent interroge la mémoire confidentielle de l'enclave. Le contexte global et le vôtre sont utilisables d'office ; celui d'un collègue ne sort qu'avec son accord, signé sur son Ledger."
+        title={`${employee.firstName}'s agent`}
+        eyebrow="Agent · confidential memory"
+        description="Your agent queries the confidential memory inside the enclave. Company context and your own are available right away; a colleague's context only comes out with their consent, signed on their Ledger."
       />
       <AgentComposer
         employee={employee.id}
@@ -31,8 +30,8 @@ export default async function AgentPage({ params }: { params: Promise<{ employee
         {!tasks.ok ? (
           <EnclaveUnavailable failure={tasks} employee={employee.id} />
         ) : tasks.data.length === 0 ? (
-          <EmptyState icon={<MessageSquareDashed />} title="Aucune tâche pour l'instant">
-            Essayez « Prépare-moi le brief du rendez-vous de demain avec le client Orion ».
+          <EmptyState icon={<MessageSquareDashed />} title="No tasks yet">
+            Try &quot;Prepare the brief for tomorrow&apos;s meeting with client Orion&quot;.
           </EmptyState>
         ) : (
           tasks.data.map((task) => <TaskThread key={task.id} task={task} requester={employee.id} />)

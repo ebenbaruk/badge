@@ -8,7 +8,7 @@ export const employeeIdSchema = z.enum(EMPLOYEE_IDS);
 export const deskIdSchema = z.enum(DESK_IDS);
 export const bytes32Schema = z
   .string()
-  .regex(/^0x[0-9a-fA-F]{64}$/, { error: "identifiant 32 octets attendu" })
+  .regex(/^0x[0-9a-fA-F]{64}$/, { error: "expected a 32-byte identifier" })
   .transform((value) => value as `0x${string}`);
 
 /** Free-text task typed by the employee; bounded so a paste cannot flood the enclave. */

@@ -56,8 +56,8 @@ export class MockEnclave implements EnclaveApi {
       tcbStatus: "Simulated",
       appId: keccak256(toHex("badge/mock-app")).slice(0, 2 + APP_ID_BYTES * 2),
       warnings: [
-        "Enclave simulée (mode démo) : aucune garantie matérielle.",
-        "Les signatures Ledger et les preuves ZK sont réelles et vérifiées.",
+        "Simulated enclave (demo mode): no hardware guarantee.",
+        "Ledger signatures and ZK proofs are real and verified.",
       ],
       checkedAt: this.startedAt.toISOString(),
     };
@@ -183,7 +183,7 @@ export class MockEnclave implements EnclaveApi {
       signature: input.signature,
     });
     if (!isAddressEqual(recovered, EMPLOYEES[viewer].address)) {
-      throw new EnclaveError("SIGNATURE_REJECTED", "clé de conformité signée par un autre appareil");
+      throw new EnclaveError("SIGNATURE_REJECTED", "compliance key signed by another device");
     }
     this.state.complianceKey = { publicKey: input.publicKey, registeredAt: new Date() };
     this.state.audit.append({
@@ -209,8 +209,7 @@ export class MockEnclave implements EnclaveApi {
   async revealNotice(viewer: EmployeeId, input: RevealNoticeInput): Promise<SealedIdentityView> {
     this.assertCompliance(viewer);
     const record = this.state.sealed.get(input.seq);
-    if (record === undefined)
-      throw new EnclaveError("NOT_FOUND", `aucune identité scellée à l'entrée ${input.seq}`);
+    if (record === undefined) throw new EnclaveError("NOT_FOUND", `no sealed identity at entry ${input.seq}`);
     record.revealedAt ??= new Date();
     this.state.audit.append({
       type: "compliance.reveal",
@@ -223,7 +222,7 @@ export class MockEnclave implements EnclaveApi {
 
   private assertCompliance(viewer: EmployeeId): void {
     if (EMPLOYEES[viewer].role !== "compliance") {
-      throw new EnclaveError("FORBIDDEN", "réservé au rôle conformité");
+      throw new EnclaveError("FORBIDDEN", "restricted to the compliance role");
     }
   }
 }

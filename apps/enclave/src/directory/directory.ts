@@ -46,7 +46,7 @@ export const DirectorySeedSchema = z.object({
     .array(
       z.object({
         id: z.string().regex(/^[a-z0-9-]{1,64}$/),
-        /** Shown on the owner's Ledger in the DeskShare message ("Regle"). */
+        /** Shown on the owner's Ledger in the DeskShare message ("Rule"). */
         label: deviceAsciiString.max(60),
         sourceDesk: OwnerIdSchema,
         recipientDesk: OwnerIdSchema,
@@ -197,7 +197,7 @@ export class Directory {
     return new Set(this.employees().map((e) => e.team));
   }
 
-  /** How the employee appears on a Ledger screen: "Alice Martin (Ventes)", device ASCII. */
+  /** How the employee appears on a Ledger screen: "Alice Martin (Sales)", device ASCII. */
   displayName(employee: Employee): string {
     return toDeviceAscii(`${employee.name} (${employee.team})`);
   }

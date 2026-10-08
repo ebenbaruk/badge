@@ -44,7 +44,7 @@ export const RISK_REASON_CODES = [
 ] as const;
 export type RiskReasonCode = (typeof RISK_REASON_CODES)[number];
 
-/** A reason shown to the owner (French, for the web app; the device only shows the signed fields). */
+/** A reason shown to the owner (English, for the web app; the device only shows the signed fields). */
 export interface RiskReason {
   readonly code: RiskReasonCode;
   readonly severity: "warn" | "block";
@@ -86,13 +86,13 @@ export function evaluateExtraction(
     add(
       "EXCERPT_OVER_CAP",
       "block",
-      `Extrait de ${input.excerptLength} caractères, au-delà du plafond de ${thresholds.excerptBlockChars}.`,
+      `Excerpt of ${input.excerptLength} characters, over the ${thresholds.excerptBlockChars}-character cap.`,
     );
   } else if (input.excerptLength > thresholds.excerptWarnChars) {
     add(
       "EXCERPT_LONG",
       "warn",
-      `Extrait inhabituellement long (${input.excerptLength} caractères, seuil ${thresholds.excerptWarnChars}).`,
+      `Unusually long excerpt (${input.excerptLength} characters, threshold ${thresholds.excerptWarnChars}).`,
     );
   }
 
@@ -102,7 +102,7 @@ export function evaluateExtraction(
     add(
       "OWNER_SHARE_HIGH",
       "warn",
-      `La tâche demande ${Math.min(PERCENT, Math.round(share * PERCENT))} % de votre contexte personnel.`,
+      `The task asks for ${Math.min(PERCENT, Math.round(share * PERCENT))}% of your personal context.`,
     );
   }
 
@@ -110,13 +110,13 @@ export function evaluateExtraction(
     add(
       "TOO_MANY_OWNERS",
       "block",
-      `La tâche vise le contexte de ${input.distinctOwnersInTask} personnes (plafond ${thresholds.distinctOwnersBlock}).`,
+      `The task targets the context of ${input.distinctOwnersInTask} people (cap ${thresholds.distinctOwnersBlock}).`,
     );
   } else if (input.distinctOwnersInTask >= thresholds.distinctOwnersWarn) {
     add(
       "MANY_OWNERS",
       "warn",
-      `La tâche vise le contexte de ${input.distinctOwnersInTask} personnes à la fois.`,
+      `The task targets the context of ${input.distinctOwnersInTask} people at once.`,
     );
   }
 
@@ -124,13 +124,13 @@ export function evaluateExtraction(
     add(
       "OWNER_RATE_OVER_CAP",
       "block",
-      `${input.ownerRequestsLastHour} demandes sur votre contexte depuis une heure (plafond ${thresholds.ownerRequestsPerHourBlock}).`,
+      `${input.ownerRequestsLastHour} requests on your context in the last hour (cap ${thresholds.ownerRequestsPerHourBlock}).`,
     );
   } else if (input.ownerRequestsLastHour >= thresholds.ownerRequestsPerHourWarn) {
     add(
       "OWNER_RATE_HIGH",
       "warn",
-      `${input.ownerRequestsLastHour} demandes sur votre contexte depuis une heure.`,
+      `${input.ownerRequestsLastHour} requests on your context in the last hour.`,
     );
   }
 
@@ -138,7 +138,7 @@ export function evaluateExtraction(
     add(
       "FULL_CONTEXT_REQUEST",
       "warn",
-      "L'agent demande l'intégralité de votre contexte, pas un extrait ciblé.",
+      "The agent is asking for your entire context, not a targeted excerpt.",
     );
   }
 

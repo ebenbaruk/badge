@@ -5,7 +5,7 @@ import { HonchoMemory } from "./honcho-memory";
 import { normalizeNote } from "./types";
 
 /** Toy embedding: one dimension per topic word, so similarity is predictable. */
-const TOPICS = ["orion", "remise", "rh", "salon"];
+const TOPICS = ["orion", "discount", "hr", "trade show"];
 const embedText = (text: string) => {
   const lower = text.toLowerCase();
   return TOPICS.map((word) => (lower.includes(word) ? 1 : 0.01));
@@ -21,7 +21,7 @@ function setup() {
 describe("HonchoMemory.ingest", () => {
   it("stores a note once and reports re-ingestion as not created", async () => {
     const { backend, memory } = setup();
-    const note = { ownerId: "bob", text: "Conditions Orion : remise 12 %", tags: ["orion"] };
+    const note = { ownerId: "bob", text: "Orion terms: 12% discount", tags: ["orion"] };
     await expect(memory.ingest(note)).resolves.toMatchObject({ created: true });
     await expect(memory.ingest(note)).resolves.toMatchObject({ created: false });
     expect(backend.notes).toHaveLength(1);
@@ -47,20 +47,20 @@ describe("HonchoMemory.findCandidates", () => {
     await ctx.memory.ingest({
       id: "orion-conditions",
       ownerId: "bob",
-      text: "Orion : remise 12 % au-dela de 40k",
+      text: "Orion: 12% discount above 40k",
     });
     await ctx.memory.ingest({
       id: "orion-client",
       ownerId: "company",
-      text: "Orion est un client grand compte",
+      text: "Orion is a key account client",
     });
-    await ctx.memory.ingest({ id: "rh", ownerId: "chloe", text: "Dossier RH confidentiel" });
-    await ctx.memory.ingest({ id: "salon", ownerId: "company", text: "Salon en mars" });
+    await ctx.memory.ingest({ id: "rh", ownerId: "chloe", text: "Confidential HR file" });
+    await ctx.memory.ingest({ id: "salon", ownerId: "company", text: "Trade show in March" });
     ctx.backend.conclusions.push({
       ownerId: "bob",
       kind: "conclusion",
       id: "c1",
-      text: "Selon bob, Orion obtient une remise",
+      text: "According to bob, Orion gets a discount",
       tags: [],
     });
     return ctx;
@@ -68,7 +68,7 @@ describe("HonchoMemory.findCandidates", () => {
 
   it("merges every owner's context, ranks it and drops unrelated excerpts", async () => {
     const { memory, llm } = await seeded();
-    const candidates = await memory.findCandidates("brief Orion remise", {
+    const candidates = await memory.findCandidates("brief Orion discount", {
       requesterId: "alice",
       minScore: 0.5,
     });
@@ -80,9 +80,9 @@ describe("HonchoMemory.findCandidates", () => {
 
   it("searches notes only by default and conclusions on request", async () => {
     const { memory } = await seeded();
-    const notesOnly = await memory.findCandidates("Orion remise", { requesterId: "alice", minScore: 0 });
+    const notesOnly = await memory.findCandidates("Orion discount", { requesterId: "alice", minScore: 0 });
     expect(notesOnly.every((c) => c.source.kind === "note")).toBe(true);
-    const both = await memory.findCandidates("Orion remise", {
+    const both = await memory.findCandidates("Orion discount", {
       requesterId: "alice",
       minScore: 0,
       sourceKinds: ["note", "conclusion"],

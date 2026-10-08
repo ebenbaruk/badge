@@ -12,48 +12,42 @@ export const MIN_CANDIDATE_SCORE = 2;
 const TAG_WEIGHT = 2;
 const MIN_TOKEN_LENGTH = 3;
 /** Tags of personal data the classifier never forwards to someone else's task. */
-export const SENSITIVE_TAGS: ReadonlySet<string> = new Set(["perso", "rh", "confidentiel"]);
+export const SENSITIVE_TAGS: ReadonlySet<string> = new Set(["personal", "hr", "confidential"]);
 
+/** Function words and task verbs that say nothing about which note is relevant. */
 const STOPWORDS: ReadonlySet<string> = new Set([
-  "les",
-  "des",
-  "une",
-  "pour",
-  "avec",
-  "dans",
-  "sur",
-  "par",
-  "est",
-  "sont",
-  "qui",
-  "que",
-  "moi",
-  "mon",
-  "mes",
-  "ton",
-  "vous",
-  "nous",
-  "leur",
-  "aux",
-  "du",
-  "de",
-  "la",
-  "le",
-  "et",
-  "ou",
-  "au",
-  "en",
-  "ce",
-  "cette",
+  "the",
+  "and",
+  "for",
+  "with",
+  "from",
+  "into",
+  "about",
+  "this",
+  "that",
+  "these",
+  "those",
+  "are",
+  "was",
+  "were",
+  "our",
+  "your",
+  "you",
+  "its",
+  "their",
+  "they",
+  "who",
+  "what",
+  "which",
   "prepare",
-  "preparer",
-  "fais",
-  "faire",
+  "make",
+  "give",
+  "write",
+  "draft",
   "brief",
-  "donne",
 ]);
 
-/** Lower-case, accent-free word stems (crude French plural folding) of length >= 3, without stopwords. */
+/** Lower-case, accent-free word stems (crude plural folding) of length >= 3, without stopwords. */
 export function tokenize(text: string): Set<string> {
   const words = text
     .normalize("NFKD")

@@ -4,27 +4,27 @@ import type { AllowedBy } from "@/server/enclave/types";
 
 const PROVENANCE: Record<AllowedBy, { label: string; className: string; Icon: typeof Building2 }> = {
   global: {
-    label: "Contexte global",
+    label: "Company context",
     className: "border-border bg-muted/60 text-muted-foreground",
     Icon: Building2,
   },
   own: {
-    label: "Mon contexte",
+    label: "My context",
     className: "border-periwinkle/60 bg-periwinkle/20 text-brand-deep dark:text-periwinkle",
     Icon: User,
   },
   consent: {
-    label: "Accord signé sur Ledger",
+    label: "Consent signed on Ledger",
     className: "border-success/30 bg-success/10 text-success",
     Icon: PenLine,
   },
   grant: {
-    label: "Accord réutilisé",
+    label: "Consent reused",
     className: "border-success/30 bg-success/10 text-success",
     Icon: Repeat,
   },
   policy: {
-    label: "Accord permanent",
+    label: "Standing agreement",
     className: "border-brand/30 bg-brand/10 text-brand",
     Icon: FileSignature,
   },

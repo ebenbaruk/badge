@@ -114,7 +114,7 @@ export class FakeLlm implements LlmClient {
   async structuredCompletion<T>(schema: z.ZodType<T>, messages: readonly ChatMessage[]): Promise<T> {
     const user = messages.find((m) => m.role === "user")?.content ?? "";
     const screen = !user.includes("<task>");
-    const confidential = user.includes("Confidentiel RH") || (screen && (this.screenFlags?.(user) ?? false));
+    const confidential = user.includes("Confidential HR") || (screen && (this.screenFlags?.(user) ?? false));
     return schema.parse({
       relevant: !confidential,
       relevance: confidential ? 0.1 : 0.8,

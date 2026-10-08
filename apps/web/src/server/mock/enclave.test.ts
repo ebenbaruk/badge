@@ -37,8 +37,8 @@ const ACCOUNTS = Object.fromEntries(
   Object.entries(TEST_MNEMONICS).map(([id, mnemonic]) => [id, mnemonicToAccount(mnemonic)]),
 ) as Record<EmployeeId, HDAccount>;
 const ORION_TASK = {
-  task: "Prépare-moi le brief du rendez-vous de demain avec le client Orion",
-  taskLabel: "brief Orion",
+  task: "Prepare the brief for tomorrow's meeting with client Orion",
+  taskLabel: "Orion brief",
 };
 const ZK_ARTIFACTS = fileURLToPath(
   new URL("../../../../../infra/zk-artifacts/semaphore-16.zkey", import.meta.url),
@@ -98,7 +98,7 @@ describe("mock enclave demo scenario", () => {
     if (request === undefined) throw new Error("expected a consent request for Bob");
     expect(request.findings).toEqual([]);
     const message = decodeBadgeMessage("ContextShare", request.message);
-    expect(message.recipientName).toBe("Alice Martin (Ventes)");
+    expect(message.recipientName).toBe("Alice Martin (Sales)");
 
     // A signature by someone else than the owner is refused.
     const forged = await sign("alice", "ContextShare", message);
@@ -122,7 +122,7 @@ describe("mock enclave demo scenario", () => {
     const [grant] = await enclave.listGrants("bob");
     if (grant === undefined) throw new Error("expected a grant");
     const revoke = await enclave.prepareRevocation("bob", { grantId: grant.id });
-    expect(revoke.targetLabel).toMatch(/^Alice Martin \(Ventes\) - /);
+    expect(revoke.targetLabel).toMatch(/^Alice Martin \(Sales\) - /);
     expect(await enclave.revoke("bob", await sign("bob", "ContextRevoke", revoke))).toEqual({ revoked: 1 });
     expect((await enclave.createTask("alice", ORION_TASK)).status).toBe("waiting_consent");
   });
@@ -161,9 +161,9 @@ describe("mock enclave demo scenario", () => {
     const policy = buildContextPolicy(
       EMPLOYEES.bob,
       {
-        granteeTeam: "Ventes",
-        contextTag: "conditions",
-        purpose: "briefs clients",
+        granteeTeam: "Sales",
+        contextTag: "terms",
+        purpose: "client briefs",
         maxExcerptLength: 800,
         durationDays: 30,
       },
@@ -172,7 +172,7 @@ describe("mock enclave demo scenario", () => {
     );
     await enclave.createPolicy("bob", await sign("bob", "ContextPolicy", policy));
     const task = await enclave.createTask("alice", ORION_TASK);
-    expect(task.allowed.find((s) => s.allowedBy === "policy")?.label).toBe("Conditions Orion 2025");
+    expect(task.allowed.find((s) => s.allowedBy === "policy")?.label).toBe("Orion 2025 terms");
     expect((await enclave.listPolicies("bob"))[0]?.uses).toBe(1);
   });
 
@@ -201,7 +201,7 @@ describe("mock enclave demo scenario", () => {
       await enclave.createDeskRequest("alice", {
         fromDesk: "origination",
         toDesk: "research",
-        task: "tendances du marché des capteurs industriels et prix des composants",
+        task: "Industrial sensor market trends and component prices",
       });
       const [request] = (await enclave.listDeskRequests("bob")).incoming;
       if (request === undefined) throw new Error("expected a desk request for Bob");

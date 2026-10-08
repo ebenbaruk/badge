@@ -33,7 +33,7 @@ async function orionTask(h: Harness) {
 
 function policy(h: Harness, overrides: Partial<ContextPolicy> = {}): ContextPolicy {
   return {
-    granteeTeam: "Ventes",
+    granteeTeam: "Sales",
     contextTag: "orion",
     purpose: "Briefs clients",
     maxExcerptLength: 500,
@@ -76,7 +76,7 @@ describe("enrollment and sessions", () => {
       body: await signedWire(ledgers.alice, "EmployeeEnroll", {
         company: "Acme",
         employeeName: "Bob Durand",
-        team: "Grands comptes",
+        team: "Key Accounts",
         enclaveMeasurement: MEASUREMENT,
         employee: ledgers.bob.address,
         issuedAt: nowSec(h),
@@ -93,7 +93,7 @@ describe("enrollment and sessions", () => {
         body: await signedWire(ledgers.alice, "EmployeeEnroll", {
           company: "Acme",
           employeeName,
-          team: "Ventes",
+          team: "Sales",
           enclaveMeasurement: MEASUREMENT,
           employee: ledgers.alice.address,
           issuedAt,
@@ -108,7 +108,7 @@ describe("enrollment and sessions", () => {
     const body = await signedWire(ledgers.alice, "EmployeeEnroll", {
       company: "Acme",
       employeeName: "Alice Martin",
-      team: "Ventes",
+      team: "Sales",
       enclaveMeasurement: MEASUREMENT,
       employee: ledgers.alice.address,
       issuedAt: nowSec(h),
@@ -218,7 +218,7 @@ describe("one-off consents", () => {
     expect(message).toMatchObject({
       grantId,
       recipient: ledgers.alice.address,
-      targetLabel: `Alice Martin (Ventes) - ${share.message.excerptLabel}`,
+      targetLabel: `Alice Martin (Sales) - ${share.message.excerptLabel}`,
     });
     const foreign = await call(h, "POST", "/v1/revocations", {
       as: "alice",
@@ -255,8 +255,8 @@ describe("one-off consents", () => {
     expect(view.refused.some((e: { reason: string }) => e.reason === "revoked")).toBe(true);
     // The first draft (with Bob's notes) was dropped; the brief returned comes from a second one without them.
     expect(h.llm.briefInputs.length).toBe(drafts + 2);
-    expect(h.llm.briefInputs.at(-2)).toContain("remise 12 %");
-    expect(h.llm.briefInputs.at(-1)).not.toContain("remise 12 %");
+    expect(h.llm.briefInputs.at(-2)).toContain("12% discount");
+    expect(h.llm.briefInputs.at(-1)).not.toContain("12% discount");
   });
 
   it("binds the label the owner reads on the device to what is actually revoked", async () => {
@@ -272,7 +272,7 @@ describe("one-off consents", () => {
     expect(all).toMatchObject({
       grantId: zeroHash,
       recipient: ledgers.alice.address,
-      targetLabel: "Tout ce que j'ai partage avec Alice Martin + accords equipe Ventes",
+      targetLabel: "Everything I shared with Alice Martin + Sales team agreements",
     });
     const one = await preparedRevoke(h, "bob", { grantId });
     const forged: Array<[string, ContextRevoke]> = [
@@ -338,8 +338,8 @@ describe("standing policies", () => {
   });
 
   it("does not cover another team, another tag, or longer excerpts", async () => {
-    await postPolicy(h, policy(h, { granteeTeam: toDeviceAscii("Juridique & conformité") }));
-    await postPolicy(h, policy(h, { contextTag: "perso" }));
+    await postPolicy(h, policy(h, { granteeTeam: toDeviceAscii("Legal & Compliance") }));
+    await postPolicy(h, policy(h, { contextTag: "personal" }));
     await postPolicy(h, policy(h, { maxExcerptLength: 100 }));
     expect(await policyBases()).toBe(0);
   });
@@ -349,7 +349,7 @@ describe("standing policies", () => {
     expect(await policyBases()).toBe(3);
     // The task-based classification said "no personal data" (as an injected task could make it say); the
     // requester-independent screen of the excerpt alone flags one note: it goes to Bob's Ledger instead.
-    h.llm.screenFlags = (prompt) => prompt.includes("remise 12 %");
+    h.llm.screenFlags = (prompt) => prompt.includes("12% discount");
     const task = await orionTask(h);
     expect(task.allowed.filter((e: { via: string }) => e.via === "policy")).toHaveLength(2);
     expect(task.pending.filter((e: { ownerId: string }) => e.ownerId === "bob")).toHaveLength(1);
@@ -365,7 +365,7 @@ describe("standing policies", () => {
     const second = (await postPolicy(h, policy(h))).json;
     expect(await policyBases()).toBe(3);
     const message = await preparedRevoke(h, "bob", { grantId: second.id });
-    expect(message).toMatchObject({ targetLabel: "Accord equipe Ventes - orion", recipient: zeroAddress });
+    expect(message).toMatchObject({ targetLabel: "Sales team agreement - orion", recipient: zeroAddress });
     const revoke = await call(h, "POST", "/v1/revocations", {
       as: "bob",
       body: await signedWire(ledgers.bob, "ContextRevoke", message),

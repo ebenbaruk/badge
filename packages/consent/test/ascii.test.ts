@@ -41,7 +41,7 @@ describe("toDeviceAscii", () => {
 
 describe("assertDeviceAscii", () => {
   it("accepts canonical ASCII", () => {
-    expect(() => assertDeviceAscii("Partager avec")).not.toThrow();
+    expect(() => assertDeviceAscii("Share with")).not.toThrow();
   });
 
   it.each(["Équipe", " lead", "trail ", "double  space", "tab\there"])("rejects %j", (value) => {

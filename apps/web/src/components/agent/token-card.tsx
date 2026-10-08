@@ -12,19 +12,19 @@ export function TokenCard({ stats }: { stats: TokenStats }) {
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-2 mono-label text-[10px] text-muted-foreground">
           <Gauge className="size-3.5" />
-          Contexte injecté dans le modèle
+          Context injected into the model
         </div>
         <div className="text-right">
           <span className="font-heading text-[34px] leading-none font-medium tracking-display text-success tabular-nums">
-            {saved} %
+            {saved}%
           </span>
-          <span className="mt-1 block text-xs text-muted-foreground">économisés</span>
+          <span className="mt-1 block text-xs text-muted-foreground">saved</span>
         </div>
       </div>
       <div className="mt-4 space-y-3">
         <div>
           <div className="mb-1 flex justify-between text-[11px]">
-            <span>Contexte sélectionné par Badge</span>
+            <span>Context selected by Badge</span>
             <span className="font-mono tabular-nums">{formatNumber(stats.selectedTokens)} tokens</span>
           </div>
           <div className="h-2 overflow-hidden rounded-pill bg-card">
@@ -36,7 +36,7 @@ export function TokenCard({ stats }: { stats: TokenStats }) {
         </div>
         <div>
           <div className="mb-1 flex justify-between text-[11px] text-muted-foreground">
-            <span>Tout injecter (global + tous les contextes personnels)</span>
+            <span>Inject everything (company + every personal context)</span>
             <span className="font-mono tabular-nums">{formatNumber(stats.allContextTokens)} tokens</span>
           </div>
           <div className="h-2 rounded-pill bg-muted-foreground/25" />

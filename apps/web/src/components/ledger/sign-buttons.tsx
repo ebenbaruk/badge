@@ -20,29 +20,29 @@ const STAMP_VISIBLE_MS = 1100;
 
 const wait = (ms: number): Promise<void> => new Promise((resolve) => window.setTimeout(resolve, ms));
 
-/** Dashed seal that lands on a decided request ("SIGNE" / "REFUSE", ASCII like the device). */
+/** Dashed seal that lands on a decided request ("SIGNED" / "REJECTED", ASCII like the device). */
 function DecisionStamp({ decision }: { decision: Decision }) {
   return (
     <span role="status" className={cn("app-stamp", decision === "approved" ? "text-success" : "text-danger")}>
-      {decision === "approved" ? "Signe" : "Refuse"}
-      <small>{decision === "approved" ? "Ledger" : "Rien ne sort"}</small>
+      {decision === "approved" ? "Signed" : "Rejected"}
+      <small>{decision === "approved" ? "Ledger" : "Nothing leaves"}</small>
     </span>
   );
 }
 
 /**
- * "Approve on my Ledger" / "Refuse" pair. Approval runs the server action that waits for the device; the mirror
+ * "Approve on my Ledger" / "Reject" pair. Approval runs the server action that waits for the device; the mirror
  * goes live meanwhile. Refusing in the web UI needs no signature (nothing leaves the enclave).
  */
 export function ApproveRejectButtons({
-  approveLabel = "Approuver sur mon Ledger",
+  approveLabel = "Approve on my Ledger",
   reviewLabel,
   approve,
   reject,
   approvedMessage,
 }: {
   approveLabel?: string;
-  /** Shown next to the mirror while the device waits, e.g. "Partager avec Alice Martin". */
+  /** Shown next to the mirror while the device waits, e.g. "Share with Alice Martin". */
   reviewLabel: string;
   approve: () => Promise<ActionResult<Outcome>>;
   reject: () => Promise<ActionResult>;
@@ -62,7 +62,7 @@ export function ApproveRejectButtons({
   const onApprove = async (): Promise<void> => {
     setBusy("approve");
     const result = await runOnLedger(reviewLabel, approve, {
-      success: (outcome) => (outcome === "approved" ? approvedMessage : "Refusé sur le Ledger."),
+      success: (outcome) => (outcome === "approved" ? approvedMessage : "Rejected on Ledger."),
     });
     if (result.ok) await settle(result.data === "approved" ? "approved" : "rejected");
     setBusy(null);
@@ -73,7 +73,7 @@ export function ApproveRejectButtons({
     setBusy("reject");
     const result = await reject();
     if (result.ok) {
-      toast("Demande refusée.");
+      toast("Request rejected.");
       await settle("rejected");
     } else toast.error(result.message);
     setBusy(null);
@@ -89,11 +89,11 @@ export function ApproveRejectButtons({
       )}
       <Button size="lg" onClick={() => void onApprove()} disabled={busy !== null || activity !== null}>
         {busy === "approve" ? <Loader2 className="animate-spin" /> : <PenLine />}
-        {busy === "approve" ? "Vérifiez sur votre Ledger…" : approveLabel}
+        {busy === "approve" ? "Check your Ledger…" : approveLabel}
       </Button>
       <Button variant="ghost" size="lg" onClick={() => void onReject()} disabled={busy !== null}>
         {busy === "reject" ? <Loader2 className="animate-spin" /> : <X />}
-        Refuser
+        Reject
       </Button>
     </div>
   );
@@ -129,7 +129,7 @@ export function LedgerActionButton<T>({
   return (
     <Button variant={variant} size={size} onClick={() => void onClick()} disabled={busy || activity !== null}>
       {busy ? <Loader2 className="animate-spin" /> : (icon ?? <PenLine />)}
-      {busy ? "Vérifiez sur votre Ledger…" : label}
+      {busy ? "Check your Ledger…" : label}
     </Button>
   );
 }

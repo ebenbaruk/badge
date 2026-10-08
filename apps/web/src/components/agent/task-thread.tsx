@@ -7,7 +7,7 @@ import { RiskFindings } from "@/components/risk-findings";
 import { PulseDot } from "@/components/motion/pulse-dot";
 import { Button } from "@/components/ui/button";
 import { EMPLOYEES, type EmployeeId } from "@/lib/directory";
-import { formatLength, formatTime, ofName } from "@/lib/format";
+import { formatLength, formatTime, reasonForThirdParty } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { BlockedExcerptView, ContextOwner, TaskStatus, TaskView } from "@/server/enclave/types";
 import { TaskTimeline } from "./task-timeline";
@@ -15,54 +15,71 @@ import { TokenCard } from "./token-card";
 
 const STATUS: Record<TaskStatus, { label: string; className: string }> = {
   waiting_consent: {
-    label: "En attente d'accord",
+    label: "Awaiting consent",
     className: "border-warning/35 bg-warning/10 text-warning",
   },
-  ready: { label: "Brief prêt", className: "border-success/35 bg-success/10 text-success" },
-  refused: { label: "Refusé", className: "border-danger/35 bg-danger/10 text-danger" },
+  ready: { label: "Brief ready", className: "border-success/35 bg-success/10 text-success" },
+  refused: { label: "Refused", className: "border-danger/35 bg-danger/10 text-danger" },
 };
 
 const BLOCKED_KIND_LABEL: Record<BlockedExcerptView["kind"], string> = {
-  rule: "Bloqué",
-  classifier: "Écarté",
-  rejected: "Refusé",
-  revoked: "Révoqué",
-  expired: "Expiré",
+  rule: "Blocked",
+  classifier: "Not relevant",
+  rejected: "Rejected",
+  revoked: "Revoked",
+  expired: "Expired",
 };
 
 function ownerLabel(owner: ContextOwner): string {
-  return owner === "company" ? "Acme (global)" : EMPLOYEES[owner].name;
+  return owner === "company" ? "Acme (company)" : EMPLOYEES[owner].name;
 }
 
-/** One callout per owner: an owner reviews all of a task's excerpts in their inbox, one Ledger signature each. */
-function PendingCallout({ task }: { task: TaskView }) {
+/**
+ * One callout per owner: an owner reviews all of a task's excerpts in their inbox, one Ledger signature each.
+ * The discovery line makes the core idea visible: the memory itself surfaced a colleague's context the requester
+ * did not know about. It is left out for a compromised agent, whose request did aim at that colleague.
+ */
+function PendingCallout({ task, requester }: { task: TaskView; requester: EmployeeId }) {
   const owners = [...new Set(task.pending.map((p) => p.owner))];
   return (
     <div className="space-y-2">
       {owners.map((owner) => {
         const excerpts = task.pending.filter((p) => p.owner === owner);
-        const findings = excerpts.flatMap((p) => p.findings);
+        // The enclave words rule reasons for the owner ("your context"); the requester reads them about the owner.
+        const findings = excerpts
+          .flatMap((p) => p.findings)
+          .map((f) => ({ ...f, message: reasonForThirdParty(f.message, EMPLOYEES[owner].name) }));
         const total = excerpts.reduce((sum, p) => sum + p.length, 0);
         return (
           <div key={owner} className="app-enter rounded-2xl border border-warning/35 bg-warning/6 p-4">
+            {!task.trapped && (
+              <p className="mb-3 flex gap-2 text-xs leading-relaxed text-muted-foreground">
+                <Sparkles className="mt-0.5 size-3.5 shrink-0 text-brand" />
+                <span>
+                  Badge found relevant context in {EMPLOYEES[owner].name}&apos;s memory on its own;{" "}
+                  {EMPLOYEES[requester].firstName} never asked for it. It stays sealed in the enclave until{" "}
+                  {EMPLOYEES[owner].firstName} approves on their Ledger.
+                </span>
+              </p>
+            )}
             <div className="flex flex-wrap items-center gap-3">
               <EmployeeAvatar employee={owner} size="sm" />
               {/* A floor width so the button wraps below instead of squeezing the name into a column. */}
               <div className="min-w-[12rem] flex-1">
                 <div className="text-[13px] font-semibold">
                   <PulseDot tone="live" className="mr-2 align-middle" />
-                  En attente de {EMPLOYEES[owner].name}
-                  <span className="ml-1.5 font-normal text-muted-foreground">· sur son Ledger</span>
+                  Waiting for {EMPLOYEES[owner].name}
+                  <span className="ml-1.5 font-normal text-muted-foreground">· on their Ledger</span>
                 </div>
                 <div className="text-xs text-muted-foreground">
                   {excerpts.length === 1
                     ? `${excerpts[0]?.label ?? ""} · ${formatLength(total)}`
-                    : `${excerpts.length} extraits · ${formatLength(total)}`}
+                    : `${excerpts.length} excerpts · ${formatLength(total)}`}
                 </div>
               </div>
               <Button asChild variant="outline" size="sm">
                 <Link href={`/${owner}/consents` as Route}>
-                  Ouvrir la boîte de {EMPLOYEES[owner].firstName}
+                  Open {EMPLOYEES[owner].firstName}&apos;s inbox
                   <ArrowUpRight />
                 </Link>
               </Button>
@@ -106,7 +123,7 @@ function Brief({ task }: { task: TaskView }) {
           </ul>
           {brief.recommendation !== undefined && (
             <p className="mt-5 rounded-xl border border-brand/20 bg-brand/8 px-4 py-3 text-[13px] leading-relaxed">
-              <span className="font-semibold text-brand">Recommandation. </span>
+              <span className="font-semibold text-brand">Recommendation. </span>
               {brief.recommendation}
             </p>
           )}
@@ -114,7 +131,7 @@ function Brief({ task }: { task: TaskView }) {
       </div>
 
       <div>
-        <div className="mb-2.5 mono-label text-[10px] text-muted-foreground">Sources et autorisations</div>
+        <div className="mb-2.5 mono-label text-[10px] text-muted-foreground">Sources and permissions</div>
         <ol className="divide-y overflow-hidden rounded-2xl border bg-card">
           {task.allowed.map((source, index) => (
             <li
@@ -144,7 +161,7 @@ function BlockedList({ blocked }: { blocked: readonly BlockedExcerptView[] }) {
   if (blocked.length === 0) return null;
   return (
     <div>
-      <div className="mb-2.5 mono-label text-[10px] text-muted-foreground">Restés dans l&apos;enclave</div>
+      <div className="mb-2.5 mono-label text-[10px] text-muted-foreground">Kept in the enclave</div>
       <ul className="divide-y divide-dashed overflow-hidden rounded-2xl border border-dashed bg-surface/50">
         {blocked.map((item, index) => (
           <li
@@ -202,18 +219,18 @@ export function TaskThread({ task, requester }: { task: TaskView; requester: Emp
           <span className="flex size-7 items-center justify-center rounded-full bg-card ring-1 ring-border">
             <Bot className="size-4 text-muted-foreground" />
           </span>
-          <span className="text-[13px] font-semibold">Agent {ofName(EMPLOYEES[requester].firstName)}</span>
+          <span className="text-[13px] font-semibold">{EMPLOYEES[requester].firstName}&apos;s agent</span>
           {task.trapped && (
             <span className="inline-flex items-center gap-1 rounded-pill border border-danger/35 bg-danger/10 px-2.5 py-0.5 text-[11px] font-semibold text-danger">
               <Skull className="size-3" />
-              Agent compromis (simulation)
+              Compromised agent (simulation)
             </span>
           )}
           <span
             className="min-w-0 truncate font-mono text-[10.5px] text-muted-foreground"
             title={task.taskLabel}
           >
-            tâche « {task.taskLabel} »
+            task &ldquo;{task.taskLabel}&rdquo;
           </span>
           <span
             className={cn(
@@ -228,15 +245,14 @@ export function TaskThread({ task, requester }: { task: TaskView; requester: Emp
         <div className="grid gap-8 p-5 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:p-6">
           <TaskTimeline steps={task.steps} />
           <div className="min-w-0 space-y-4">
-            {task.pending.length > 0 && <PendingCallout task={task} />}
+            {task.pending.length > 0 && <PendingCallout task={task} requester={requester} />}
             {task.status === "refused" && (
               <div className="app-enter rounded-2xl border border-danger/35 bg-danger/6 p-5 text-[13px]">
                 <div className="font-heading text-[17px] font-medium tracking-[-0.035em] text-danger">
-                  Rien n&apos;a quitté l&apos;enclave.
+                  Nothing left the enclave.
                 </div>
                 <p className="mt-1 text-muted-foreground">
-                  La demande de l&apos;agent a été refusée : aucun extrait n&apos;a été injecté dans le
-                  modèle.
+                  The agent&apos;s request was refused: no excerpt was injected into the model.
                 </p>
               </div>
             )}

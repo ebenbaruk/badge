@@ -39,7 +39,7 @@ describe("decodeBadgeMessage rejects", () => {
     ["unknown key", { extra: 1 }],
     ["missing key", { nonce: undefined }],
     ["non-ASCII displayed string", { recipientName: "Bob (Équipe)" }],
-    ["non-canonical spacing", { recipientName: "Bob  (Ventes)" }],
+    ["non-canonical spacing", { recipientName: "Bob  (Sales)" }],
     ["empty string", { taskLabel: "" }],
     ["too long string", { taskLabel: "x".repeat(257) }],
     ["bigint as number", { expiresAt: 123 }],

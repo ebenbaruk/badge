@@ -1,6 +1,6 @@
 /**
  * Device address book ("Contacts", app-ethereum >= 1.23): the device itself certifies a contact name with HMAC
- * proofs, so an address field of an EIP-712 message can be displayed as "Alice (Ventes)" instead of 0x...
+ * proofs, so an address field of an EIP-712 message can be displayed as "Alice (Sales)" instead of 0x...
  *
  * Unlike the signed `recipientName` string (which the host chooses), a contact name was confirmed by the owner on
  * the device when registered, so a compromised host cannot relabel an address. The kit is stateless: the host
@@ -25,8 +25,8 @@ export interface ContactField {
  * field is then displayed as one more review line, as the raw address when no contact matches.
  */
 export const SUGGESTED_CONTACT_FIELDS: Partial<Record<BadgeMessageKind, ContactField>> = {
-  ContextShare: { path: "recipient", label: "Destinataire" },
-  ContextRevoke: { path: "recipient", label: "Destinataire" },
+  ContextShare: { path: "recipient", label: "Recipient" },
+  ContextRevoke: { path: "recipient", label: "Recipient" },
 };
 
 const GROUP_HANDLE_BYTES = 64;

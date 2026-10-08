@@ -32,13 +32,13 @@ describe("MCP server (in-process client)", () => {
     await client.close();
   });
 
-  it("lists the four tools with bilingual descriptions and input schemas", async () => {
+  it("lists the four tools with English descriptions and input schemas", async () => {
     const { tools } = await client.listTools();
 
     expect(tools.map((tool) => tool.name).sort()).toEqual(TOOL_NAMES);
     for (const tool of tools) {
-      expect(tool.description).toMatch(/FR :/);
-      expect(tool.description).toMatch(/EN:/);
+      expect(tool.description?.length ?? 0).toBeGreaterThan(80);
+      expect(tool.description).not.toMatch(/FR :|EN:|[àâçéèêîôûù«»]/);
     }
     const getContext = tools.find((tool) => tool.name === "badge_get_context");
     expect(getContext?.inputSchema.required).toEqual(["task", "taskLabel"]);
@@ -48,12 +48,12 @@ describe("MCP server (in-process client)", () => {
   it("calls badge_get_context and badge_task_status end to end", async () => {
     const pending = await client.callTool({
       name: "badge_get_context",
-      arguments: { task: "Preparer le rendez-vous Durand", taskLabel: "Brief Durand" },
+      arguments: { task: "Prepare the Durand meeting", taskLabel: "Durand brief" },
     });
-    expect(textOf(pending)).toContain("En attente de l'accord de Bob Durand");
+    expect(textOf(pending)).toContain("Waiting for Bob Durand to approve");
 
     const ready = await client.callTool({ name: "badge_task_status", arguments: { taskId: TASK_ID } });
-    expect(textOf(ready)).toContain("## Brief (rédigé dans l'enclave)");
+    expect(textOf(ready)).toContain("## Brief (drafted in the enclave)");
   });
 
   it("rejects invalid arguments before reaching the enclave", async () => {
@@ -69,10 +69,10 @@ describe("MCP server (in-process client)", () => {
 
   it("calls the argument-less tools", async () => {
     expect(textOf(await client.callTool({ name: "badge_list_my_consents", arguments: {} }))).toContain(
-      "Alice Martin (Ventes)",
+      "Alice Martin (Sales)",
     );
     expect(textOf(await client.callTool({ name: "badge_attestation", arguments: {} }))).toContain(
-      "Mesure de l'enclave",
+      "Enclave measurement",
     );
   });
 });
@@ -101,7 +101,7 @@ describe("MCP server over Streamable HTTP", () => {
     const { tools } = await client.listTools();
     expect(tools).toHaveLength(TOOL_NAMES.length);
     expect(textOf(await client.callTool({ name: "badge_list_my_consents", arguments: {} }))).toContain(
-      "en attente",
+      "awaiting your consent",
     );
     await client.close();
     expect(errors).toEqual([]);

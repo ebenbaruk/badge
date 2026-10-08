@@ -21,10 +21,10 @@ export const AGENT_SESSION_TTL_SECONDS = DEFAULT_AGENT_SESSION_TTL_SECONDS;
 /** Standing agreements are capped at 90 days by @badge/consent (`MAX_POLICY_TTL_SECONDS`). */
 export const MAX_POLICY_DAYS = 90;
 const NONCE_BYTES = 16;
-const AGENT_ACCESS = "Demandes uniquement";
+const AGENT_ACCESS = "Requests only";
 /** Longest label we put on the device: the contract caps excerpt labels at 60 ASCII characters. */
 export const MAX_DEVICE_LABEL_LENGTH = 60;
-const FALLBACK_DEVICE_LABEL = "extrait";
+const FALLBACK_DEVICE_LABEL = "excerpt";
 
 /** Device ASCII, truncated to `max` and re-canonicalised (truncation may leave a trailing space). */
 export function deviceLabel(text: string, max = MAX_DEVICE_LABEL_LENGTH): string {
@@ -37,7 +37,7 @@ export function newNonce(): bigint {
   return BigInt(`0x${Buffer.from(bytes).toString("hex")}`);
 }
 
-/** "Alice Martin (Ventes)": how a person is named on a device (ASCII). */
+/** "Alice Martin (Sales)": how a person is named on a device (ASCII). */
 export function deviceName(employee: Pick<Employee, "name" | "team">): string {
   return toDeviceAscii(`${employee.name} (${employee.team})`);
 }
@@ -69,7 +69,7 @@ export function buildAgentSession(
   now: Date = new Date(),
 ): CreatedAgentSession {
   return createAgentSession(employee.address, {
-    agentName: `Agent Badge de ${employee.firstName}`,
+    agentName: `${employee.firstName}'s Badge agent`,
     access: AGENT_ACCESS,
     enclaveMeasurement,
     ttlSeconds: AGENT_SESSION_TTL_SECONDS,

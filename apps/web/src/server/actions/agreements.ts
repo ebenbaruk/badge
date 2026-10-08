@@ -34,7 +34,7 @@ export async function createStandingAgreement(
     const api = enclave();
     const tags = await api.contextTags(employee);
     if (!tags.includes(policy.contextTag)) {
-      throw new EnclaveError("INVALID_REQUEST", `étiquette de contexte inconnue : ${policy.contextTag}`);
+      throw new EnclaveError("INVALID_REQUEST", `unknown context tag: ${policy.contextTag}`);
     }
     const { measurement } = await api.attestation();
     const message = buildContextPolicy(EMPLOYEES[employee], policy, measurement, toUnixSeconds(new Date()));
@@ -74,7 +74,7 @@ export async function revokeAllFor(input: {
 }): Promise<ActionResult<{ revoked: number }>> {
   return runAction(async () => {
     const { employee, recipient } = revokeAllSchema.parse(input);
-    if (employee === recipient) throw new EnclaveError("INVALID_REQUEST", "rien à révoquer pour soi-même");
+    if (employee === recipient) throw new EnclaveError("INVALID_REQUEST", "nothing to revoke for yourself");
     const api = enclave();
     const message = await api.prepareRevocation(employee, { recipient });
     const result = await api.revoke(employee, await signOnDevice(employee, "ContextRevoke", message));

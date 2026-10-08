@@ -16,15 +16,15 @@ import { enclave } from "@/server/enclave";
 import { employeeFromParams, load } from "@/server/load";
 import { deviceName } from "@/server/messages";
 
-export const metadata: Metadata = { title: "Configuration" };
+export const metadata: Metadata = { title: "Setup" };
 
 /** Flow step states of the reference: finished, the one to do now, or waiting on an earlier step. */
 type StepState = "done" | "now" | "locked";
 
 const STEP_CHIP: Record<StepState, string> = {
-  done: "Fait",
-  now: "À faire",
-  locked: "Plus tard",
+  done: "Done",
+  now: "To do",
+  locked: "Later",
 };
 
 function stepState(done: boolean, unlocked: boolean): StepState {
@@ -70,7 +70,7 @@ function Step({
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <span className="mono-label text-[10px] text-muted-foreground">Étape {index}</span>
+          <span className="mono-label text-[10px] text-muted-foreground">Step {index}</span>
           <span
             className={cn(
               "rounded-pill border px-2 py-0.5 mono-chip",
@@ -107,13 +107,13 @@ export default async function OnboardingPage({ params }: { params: Promise<{ emp
   return (
     <div className="mx-auto max-w-3xl">
       <PageHeader
-        title="Configuration"
-        eyebrow="Deux signatures · une journée de travail"
-        description={`Deux signatures sur le Ledger de ${employee.firstName} relient son identité à l'enclave attestée et délèguent à son agent le droit de faire des demandes, jamais celui de lire le contexte des autres.`}
+        title="Setup"
+        eyebrow="Two signatures · one working day"
+        description={`Two signatures on ${employee.firstName}'s Ledger bind their identity to the attested enclave and delegate to their agent the right to make requests, never the right to read anyone else's context.`}
       />
       <div className="mb-8 flex flex-wrap items-center gap-2 rounded-2xl bg-brand-deep px-5 py-4 text-xs text-paper [&_button]:text-paper/90 [&_button:hover]:text-paper">
         <span className="mono-label text-[10px] text-signal-hover">
-          Mesure de l&apos;enclave signée dans chaque message
+          Enclave measurement signed into every message
         </span>
         <CopyableHash value={attestation.data.measurement} full />
       </div>
@@ -122,26 +122,25 @@ export default async function OnboardingPage({ params }: { params: Promise<{ emp
           index={1}
           state={stepState(enrolled, true)}
           icon={<Fingerprint className="size-4" />}
-          title="Associer mon Ledger à mon identité"
+          title="Link my Ledger to my identity"
           description={
             <>
-              Le Ledger signe « Rejoindre Badge » : entreprise Acme, identité{" "}
-              <span className="font-mono text-foreground">{deviceName(employee)}</span>, mesure de
-              l&apos;enclave.
+              The Ledger signs &quot;Join Badge&quot;: company Acme, identity{" "}
+              <span className="font-mono text-foreground">{deviceName(employee)}</span>, enclave measurement.
             </>
           }
         >
           {enrolled ? (
             <p className="inline-flex rounded-pill border border-success/35 bg-success/8 px-3 py-1 text-xs font-semibold text-success">
-              Inscrit{" "}
+              Enrolled{" "}
               {enrollment.data.enrolledAt === undefined ? "" : formatRelative(enrollment.data.enrolledAt)}.
             </p>
           ) : (
             <LedgerActionButton
-              label="Signer sur mon Ledger"
-              reviewLabel="Rejoindre Badge (EmployeeEnroll)"
+              label="Sign on my Ledger"
+              reviewLabel="Join Badge (EmployeeEnroll)"
               action={enrollEmployee.bind(null, { employee: employee.id })}
-              successMessage="Ledger associé : vous avez rejoint Badge."
+              successMessage="Ledger linked: you have joined Badge."
             />
           )}
         </Step>
@@ -149,8 +148,8 @@ export default async function OnboardingPage({ params }: { params: Promise<{ emp
           index={2}
           state={stepState(session !== undefined, enrolled)}
           icon={<Bot className="size-4" />}
-          title="Autoriser mon agent"
-          description="Une clé de session est générée pour votre agent ; votre Ledger lui délègue le droit de faire des demandes pendant une journée de travail (8 heures)."
+          title="Authorize my agent"
+          description="A session key is generated for your agent; your Ledger delegates to it the right to make requests for one working day (8 hours)."
         >
           {session !== undefined ? (
             <div className="space-y-3">
@@ -160,38 +159,38 @@ export default async function OnboardingPage({ params }: { params: Promise<{ emp
                   <dd className="mt-1 font-medium">{session.agentName}</dd>
                 </div>
                 <div>
-                  <dt className="mono-label text-[10px] text-muted-foreground">Expire</dt>
+                  <dt className="mono-label text-[10px] text-muted-foreground">Expires</dt>
                   <dd className="mt-1">
                     {formatDateTime(session.expiresAt)}{" "}
                     <span className="text-muted-foreground">({formatRelative(session.expiresAt)})</span>
                   </dd>
                 </div>
                 <div className="sm:col-span-2">
-                  <dt className="mono-label text-[10px] text-muted-foreground">Clé de session</dt>
+                  <dt className="mono-label text-[10px] text-muted-foreground">Session key</dt>
                   <dd className="mt-1">
                     <CopyableHash value={session.sessionKey} full />
                   </dd>
                 </div>
               </dl>
               <LedgerActionButton
-                label="Renouveler la session"
+                label="Renew session"
                 variant="outline"
                 size="sm"
                 icon={<RefreshCw />}
-                reviewLabel="Autoriser mon agent (AgentSession)"
+                reviewLabel="Authorize my agent (AgentSession)"
                 action={authorizeAgent.bind(null, { employee: employee.id })}
-                successMessage="Nouvelle session d'agent ouverte."
+                successMessage="New agent session opened."
               />
             </div>
           ) : enrolled ? (
             <LedgerActionButton
-              label="Signer sur mon Ledger"
-              reviewLabel="Autoriser mon agent (AgentSession)"
+              label="Sign on my Ledger"
+              reviewLabel="Authorize my agent (AgentSession)"
               action={authorizeAgent.bind(null, { employee: employee.id })}
-              successMessage="Agent autorisé pour 8 heures."
+              successMessage="Agent authorized for 8 hours."
             />
           ) : (
-            <p className="text-xs text-muted-foreground">Associez d&apos;abord votre Ledger.</p>
+            <p className="text-xs text-muted-foreground">Link your Ledger first.</p>
           )}
         </Step>
         {employee.role === "compliance" && (
@@ -199,32 +198,32 @@ export default async function OnboardingPage({ params }: { params: Promise<{ emp
             index={3}
             state={stepState(complianceKey !== undefined, session !== undefined)}
             icon={<KeyRound className="size-4" />}
-            title="Enregistrer ma clé de conformité"
-            description="Les identités des partages anonymes entre desks sont scellées pour vous seule. Votre clé est dérivée d'une signature de votre Ledger : elle n'est stockée nulle part et se recalcule à chaque levée d'anonymat."
+            title="Register my compliance key"
+            description="The identities behind anonymous desk shares are sealed for you alone. Your key is derived from a signature on your Ledger: it is stored nowhere and is recomputed each time you reveal an identity."
           >
             {complianceKey !== undefined ? (
               <dl className="grid gap-2 text-xs sm:grid-cols-2">
                 <div className="sm:col-span-2">
-                  <dt className="mono-label text-[10px] text-muted-foreground">Clé publique X25519</dt>
+                  <dt className="mono-label text-[10px] text-muted-foreground">X25519 public key</dt>
                   <dd className="mt-1">
                     <CopyableHash value={complianceKey.publicKey} full />
                   </dd>
                 </div>
                 <div>
-                  <dt className="mono-label text-[10px] text-muted-foreground">Enregistrée</dt>
+                  <dt className="mono-label text-[10px] text-muted-foreground">Registered</dt>
                   <dd className="mt-1">{formatRelative(complianceKey.registeredAt)}</dd>
                 </div>
               </dl>
             ) : session !== undefined ? (
               <LedgerActionButton
-                label="Dériver et enregistrer sur mon Ledger"
+                label="Derive and register on my Ledger"
                 icon={<KeyRound />}
-                reviewLabel="Clé de conformité : dérivation puis enregistrement (2 messages)"
+                reviewLabel="Compliance key: derive, then register (2 messages)"
                 action={registerComplianceKey.bind(null, { employee: employee.id })}
-                successMessage="Clé de conformité enregistrée : les partages anonymes peuvent commencer."
+                successMessage="Compliance key registered: anonymous shares can begin."
               />
             ) : (
-              <p className="text-xs text-muted-foreground">Autorisez d&apos;abord votre agent.</p>
+              <p className="text-xs text-muted-foreground">Authorize your agent first.</p>
             )}
           </Step>
         )}
@@ -233,11 +232,11 @@ export default async function OnboardingPage({ params }: { params: Promise<{ emp
             index={3}
             state={stepState(desksJoined, session !== undefined)}
             icon={<VenetianMask className="size-4" />}
-            title="Rejoindre mon desk"
-            description="Pour répondre anonymement aux autres desks : votre identité anonyme est dérivée de votre Ledger, rien n'est stocké."
+            title="Join my desk"
+            description="To answer other desks anonymously: your anonymous identity is derived from your Ledger, and nothing is stored."
           >
             <Button asChild variant="outline" size="sm">
-              <Link href={`/${employee.id}/desks` as Route}>Ouvrir les desks</Link>
+              <Link href={`/${employee.id}/desks` as Route}>Open desks</Link>
             </Button>
           </Step>
         )}

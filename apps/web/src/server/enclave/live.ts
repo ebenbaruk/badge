@@ -62,12 +62,12 @@ import type {
 
 /** What the compliance page says when the audit head does not extend the last one the officer accepted. */
 const AUDIT_HEAD_PROBLEMS: Record<AuditHeadProblem, string> = {
-  broken: "chaîne rompue : aucune tête signée",
-  unsigned: "tête de chaîne non signée par l'enclave",
-  bad_signature: "signature de la tête invalide pour l'enclave attestée",
-  signer_changed: "la clé d'audit de l'enclave a changé depuis la dernière lecture",
-  shorter: "journal plus court que lors de la dernière lecture (troncature ou retour en arrière)",
-  diverged: "historique différent de celui déjà lu (réécriture ou retour en arrière)",
+  broken: "broken chain: no signed head",
+  unsigned: "chain head not signed by the enclave",
+  bad_signature: "head signature invalid for the attested enclave",
+  signer_changed: "the enclave's audit key changed since the last read",
+  shorter: "log shorter than at the last read (truncation or rollback)",
+  diverged: "history differs from what was already read (rewrite or rollback)",
 };
 
 /** Tasks shown in the agent thread (newest first); older ones stay in the enclave and the audit log. */

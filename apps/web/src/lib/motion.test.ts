@@ -3,15 +3,15 @@ import { magneticOffset, splitForReveal } from "./motion";
 
 describe("splitForReveal", () => {
   it("numbers letters across words and keeps the whitespace between them", () => {
-    const words = splitForReveal("Ton accord.");
-    expect(words.map((w) => w.letters.map((l) => l.char).join(""))).toEqual(["Ton", "accord."]);
+    const words = splitForReveal("Your consent.");
+    expect(words.map((w) => w.letters.map((l) => l.char).join(""))).toEqual(["Your", "consent."]);
     expect(words[0]?.trailing).toBe(" ");
-    expect(words[1]?.letters[0]?.index).toBe(3);
+    expect(words[1]?.letters[0]?.index).toBe(4);
   });
 
   it("never splits an accented character", () => {
-    const [word] = splitForReveal("Révoqué");
-    expect(word?.letters).toHaveLength(7);
+    const [word] = splitForReveal("Chloé");
+    expect(word?.letters).toHaveLength(5);
   });
 
   it("returns nothing for blank text", () => {

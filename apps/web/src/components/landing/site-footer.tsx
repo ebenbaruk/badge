@@ -8,7 +8,7 @@ import { ScrollScene } from "./scroll-scene";
 const FOOTER_LINKS = [
   { href: GITHUB_URL, label: "GitHub" },
   { href: `${GITHUB_URL}/blob/main/docs/ARCHITECTURE.md`, label: "Architecture" },
-  { href: `${GITHUB_URL}/blob/main/docs/DEMO.md`, label: "Parcours de démo" },
+  { href: `${GITHUB_URL}/blob/main/docs/DEMO.md`, label: "Demo walkthrough" },
 ] as const;
 
 /** Night footer: invitation, giant drifting wordmark and the hackathon credits. */
@@ -22,13 +22,13 @@ export function SiteFooter() {
         <RevealText
           as="p"
           className="text-[clamp(30px,4vw,60px)] leading-[1.08] tracking-[-0.06em]"
-          text="Le contexte circule. L'accord reste à chacun."
+          text="Context flows. Consent stays with its owner."
         />
         <Link
           href={DEMO_ROUTE}
           className="inline-flex items-center gap-4 justify-self-start text-[clamp(18px,2.5vw,36px)] tracking-[-0.04em] text-signal md:justify-self-end"
         >
-          <RollingText>Ouvrir la démo</RollingText>
+          <RollingText>Open the demo</RollingText>
           <NudgeArrow />
         </Link>
       </div>
@@ -42,19 +42,19 @@ export function SiteFooter() {
       </div>
 
       <div className="mx-auto mt-12 flex max-w-[1700px] flex-col gap-4 border-t border-[#ffffff30] pt-5 text-[11px] text-[#c4cee2] md:flex-row md:items-center md:justify-between">
-        <p>Ledger N3XT Hackathon @ OP3N 2026 · Équipe DVB</p>
+        <p>Ledger N3XT Hackathon @ OP3N 2026 · Team DVB</p>
         <ul className="flex flex-wrap gap-5">
           {FOOTER_LINKS.map((link) => (
             <li key={link.label}>
               <a href={link.href} target="_blank" rel="noreferrer" className="hover:underline">
                 {link.label}
-                <span className="sr-only"> (nouvel onglet)</span>
+                <span className="sr-only"> (opens in a new tab)</span>
               </a>
             </li>
           ))}
           <li>
             <a href="#top" className="hover:underline">
-              Haut de page ↑
+              Back to top ↑
             </a>
           </li>
         </ul>

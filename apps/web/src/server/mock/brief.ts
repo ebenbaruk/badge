@@ -9,23 +9,23 @@ import type { TaskSource } from "./state";
 /** One brief line per seeded note: what an analyst would extract from it. */
 const NOTE_BULLETS: Readonly<Record<string, string>> = {
   "company-client-orion":
-    "Client grand compte depuis 2021 : 14 entrepôts (France, Benelux), environ 35 000 AX-200 installés ; contrat-cadre jusqu'au 31 décembre 2026.",
+    "Key account since 2021: 14 warehouses (France, Benelux), about 35,000 AX-200 installed; framework agreement runs until December 31, 2026.",
   "alice-objectif-orion":
-    "Objectif du rendez-vous (8 octobre, 10 h) : renouveler le contrat-cadre 2027 et proposer l'AX-500 sur les nouveaux entrepôts.",
+    "Meeting goal (October 8, 10 am): renew the framework agreement for 2027 and pitch the AX-500 for the new warehouses.",
   "bob-orion-conditions-2025":
-    "Conditions 2025 : remise de 12 % au-delà de 40 000 unités, paiement à 60 jours fin de mois (validé en janvier).",
+    "2025 terms: 12% discount above 40,000 units, payment at 60 days end of month (approved in January).",
   "bob-orion-reunion-septembre":
-    "Attentes exprimées le 22 septembre par Marc Lefèvre (achats) : livraisons trimestrielles, délai garanti à 3 semaines ; inquiétude sur le prix de la passerelle GW-10.",
+    "Expectations voiced on September 22 by Marc Lefevre (purchasing): quarterly deliveries, a committed 3-week lead time; concerned about the price of the GW-10 gateway.",
   "bob-orion-points-attention":
-    "Enjeux du renouvellement : 4 entrepôts ouverts en 2027 (environ 8 000 capteurs) et une offre concurrente à -15 % ; la DAF valide au-delà de 1 M€.",
+    "What is at stake in the renewal: 4 warehouses opening in 2027 (about 8,000 sensors) and a competing offer at 15% off; the CFO's office signs off above EUR 1M.",
   "company-politique-tarifaire":
-    "Cadre interne : toute remise au-delà de 8 % passe par la direction commerciale, revue juridique au-delà de 500 k€.",
+    "Internal rules: any discount above 8% needs sales management sign-off; legal review above EUR 500k.",
   "company-catalogue-2026":
-    "Tarifs 2026 : AX-200 à 118 € HT, AX-500 à 245 € HT, passerelle GW-10 à 890 € HT.",
+    "2026 prices: AX-200 at EUR 118, AX-500 at EUR 245, GW-10 gateway at EUR 890 (excl. VAT).",
   "company-organisation":
-    "Bob Durand (Grands comptes) suit Orion ; Chloé Bernard (Juridique) valide les contrats.",
+    "Bob Durand (Key Accounts) owns Orion; Chloé Bernard (Legal & Compliance) approves contracts.",
   "bob-research-marche-capteurs":
-    "Marché européen des capteurs connectés : +9 % en 2026 ; puces radio -18 % sur le trimestre, marge disponible sur les passerelles.",
+    "European connected-sensor market: +9% in 2026; radio chips down 18% over the quarter, leaving room on gateway margins.",
 };
 
 const ORION_NEGOTIATION_NOTES = ["bob-orion-conditions-2025", "bob-orion-points-attention"];
@@ -53,13 +53,13 @@ export function draftBrief(task: string, sources: readonly TaskSource[]): BriefV
     });
   }
   const isOrion = /orion/i.test(task);
-  const brief: BriefView = { title: isOrion ? "Brief : rendez-vous Orion Logistique" : "Brief", bullets };
+  const brief: BriefView = { title: isOrion ? "Brief: Orion Logistique meeting" : "Brief", bullets };
   if (isOrion && ORION_NEGOTIATION_NOTES.every((id) => allowedNotes.has(id))) {
     brief.recommendation =
-      "Défendre le renouvellement sur la valeur installée (35 000 capteurs) plutôt que sur le prix : proposer l'AX-500 sur les 4 nouveaux entrepôts avec une remise par paliers, sans dépasser 12 % sans accord de la direction commerciale.";
+      "Defend the renewal on installed value (35,000 sensors) rather than on price: pitch the AX-500 for the 4 new warehouses with a tiered discount, never above 12% without sales management sign-off.";
   } else if (isOrion) {
     brief.recommendation =
-      "Sans les notes de négociation de Bob, rester sur l'objectif de renouvellement et ne pas s'engager sur une remise.";
+      "Without Bob's negotiation notes, stick to the renewal goal and do not commit to any discount.";
   }
   return brief;
 }

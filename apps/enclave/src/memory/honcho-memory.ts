@@ -36,9 +36,10 @@ export type Embedder = Pick<LlmClient, "embed">;
 export const DEFAULT_CANDIDATE_LIMIT = 8;
 /**
  * Below this cosine similarity an excerpt is treated as unrelated. Calibrated on the demo dataset with
- * text-embedding-3-small at 384 dimensions: for the Orion brief, Orion notes score 0.46-0.64 and the off-topic HR
- * note 0.32. Short French texts share a lot of vocabulary, so scores are compressed: this is a coarse recall
- * filter, the relevance classifier and the policy engine make the real decision. Recalibrate per embedding model.
+ * text-embedding-3-small at 384 dimensions: for the Orion brief, Orion notes score 0.41-0.59 and the off-topic HR
+ * note 0.20. Short notes about the same business share a lot of vocabulary, so scores are compressed: this is a
+ * coarse recall filter, the relevance classifier and the policy engine make the real decision. Recalibrate per
+ * embedding model.
  */
 export const DEFAULT_MIN_SCORE = 0.35;
 /** Hits fetched per owner and per source kind before global ranking. */

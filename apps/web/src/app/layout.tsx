@@ -11,14 +11,14 @@ const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-jet
 
 export const metadata: Metadata = {
   title: { default: "Badge", template: "%s · Badge" },
-  description: "La mémoire confidentielle de l'entreprise AI-native : chaque partage signé sur le Ledger.",
+  description: "The confidential memory of the AI-native company: every share signed on a Ledger.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     // next-themes sets the `class` attribute before hydration: the mismatch warning is expected.
     <html
-      lang="fr"
+      lang="en"
       className={cn("font-sans", montserrat.variable, jetbrainsMono.variable)}
       suppressHydrationWarning
     >

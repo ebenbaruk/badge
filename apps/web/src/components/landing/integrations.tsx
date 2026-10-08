@@ -6,11 +6,14 @@ import { EditorialGrid, GITHUB_URL, SECTION_X, TextLink } from "./primitives";
 const TOOLS = [
   {
     name: "badge_get_context",
-    body: "Demande le contexte d'une tâche : brief et provenance, ou les accords en attente.",
+    body: "Requests context for a task: the brief and its provenance, or the pending consents.",
   },
-  { name: "badge_task_status", body: "Suit la tâche ; renvoie le brief dès que plus rien n'est en attente." },
-  { name: "badge_list_my_consents", body: "Liste les demandes reçues. L'agent ne peut pas les approuver." },
-  { name: "badge_attestation", body: "Mesure de l'enclave, comparée à celle signée dans la session." },
+  { name: "badge_task_status", body: "Tracks the task; returns the brief once nothing is pending." },
+  { name: "badge_list_my_consents", body: "Lists the requests received. The agent can't approve them." },
+  {
+    name: "badge_attestation",
+    body: "Enclave measurement, checked against the one signed into the session.",
+  },
 ] as const;
 
 /** Integrations: Badge plugs into each employee's own agent harness through MCP. */
@@ -21,16 +24,16 @@ export function Integrations() {
       aria-labelledby="integrations-title"
       className={`${SECTION_X} pb-[100px] md:pb-[140px]`}
     >
-      <EditorialGrid aside="Intégrations">
+      <EditorialGrid aside="Integrations">
         <RevealText
           as="h2"
           id="integrations-title"
           className="text-heading-lg"
-          text="Dans votre harness d'agent."
+          text="Inside your agent harness."
         />
         <Reveal as="p" delay={100} className="mt-6 max-w-[36em] text-lede text-ink-muted-2">
-          Chacun garde ses outils. Badge se branche sur l&apos;agent de chaque employé par un serveur MCP
-          local : quatre outils, et toujours la même règle, l&apos;agent demande, l&apos;humain signe.
+          Everyone keeps their own tools. Badge plugs into each employee&apos;s agent through a local MCP
+          server: four tools, and always the same rule. The agent asks, the human signs.
         </Reveal>
 
         <div className="mt-12 grid gap-6 lg:grid-cols-[1.2fr_1fr]">
@@ -45,25 +48,27 @@ export function Integrations() {
             <pre
               tabIndex={0}
               role="region"
-              aria-label="Échange entre l'agent d'Alice et Badge"
+              aria-label="Exchange between Alice's agent and Badge"
               className="overflow-x-auto p-5 font-mono text-[12px] leading-[1.8] md:p-6 md:text-[13px]"
             >
               <code>
                 <span className="text-[#8a90a0]">{"› "}</span>
-                <span className="text-paper">Prépare le brief du rendez-vous Orion</span>
+                <span className="text-paper">
+                  Prepare the brief for tomorrow&apos;s meeting with client Orion
+                </span>
                 {"\n\n"}
                 <span className="text-signal">badge_get_context</span>
-                {' { taskLabel: "brief Orion" }\n'}
+                {' { taskLabel: "Orion brief" }\n'}
                 <span className="text-[#a8a0f4]">
-                  {"  ⏳ en attente de l'accord de Bob Durand sur son Ledger\n\n"}
+                  {"  ⏳ waiting for Bob Durand's consent on his Ledger\n\n"}
                 </span>
                 <span className="text-signal">badge_task_status</span>
                 {' { taskId: "t_42" }\n'}
                 <span className="text-[#89e0b0]">
-                  {"  ✓ brief prêt · 3 extraits · accord signé sur Ledger\n"}
+                  {"  ✓ brief ready · 3 excerpts · consent signed on Ledger\n"}
                 </span>
                 <span className="text-[#8a90a0]">
-                  {"  provenance : notes de Bob (signé), contexte global"}
+                  {"  provenance: Bob's notes (signed), company context"}
                 </span>
               </code>
             </pre>
@@ -79,7 +84,7 @@ export function Integrations() {
           </ul>
         </div>
         <TextLink href={`${GITHUB_URL}/tree/main/apps/mcp`} className="mt-10">
-          Brancher Badge sur un agent
+          Connect Badge to your agent
         </TextLink>
       </EditorialGrid>
     </section>

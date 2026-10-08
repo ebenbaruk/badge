@@ -30,7 +30,7 @@ export function EnclaveUnavailable({
       )}
       {needsSession && (
         <Button asChild variant="night" className="mt-5">
-          <Link href={`/${employee}/onboarding` as Route}>Ouvrir la configuration</Link>
+          <Link href={`/${employee}/onboarding` as Route}>Open setup</Link>
         </Button>
       )}
     </div>

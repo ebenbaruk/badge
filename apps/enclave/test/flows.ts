@@ -48,11 +48,11 @@ export async function call(
 }
 
 const NAMES: Record<DemoEmployee, { name: string; team: string }> = {
-  alice: { name: "Alice Martin", team: "Ventes" },
-  bob: { name: "Bob Durand", team: "Grands comptes" },
-  chloe: { name: "Chloe Bernard", team: "Juridique & conformite" },
-  david: { name: "David Moreau", team: "Strategie" },
-  emma: { name: "Emma Leroy", team: "Strategie" },
+  alice: { name: "Alice Martin", team: "Sales" },
+  bob: { name: "Bob Durand", team: "Key Accounts" },
+  chloe: { name: "Chloe Bernard", team: "Legal & Compliance" },
+  david: { name: "David Moreau", team: "Strategy" },
+  emma: { name: "Emma Leroy", team: "Strategy" },
 };
 
 export function nowSec(h: Harness): bigint {

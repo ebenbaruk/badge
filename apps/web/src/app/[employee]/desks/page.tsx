@@ -42,41 +42,41 @@ function DeskCard({ desk, employee }: { desk: DeskView; employee: Employee }) {
           {desk.joined && (
             <span className="inline-flex animate-gallery-in items-center gap-1 rounded-pill border border-success/35 bg-success/10 px-2.5 py-0.5 text-[11px] font-semibold tracking-normal text-success">
               <BadgeCheck className="size-3" />
-              Identité anonyme enregistrée
+              Anonymous identity registered
             </span>
           )}
         </CardTitle>
-        <CardDescription>Sujets partageables : {desk.allowedTopics.join(", ")}</CardDescription>
+        <CardDescription>Shareable topics: {desk.allowedTopics.join(", ")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         <dl className="grid grid-cols-2 gap-3 text-xs">
           <div>
-            <dt className="mono-label text-[10px] text-muted-foreground">Identités enregistrées</dt>
+            <dt className="mono-label text-[10px] text-muted-foreground">Registered identities</dt>
             <dd className="mt-1 flex flex-wrap items-center gap-x-1.5 font-medium whitespace-nowrap">
               <Users className="size-3.5 text-muted-foreground" />
-              {desk.commitments.length} / {desk.directoryMembers} membres
+              {desk.commitments.length} / {desk.directoryMembers} members
               <span className={cn("text-[11px] font-normal", anonymous ? "text-success" : "text-warning")}>
-                {anonymous ? "anonymat assuré" : `groupe trop petit (${MIN_ANONYMITY_SET} minimum)`}
+                {anonymous ? "anonymity guaranteed" : `group too small (${MIN_ANONYMITY_SET} minimum)`}
               </span>
             </dd>
           </div>
           <div>
-            <dt className="mono-label text-[10px] text-muted-foreground">Racine du groupe (Semaphore)</dt>
+            <dt className="mono-label text-[10px] text-muted-foreground">Group root (Semaphore)</dt>
             <dd className="mt-1">{desk.root === null ? "—" : <CopyableHash value={desk.root} />}</dd>
           </div>
         </dl>
         {desk.isMember && !desk.joined && (
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-dashed bg-surface/60 p-4">
             <p className="text-xs text-muted-foreground">
-              Deux validations sur votre Ledger : dériver votre identité anonyme, puis l&apos;inscrire au desk
-              (une seule si elle y est déjà inscrite).
+              Two approvals on your Ledger: derive your anonymous identity, then register it with the desk
+              (just one if it is already registered).
             </p>
             <LedgerActionButton
-              label={`Rejoindre ${desk.name}`}
+              label={`Join ${desk.name}`}
               icon={<Fingerprint />}
-              reviewLabel={`Desk ${desk.name} : dérivation de l'identité anonyme puis inscription (2 messages)`}
+              reviewLabel={`Desk ${desk.name}: derive the anonymous identity, then register (2 messages)`}
               action={joinDesk.bind(null, { employee: employee.id, desk: desk.id })}
-              successMessage={`Vous êtes inscrit au desk ${desk.name}, anonymement.`}
+              successMessage={`You joined the ${desk.name} desk, anonymously.`}
             />
           </div>
         )}
@@ -90,32 +90,32 @@ function IncomingRequest({ request, employee }: { request: DeskConsentView; empl
     <article className="app-decision-card app-enter overflow-hidden rounded-3xl border bg-card">
       <div className="border-b bg-lavender px-6 py-5 text-lavender-ink">
         <div className="text-[15px] leading-snug">
-          <span className="font-semibold tracking-[-0.02em]">Le desk {DESK_NAMES[request.fromDesk]}</span>
+          <span className="font-semibold tracking-[-0.02em]">The {DESK_NAMES[request.fromDesk]} desk</span>
           <span className="opacity-75">
             {" "}
-            demande un extrait à un membre du desk {request.message.sourceDesk}
+            is asking a member of the {request.message.sourceDesk} desk for an excerpt
           </span>
         </div>
-        <p className="mt-1 text-[13px] opacity-75">Sous la règle d&apos;échange « {request.ruleLabel} »</p>
+        <p className="mt-1 text-[13px] opacity-75">Under exchange rule &quot;{request.ruleLabel}&quot;</p>
       </div>
       <div className="grid gap-6 px-6 py-6 lg:grid-cols-2">
         <div className="space-y-4 text-[13px]">
           <p className="text-muted-foreground">
-            Si vous acceptez, le desk {DESK_NAMES[request.fromDesk]} reçoit l&apos;extrait et une preuve ZK
-            qu&apos;il vient d&apos;un membre de votre desk, sans savoir lequel. Votre identité reste scellée
-            pour la conformité.
+            If you accept, the {DESK_NAMES[request.fromDesk]} desk receives the excerpt and a ZK proof that it
+            comes from a member of your desk, without learning which one. Your identity stays sealed for
+            compliance.
           </p>
           <div>
-            <span className="text-muted-foreground">Extrait : </span>
+            <span className="text-muted-foreground">Excerpt: </span>
             <span className="font-medium">{request.message.excerptLabel}</span>
             <span className="text-muted-foreground"> · {formatLength(request.message.excerptLength)}</span>
           </div>
           <ApproveRejectButtons
-            approveLabel="Partager anonymement"
-            reviewLabel={`Partage anonyme vers le desk ${DESK_NAMES[request.fromDesk]} (signature + preuve ZK)`}
+            approveLabel="Share anonymously"
+            reviewLabel={`Anonymous share to the ${DESK_NAMES[request.fromDesk]} desk (signature + ZK proof)`}
             approve={approveDeskShare.bind(null, { employee: employee.id, requestId: request.id })}
             reject={rejectDeskShare.bind(null, { employee: employee.id, requestId: request.id })}
-            approvedMessage="Partagé anonymement : preuve ZK vérifiée par l'enclave."
+            approvedMessage="Shared anonymously: ZK proof verified by the enclave."
           />
         </div>
         <DevicePreviewCard preview={devicePreview("DeskShare", request.message)} />
@@ -126,9 +126,9 @@ function IncomingRequest({ request, employee }: { request: DeskConsentView; empl
 
 /** Outcomes of a desk request that ended without a delivery. */
 const UNDELIVERED_LABEL: Partial<Record<DeskRequestView["status"], string>> = {
-  rejected: "Refusé par le membre sollicité",
-  no_match: "Aucun membre du desk ne détient d'extrait autorisé par la règle",
-  expired: "Demande expirée",
+  rejected: "Rejected by the member asked",
+  no_match: "No desk member holds an excerpt allowed by the rule",
+  expired: "Request expired",
 };
 
 function OutgoingRequest({ request }: { request: DeskRequestView }) {
@@ -137,12 +137,14 @@ function OutgoingRequest({ request }: { request: DeskRequestView }) {
     <article className="app-enter rounded-3xl border bg-card p-6">
       <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
         <span>
-          Vers le desk <span className="font-medium text-foreground">{DESK_NAMES[request.toDesk]}</span>
+          To the <span className="font-medium text-foreground">{DESK_NAMES[request.toDesk]}</span> desk
         </span>
         <span>· {request.ruleLabel}</span>
         <span className="ml-auto mono-label text-[10px]">{formatRelative(request.createdAt)}</span>
       </div>
-      <p className="mt-3 font-heading text-[19px] leading-snug tracking-[-0.04em]">« {request.task} »</p>
+      <p className="mt-3 font-heading text-[19px] leading-snug tracking-[-0.04em]">
+        &ldquo;{request.task}&rdquo;
+      </p>
       {delivery === undefined ? (
         <div
           className={cn(
@@ -151,7 +153,7 @@ function OutgoingRequest({ request }: { request: DeskRequestView }) {
           )}
         >
           {request.status === "pending" ? <PulseDot tone="live" /> : <Hourglass className="size-3.5" />}
-          {UNDELIVERED_LABEL[request.status] ?? "En attente d'un membre du desk"}
+          {UNDELIVERED_LABEL[request.status] ?? "Waiting for a desk member"}
         </div>
       ) : (
         <div
@@ -170,19 +172,19 @@ function OutgoingRequest({ request }: { request: DeskRequestView }) {
             {delivery.proofVerified ? (
               <span className="inline-flex items-center gap-1.5 font-medium text-success">
                 <ShieldCheck className="size-3.5" />
-                Source : desk {DESK_NAMES[delivery.sourceDesk]} (membre anonyme, preuve ZK vérifiée)
+                Source: {DESK_NAMES[delivery.sourceDesk]} desk (anonymous member, ZK proof verified)
               </span>
             ) : (
               <span className="inline-flex items-center gap-1.5 font-medium text-warning">
                 <ShieldAlert className="size-3.5" />
-                Preuve ZK non vérifiée : ne vous fiez pas à la provenance de cet extrait
+                ZK proof not verified: do not trust where this excerpt comes from
               </span>
             )}
             <span className="inline-flex items-center gap-1 text-muted-foreground">
               nullifier <CopyableHash value={delivery.nullifier} />
             </span>
             <span className="inline-flex items-center gap-1 text-muted-foreground">
-              racine <CopyableHash value={delivery.root} />
+              root <CopyableHash value={delivery.root} />
             </span>
           </div>
         </div>
@@ -208,12 +210,12 @@ export default async function DesksPage({ params }: { params: Promise<{ employee
     <div className="mx-auto max-w-5xl">
       <PageHeader
         title="Desks"
-        eyebrow="Muraille de Chine · preuve ZK"
-        description="Partage entre équipes séparées par une « muraille de Chine » : l'enclave applique les règles d'échange, la réponse prouve (preuve ZK Semaphore) qu'elle vient d'un membre du desk, sans révéler lequel. Seule la conformité peut lever l'anonymat, et cette levée est journalisée."
+        eyebrow="Chinese wall · ZK proof"
+        description="Sharing between teams separated by a Chinese wall: the enclave enforces the exchange rules, and the answer proves (Semaphore ZK proof) that it comes from a desk member without revealing which one. Only compliance can reveal the identity, and every reveal is logged."
       />
-      <SectionTitle>Mes desks</SectionTitle>
+      <SectionTitle>My desks</SectionTitle>
       {myDesks.length === 0 ? (
-        <EmptyState icon={<VenetianMask />} title="Vous n'êtes membre d'aucun desk" />
+        <EmptyState icon={<VenetianMask />} title="You are not a member of any desk" />
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {myDesks.map((desk) => (
@@ -224,7 +226,7 @@ export default async function DesksPage({ params }: { params: Promise<{ employee
 
       {incoming.length > 0 && (
         <section className="mt-10">
-          <SectionTitle>Demandes adressées à votre desk ({incoming.length})</SectionTitle>
+          <SectionTitle>Requests to your desk ({incoming.length})</SectionTitle>
           <div className="space-y-5">
             {incoming.map((request) => (
               <IncomingRequest key={request.id} request={request} employee={employee} />
@@ -235,7 +237,7 @@ export default async function DesksPage({ params }: { params: Promise<{ employee
 
       {myDesks.length > 0 && otherDesks.length > 0 && (
         <section className="mt-10">
-          <SectionTitle>Demander à un autre desk</SectionTitle>
+          <SectionTitle>Ask another desk</SectionTitle>
           <div className="grid gap-4">
             {otherDesks.map((desk) => {
               const fromDesk = myDesks[0];
@@ -247,8 +249,8 @@ export default async function DesksPage({ params }: { params: Promise<{ employee
                       {fromDesk.name} → {desk.name}
                     </CardTitle>
                     <CardDescription>
-                      Sujets autorisés par la règle : {desk.allowedTopics.join(", ")} ·{" "}
-                      {desk.commitments.length} identités anonymes
+                      Topics allowed by the rule: {desk.allowedTopics.join(", ")} · {desk.commitments.length}{" "}
+                      anonymous identities
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -263,7 +265,7 @@ export default async function DesksPage({ params }: { params: Promise<{ employee
 
       {requests.data.outgoing.length > 0 && (
         <section className="mt-10">
-          <SectionTitle>Mes demandes aux autres desks</SectionTitle>
+          <SectionTitle>My requests to other desks</SectionTitle>
           <div className="space-y-4">
             {requests.data.outgoing.map((request) => (
               <OutgoingRequest key={request.id} request={request} />

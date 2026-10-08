@@ -7,11 +7,11 @@ import { NudgeArrow, RollingText, SpinPlus } from "@/components/motion/rolling-t
 import { DEMO_ROUTE, GITHUB_URL } from "./primitives";
 
 const MENU_LINKS = [
-  { href: "#fonctionnement", label: "Comment ça marche" },
-  { href: "#moments", label: "Moments clés" },
-  { href: "#confiance", label: "Sécurité et attestation" },
-  { href: "#integrations", label: "Dans votre harness" },
-  { href: "#faq", label: "Questions" },
+  { href: "#how-it-works", label: "How it works" },
+  { href: "#moments", label: "Key moments" },
+  { href: "#trust", label: "Security & attestation" },
+  { href: "#integrations", label: "In your harness" },
+  { href: "#faq", label: "FAQ" },
 ] as const;
 
 /**
@@ -25,7 +25,7 @@ export function NavPill() {
   return (
     <>
       <nav
-        aria-label="Navigation principale"
+        aria-label="Main navigation"
         className="glass animate-nav-arrive fixed inset-x-0 top-[22px] z-40 mx-auto grid w-[min(440px,calc(100%-32px))] grid-cols-[1fr_auto_1fr] items-center rounded-pill px-2 py-[5px] text-ink shadow-nav"
       >
         <button
@@ -34,17 +34,17 @@ export function NavPill() {
           aria-haspopup="dialog"
           className="inline-flex items-center gap-2 justify-self-start rounded-pill px-[11px] py-[11px] text-[11px] font-semibold md:px-[15px] md:py-3 md:text-[12px]"
         >
-          <RollingText>Le produit</RollingText>
+          <RollingText>Product</RollingText>
           <SpinPlus className="text-[18px] leading-none" />
         </button>
-        <a href="#top" aria-label="Badge, haut de page" className="rounded-[10px]">
+        <a href="#top" aria-label="Badge, back to top" className="rounded-[10px]">
           <BadgeMark className="size-10 md:size-11" />
         </a>
         <Link
           href={DEMO_ROUTE}
           className="inline-flex items-center gap-2 justify-self-end rounded-pill bg-graphite px-[11px] py-[9px] text-[11px] font-semibold text-paper transition-colors duration-300 hover:bg-brand-deep md:px-[15px] md:py-[10px] md:text-[12px]"
         >
-          <RollingText>La démo</RollingText>
+          <RollingText>Demo</RollingText>
           <NudgeArrow />
         </Link>
       </nav>
@@ -60,12 +60,12 @@ export function NavPill() {
       >
         <div className="flex items-center justify-between">
           <p id="nav-dialog-title" className="text-[12px] text-[#595b61]">
-            Badge · mémoire d&apos;entreprise consentie
+            Badge · consent-based company memory
           </p>
           <button
             type="button"
             onClick={close}
-            aria-label="Fermer"
+            aria-label="Close"
             className="lp-close inline-flex size-[42px] items-center justify-center rounded-full border border-[#c6c8cc] text-[28px] leading-none font-normal"
           >
             ×
@@ -92,7 +92,7 @@ export function NavPill() {
             href={DEMO_ROUTE}
             className="inline-flex min-h-12 items-center gap-6 rounded-pill bg-graphite px-6 text-[14px] font-semibold text-paper transition-colors duration-300 hover:bg-brand-deep"
           >
-            <RollingText>Ouvrir la démo</RollingText>
+            <RollingText>Open the demo</RollingText>
             <NudgeArrow />
           </Link>
           <a
@@ -101,9 +101,9 @@ export function NavPill() {
             rel="noreferrer"
             className="inline-flex min-h-12 items-center gap-6 rounded-pill border border-[#c6c8cc] px-6 text-[14px] font-semibold"
           >
-            <RollingText>Code source</RollingText>
+            <RollingText>Source code</RollingText>
             <NudgeArrow />
-            <span className="sr-only"> (GitHub, nouvel onglet)</span>
+            <span className="sr-only"> (GitHub, opens in a new tab)</span>
           </a>
         </div>
       </dialog>

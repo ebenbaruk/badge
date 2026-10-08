@@ -7,59 +7,60 @@ import { GITHUB_URL, SECTION_X, TextLink } from "./primitives";
 const PILLARS = [
   {
     chip: "Intel TDX · Phala dstack",
-    title: "Une enclave matérielle",
-    body: "Mémoire, politique et journal vivent dans une machine virtuelle confidentielle. L'hébergeur ne voit que de la mémoire chiffrée ; journaux et infos système ne sont pas publics.",
+    title: "A hardware enclave",
+    body: "Memory, policy and log live in a confidential virtual machine. The host only sees encrypted memory; logs and system info are never public.",
   },
   {
     chip: "Attestation",
-    title: "Vérifiée à chaque canal",
-    body: "Avant tout échange, le client vérifie la quote Intel, le TCB, le compose hash, l'app id et les mesures de l'image. Cette mesure est aussi signée dans chaque message Ledger.",
+    title: "Verified on every channel",
+    body: "Before any exchange, the client checks the Intel quote, the TCB, the compose hash, the app id and the image measurements. That measurement is also signed into every Ledger message.",
   },
   {
-    chip: "Passerelle unique",
-    title: "Une seule sortie réseau",
-    body: "La seule route vers l'extérieur est une passerelle figée dans la configuration attestée, qui ne joint que le LLM confidentiel. Le déployeur ne peut pas la rediriger.",
+    chip: "Single gateway",
+    title: "One way out",
+    body: "The only route to the outside is a gateway pinned in the attested configuration, and it only reaches the confidential LLM. The deployer can't redirect it.",
   },
   {
     chip: "Confidential AI",
-    title: "Un LLM confidentiel",
-    body: "Seuls les extraits nécessaires à une tâche partent vers Phala Confidential AI, exécuté dans un TEE GPU. Jamais le contexte complet d'un collègue.",
+    title: "A confidential LLM",
+    body: "Only the excerpts a task needs go to Phala Confidential AI, running in a GPU TEE. Never a colleague's full context.",
   },
 ] as const;
 
 const PROOFS = [
   {
     slot: "consent-receipt",
-    alt: "Reçu d'accord signé : carte papier avec un tampon bleu.",
-    title: "Le reçu d'accord",
-    caption: "Message EIP-712 signé sur le Ledger, vérifié par l'enclave avant de libérer l'extrait.",
+    alt: "Signed consent receipt: a paper card with a blue stamp.",
+    title: "The consent receipt",
+    caption:
+      "An EIP-712 message signed on the Ledger, verified by the enclave before the excerpt is released.",
   },
   {
     slot: "attestation-report",
-    alt: "Rapport d'attestation : tablette de verre et anneaux d'orbite.",
-    title: "Le rapport d'attestation",
-    caption: "Quote Intel TDX, compose hash et mesures épinglées, rejoués par chaque client.",
+    alt: "Attestation report: a glass tablet and orbit rings.",
+    title: "The attestation report",
+    caption: "Intel TDX quote, compose hash and pinned measurements, replayed by every client.",
   },
 ] as const;
 
 /** Trust architecture on a royal-blue panel: four guarantees, the attestation seal and the proofs. */
 export function Trust() {
   return (
-    <section id="confiance" aria-labelledby="trust-title" className={`${SECTION_X} pb-[100px] md:pb-[140px]`}>
+    <section id="trust" aria-labelledby="trust-title" className={`${SECTION_X} pb-[100px] md:pb-[140px]`}>
       <div className="relative overflow-hidden rounded-4xl bg-brand-deep px-5 py-14 text-paper md:px-12 md:py-20">
         <div className="grid gap-12 lg:grid-cols-[1.3fr_1fr] lg:items-center">
           <div>
-            <p className="mono-label text-[#a7c8ff]">Architecture de confiance</p>
+            <p className="mono-label text-[#a7c8ff]">Trust architecture</p>
             <RevealText
               as="h2"
               id="trust-title"
               className="mt-5 text-heading-lg"
-              text="Une enclave que chacun peut vérifier."
+              text="An enclave anyone can verify."
             />
             <Reveal as="p" delay={100} className="mt-6 max-w-[34em] text-lede text-[#c4cee2]">
-              Badge ne demande pas de faire confiance à un serveur : il le prouve. Le code qui manipule le
-              contexte est mesuré, attesté par Intel, et cette mesure est affichée sur chaque Ledger au moment
-              de signer.
+              Badge&apos;s memory lives in the cloud and knows everyone&apos;s context, so it doesn&apos;t ask
+              for trust: it proves it. The code that handles context is measured and attested by Intel, and
+              that measurement appears on every Ledger at signing time.
             </Reveal>
           </div>
           <AttestationSeal />
@@ -79,9 +80,9 @@ export function Trust() {
         </Stagger>
 
         <div className="mt-20 grid gap-10 md:grid-cols-[1fr_2.4fr] md:gap-[60px]">
-          <p className="text-[12px] text-[#a7c8ff] md:text-[14px]">Exemple</p>
+          <p className="text-[12px] text-[#a7c8ff] md:text-[14px]">Example</p>
           <div>
-            <RevealText as="h3" className="text-heading-md" text="Chaque accord laisse une preuve." />
+            <RevealText as="h3" className="text-heading-md" text="Every consent leaves proof." />
             <div className="mt-10 grid gap-6 sm:grid-cols-2">
               {PROOFS.map((proof) => (
                 <Reveal as="figure" key={proof.slot}>
@@ -96,7 +97,7 @@ export function Trust() {
               ))}
             </div>
             <TextLink href={`${GITHUB_URL}/blob/main/docs/ARCHITECTURE.md`} className="mt-10 text-paper">
-              Lire l&apos;architecture
+              Read the architecture
             </TextLink>
           </div>
         </div>
@@ -117,7 +118,7 @@ function AttestationSeal() {
       <span className="lp-orbit lp-orbit-c" />
       <Reveal y={0} className="lp-stamp-host">
         <span className="lp-seal">
-          <b>ATTESTE</b>
+          <b>ATTESTED</b>
           <small>Intel TDX</small>
           <code>0x9f2b...77d4</code>
         </span>

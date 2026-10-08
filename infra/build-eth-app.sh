@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Builds app-ethereum `develop` for Flex with the address book enabled (shows "Alice (Ventes)" instead of 0x...).
+# Builds app-ethereum `develop` for Flex with the address book enabled (shows "Alice (Sales)" instead of 0x...).
 # No published release has this feature yet (1.23.0 pending), so we pin the commit we validated.
 set -euo pipefail
 cd "$(dirname "$0")"

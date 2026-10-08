@@ -1,6 +1,6 @@
 /**
  * Typed errors of the web server and their mapping to UI messages. Server actions never throw to the client:
- * they return an {@link ActionResult} whose `code` the UI can branch on and whose `message` is French UI copy.
+ * they return an {@link ActionResult} whose `code` the UI can branch on and whose `message` is English UI copy.
  */
 import { BadgeApiError } from "@badge/client";
 import { ConsentError } from "@badge/consent";
@@ -81,51 +81,56 @@ export function toActionFailure(error: unknown): Extract<ActionResult, { ok: fal
   const detail = error instanceof Error ? error.message : String(error);
   // UserRejectedError extends DeviceActionError: test it before the generic Ledger errors.
   if (error instanceof UserRejectedError)
-    return { ok: false, code: "LEDGER_REJECTED", message: "Refusé sur le Ledger." };
+    return { ok: false, code: "LEDGER_REJECTED", message: "Rejected on Ledger." };
   if (error instanceof LedgerConnectionError)
     return {
       ok: false,
       code: "LEDGER_UNREACHABLE",
-      message: "Ledger injoignable : vérifiez que l'appareil (Speculos) est démarré.",
+      message: "Ledger unreachable: check that the device (Speculos) is running.",
       detail,
     };
   if (error instanceof DeviceNavigationError)
     return {
       ok: false,
       code: "LEDGER_NAVIGATION",
-      message: "La revue automatique n'a pas abouti sur l'appareil.",
+      message: "Auto review did not complete on the device.",
       detail,
     };
   if (error instanceof DeviceActionAbortedError)
-    return { ok: false, code: "LEDGER_ERROR", message: "Signature annulée.", detail };
+    return { ok: false, code: "LEDGER_ERROR", message: "Signing cancelled.", detail };
   if (error instanceof LedgerError)
-    return { ok: false, code: "LEDGER_ERROR", message: "Le Ledger a renvoyé une erreur.", detail };
+    return { ok: false, code: "LEDGER_ERROR", message: "The Ledger returned an error.", detail };
   if (error instanceof ConsentError)
     return {
       ok: false,
       code: "CONSENT_INVALID",
-      message: "Message de consentement invalide : signature refusée.",
+      message: "Invalid consent message: signature refused.",
       detail: `${error.code}: ${detail}`,
     };
   if (error instanceof ZkError)
-    return { ok: false, code: "ZK_ERROR", message: "Preuve ZK impossible à produire ou invalide.", detail };
+    return {
+      ok: false,
+      code: "ZK_ERROR",
+      message: "The ZK proof could not be produced or is invalid.",
+      detail,
+    };
   if (error instanceof EnclaveError)
     return {
       ok: false,
       code: "ENCLAVE_REJECTED",
-      message: `L'enclave a refusé la demande : ${error.message}`,
+      message: `The enclave refused the request: ${error.message}`,
       detail: error.code,
     };
   if (error instanceof AgentSessionMissingError)
     return {
       ok: false,
       code: "NO_SESSION",
-      message: "Votre agent n'a pas de session active : autorisez-le dans Configuration.",
+      message: "Your agent has no active session: authorize it in Setup.",
     };
   if (error instanceof BadgeApiError) return enclaveFailure(error);
   if (error instanceof z.ZodError)
-    return { ok: false, code: "INVALID_INPUT", message: "Saisie invalide.", detail: z.prettifyError(error) };
-  return { ok: false, code: "INTERNAL", message: "Erreur inattendue du serveur.", detail };
+    return { ok: false, code: "INVALID_INPUT", message: "Invalid input.", detail: z.prettifyError(error) };
+  return { ok: false, code: "INTERNAL", message: "Unexpected server error.", detail };
 }
 
 /** Failures reported by @badge/client: transport and attestation problems first, then enclave refusals. */
@@ -136,49 +141,49 @@ function enclaveFailure(error: BadgeApiError): Extract<ActionResult, { ok: false
       return {
         ok: false,
         code: "ENCLAVE_UNREACHABLE",
-        message: "Enclave injoignable : vérifiez qu'elle est démarrée.",
+        message: "Enclave unreachable: check that it is running.",
         detail,
       };
     case "ATTESTATION_FAILED":
       return {
         ok: false,
         code: "ATTESTATION_FAILED",
-        message: "Attestation de l'enclave refusée : aucune donnée n'a été envoyée.",
+        message: "Enclave attestation rejected: no data was sent.",
         detail,
       };
     case "SESSION_UNKNOWN":
       return {
         ok: false,
         code: "NO_SESSION",
-        message: "La session de votre agent a expiré : renouvelez-la dans Configuration.",
+        message: "Your agent's session has expired: renew it in Setup.",
         detail,
       };
     default:
       return {
         ok: false,
         code: "ENCLAVE_REJECTED",
-        message: ENCLAVE_REFUSALS[error.code] ?? "L'enclave a refusé la demande.",
+        message: ENCLAVE_REFUSALS[error.code] ?? "The enclave refused the request.",
         detail,
       };
   }
 }
 
-/** French explanations of the enclave refusals a user can run into (docs/enclave-api.md, "Errors"). */
+/** Plain-English explanations of the enclave refusals a user can run into (docs/enclave-api.md, "Errors"). */
 const ENCLAVE_REFUSALS: Readonly<Record<string, string>> = {
-  NOT_ENROLLED: "Associez d'abord votre Ledger (Configuration).",
+  NOT_ENROLLED: "Pair your Ledger first (Setup).",
   COMPLIANCE_KEY_MISSING:
-    "Aucune clé de conformité n'est enregistrée : la responsable conformité doit l'enregistrer avant tout partage anonyme.",
-  NOT_FOUND: "Demande introuvable ou déjà traitée.",
-  NOT_PENDING: "Cette demande a déjà été traitée.",
-  NONCE_REUSED: "Ce message signé a déjà été utilisé.",
-  SIGNATURE_MISMATCH: "La signature ne correspond pas au Ledger attendu.",
-  ENCLAVE_MISMATCH: "Le message signé vise une autre enclave (mesure différente).",
-  EXPIRED: "Le message signé a expiré.",
-  STALE: "Message trop ancien : recommencez.",
-  FORBIDDEN: "Action non autorisée pour cet employé.",
-  NO_RULE: "Aucune règle d'échange ne permet cette demande entre desks.",
-  UPSTREAM_FAILED: "La mémoire ou le modèle de l'enclave n'a pas répondu : réessayez.",
-  INVALID_REQUEST: "Requête refusée par l'enclave.",
+    "No compliance key is registered: the compliance officer must register one before any anonymous share.",
+  NOT_FOUND: "Request not found or already handled.",
+  NOT_PENDING: "This request has already been handled.",
+  NONCE_REUSED: "This signed message has already been used.",
+  SIGNATURE_MISMATCH: "The signature does not match the expected Ledger.",
+  ENCLAVE_MISMATCH: "The signed message targets another enclave (different measurement).",
+  EXPIRED: "The signed message has expired.",
+  STALE: "Message too old: please try again.",
+  FORBIDDEN: "Action not allowed for this employee.",
+  NO_RULE: "No exchange rule allows this request between desks.",
+  UPSTREAM_FAILED: "The enclave's memory or model did not respond: please try again.",
+  INVALID_REQUEST: "Request refused by the enclave.",
 };
 
 /** Runs `work` and wraps its outcome in an {@link ActionResult}. */

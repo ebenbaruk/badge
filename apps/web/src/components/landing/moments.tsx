@@ -24,58 +24,58 @@ interface Moment {
 
 const MOMENTS: readonly Moment[] = [
   {
-    id: "ecran",
+    id: "screen",
     tag: "Clear signing",
-    title: "Un écran que l'agent ne peut pas falsifier.",
-    body: "Ce que Bob lit est calculé par son Ledger à partir du message signé. Ni l'agent, ni le navigateur, ni le serveur ne contrôlent cet écran.",
-    cursor: "Signer",
+    title: "A screen the agent can't fake.",
+    body: "What Bob reads is computed by his Ledger from the signed message. Not the agent, not the browser, not the server: nobody else controls that screen.",
+    cursor: "Sign",
     watermark: "Ledger",
     tone: "bg-fog text-fog-ink",
     art: {
       slot: "act-ledger",
-      alt: "Un appareil de signature stylisé, avec un écran et une coche de validation.",
+      alt: "A stylized signing device with a screen and a check mark.",
     },
   },
   {
-    id: "refus",
-    tag: "Agent piégé",
-    title: "Agent piégé ? Refusé.",
-    body: "Une injection de prompt réclame tout le contexte de Bob. Les règles de l'enclave lèvent l'alerte, Bob refuse sur son Ledger : rien ne sort, et la conformité le voit.",
-    cursor: "Bloquer",
-    watermark: "Refus",
+    id: "refusal",
+    tag: "Compromised agent",
+    title: "Compromised agent? Denied.",
+    body: "A prompt injection demands all of Bob's context. The enclave rules raise the alarm and Bob rejects it on his Ledger: nothing leaves, and compliance sees it.",
+    cursor: "Block",
+    watermark: "Denied",
     tone: "bg-periwinkle text-periwinkle-ink",
     art: {
       slot: "act-refusal",
-      alt: "Un bouclier protège des barres de données.",
+      alt: "A shield guarding a row of data bars.",
     },
-    stamp: "Refuse · aspiration massive",
+    stamp: "Rejected · bulk extraction",
   },
   {
-    id: "permanent",
-    tag: "Accords permanents",
-    title: "Signé une fois. Tracé à chaque usage.",
-    body: "« Mon équipe Ventes peut utiliser mes notes clients pour des briefs, pendant 30 jours. » Moins de validations, aucune perte de trace : chaque usage entre au journal chaîné.",
-    cursor: "Déléguer",
-    watermark: "Accord",
+    id: "standing",
+    tag: "Standing agreements",
+    title: "Signed once. Logged every time.",
+    body: '"My Sales team can use my client notes for client briefs, for 30 days." Fewer approvals, no lost trail: every use lands in the hash-chained log.',
+    cursor: "Delegate",
+    watermark: "Consent",
     tone: "bg-lavender text-lavender-ink",
-    art: { slot: "act-memory", alt: "Trois anneaux de mémoire lavande empilés." },
+    art: { slot: "act-memory", alt: "Three stacked lavender memory rings." },
   },
   {
     id: "revocation",
-    tag: "Révocation",
-    title: "Un geste, et tout s'arrête.",
-    body: "Une révocation signée coupe un accord, ou tout ce qui est partagé avec un collègue. L'enclave refuse chaque usage suivant, et l'écrit au journal.",
-    cursor: "Révoquer",
+    tag: "Revocation",
+    title: "One move, and it all stops.",
+    body: "A signed revocation cuts off one agreement, or everything shared with a colleague. The enclave rejects every later use and writes it to the log.",
+    cursor: "Revoke",
     watermark: "Stop",
     tone: "bg-peach text-peach-ink",
-    art: { slot: "act-attest", alt: "Un cube scellé entouré d’une orbite." },
+    art: { slot: "act-attest", alt: "A sealed cube circled by an orbit." },
   },
   {
     id: "desks",
-    tag: "Desks anonymes · ZK",
-    title: "Partager entre desks, sans dire qui.",
-    body: "Une preuve Semaphore montre qu'un membre du desk a accepté, sans révéler lequel. Seule la conformité peut lever l'anonymat, sur son propre Ledger, et cela laisse une trace.",
-    cursor: "Prouver",
+    tag: "Anonymous desks · ZK",
+    title: "Share across desks without saying who.",
+    body: "A Semaphore proof shows that a desk member approved, without revealing which one. Only compliance can reveal the identity, on its own Ledger, and that leaves a trace.",
+    cursor: "Prove",
     watermark: "ZK",
     tone: "bg-night-2 text-[#c4cee2]",
     art: "zk",
@@ -91,9 +91,9 @@ export function Moments() {
           as="h2"
           id="moments-title"
           className="max-w-[14em] text-heading-lg"
-          text="Cinq moments où la confiance se joue."
+          text="Five moments where trust is won or lost."
         />
-        <TextLink href={DEMO_ROUTE}>Les vivre dans la démo</TextLink>
+        <TextLink href={DEMO_ROUTE}>See them in the demo</TextLink>
       </div>
       <ol className="mt-12 grid gap-6 md:mt-16">
         {MOMENTS.map((moment, index) => (
@@ -121,7 +121,7 @@ function MomentCard({ moment, index }: { moment: Moment; index: number }) {
         <span className="lp-glass-tag rounded-pill border border-[#fff5] bg-[#ffffff65] px-[11px] py-[6px] text-[10px] md:px-[18px] md:py-[9px] md:text-[13px]">
           {moment.tag}
         </span>
-        <span className="justify-self-end">{index === 4 ? "Mode desks" : "Démo"}</span>
+        <span className="justify-self-end">{index === 4 ? "Desk mode" : "Demo"}</span>
       </div>
 
       <span
@@ -180,19 +180,15 @@ function CaseCursor({ children }: { children: ReactNode }) {
 function ZkSculpture() {
   const members = Array.from({ length: 7 }, (_, i) => i);
   return (
-    <div
-      role="img"
-      aria-label="Sept membres d'un desk en orbite autour d'une preuve à divulgation nulle."
-      className="lp-zk"
-    >
+    <div role="img" aria-label="Seven desk members orbiting a zero-knowledge proof." className="lp-zk">
       <div className="lp-zk-orbit">
         {members.map((i) => (
           <span key={i} className="lp-zk-member" style={{ "--k": i } as React.CSSProperties} />
         ))}
       </div>
       <div className="lp-zk-core">
-        <span className="mono-chip text-signal">Preuve ZK</span>
-        <span className="mt-2 font-mono text-[11px] opacity-70">1 sur 7 · anonyme</span>
+        <span className="mono-chip text-signal">ZK proof</span>
+        <span className="mt-2 font-mono text-[11px] opacity-70">1 of 7 · anonymous</span>
       </div>
     </div>
   );
