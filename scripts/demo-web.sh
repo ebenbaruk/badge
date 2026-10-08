@@ -5,7 +5,7 @@
 #       Starts (or restarts) the enclave on :8787 and the web app on :3000, after preparing the demo: every
 #       employee enrolled, fresh 8-hour agent sessions, the Research desk complete, the compliance key registered.
 #       The presenter lands directly on the jury walkthrough (http://localhost:3000/demo).
-#         --fresh       archive the previous demo state first (enclave database, web runtime): a clean run
+#         --fresh       delete the previous demo state first (enclave database, web runtime): a clean run
 #         --rehearsal   adds "Auto review" under the Ledger mirror (practice only, never in front of the jury)
 #         --dev         Next dev server (hot reload) instead of the production build
 #   scripts/demo-web.sh stop          stops the enclave and the web app started here (the stack keeps running)
@@ -93,13 +93,10 @@ web_build_stale() {
     -newer "$WEB_BUILD_ID" -type f -not -path '*/node_modules/*' -print -quit 2>/dev/null)" ]
 }
 
-archive_state() {
-  local archive
-  archive="$STATE_DIR/archive/demo-$(date +%Y%m%d-%H%M%S)"
-  mkdir -p "$archive"
-  [ -d "$ENCLAVE_DATA_DIR" ] && mv "$ENCLAVE_DATA_DIR" "$archive/enclave"
-  [ -d "$WEB_DATA_DIR" ] && mv "$WEB_DATA_DIR" "$archive/web"
-  ok "previous demo state archived in ${archive#"$REPO_ROOT"/}"
+# The demo state is fully re-created by the preparation: a fresh run deletes it rather than piling up copies.
+reset_state() {
+  rm -rf "$ENCLAVE_DATA_DIR" "$WEB_DATA_DIR"
+  ok "previous demo state deleted (enclave database, web runtime)"
 }
 
 cmd_stop() {
@@ -148,7 +145,7 @@ cmd_start() {
   ok "Speculos Ledgers, simulated TEE, memory up and seeded (log: $(log_file bootstrap))"
 
   cmd_stop
-  [ "$fresh" = false ] || archive_state
+  [ "$fresh" = false ] || reset_state
 
   step "Enclave (:$ENCLAVE_PORT, simulated TEE)"
   start_service enclave pnpm --filter @badge/enclave start

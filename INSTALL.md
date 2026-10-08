@@ -86,7 +86,7 @@ You start directly at the walkthrough below.
 | Command                             | Effect                                                                                  |
 | ----------------------------------- | --------------------------------------------------------------------------------------- |
 | `pnpm demo:web`                     | Start or restart. Also renews the agent sessions, which last 8 hours                    |
-| `pnpm demo:web --fresh`             | Archive the previous demo state first (`infra/.data/archive/`): a clean run             |
+| `pnpm demo:web --fresh`             | Delete the previous demo state first: a clean run                                       |
 | `pnpm demo:web --rehearsal`         | Adds "Auto review" under the Ledger mirror to approve a whole review at once (practice) |
 | `pnpm demo:web --dev`               | Next.js dev server with hot reload instead of the production build                      |
 | `pnpm demo:web status`              | What runs, and until when the agent sessions are valid                                  |
