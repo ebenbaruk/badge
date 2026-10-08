@@ -5,11 +5,30 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import type { ActionResult } from "@/server/errors";
 import { useLedgerActivity } from "./ledger-activity";
 
 /** Approval outcome of a device review: the owner may also refuse on the Ledger itself. */
 type Outcome = "approved" | "rejected_on_device";
+
+/** Decision shown as a stamp on the card before the list refreshes and the request moves to the history. */
+type Decision = "approved" | "rejected";
+
+/** Long enough for the stamp to land and be read, short enough not to feel like lag. */
+const STAMP_VISIBLE_MS = 1100;
+
+const wait = (ms: number): Promise<void> => new Promise((resolve) => window.setTimeout(resolve, ms));
+
+/** Dashed seal that lands on a decided request ("SIGNE" / "REFUSE", ASCII like the device). */
+function DecisionStamp({ decision }: { decision: Decision }) {
+  return (
+    <span role="status" className={cn("app-stamp", decision === "approved" ? "text-success" : "text-danger")}>
+      {decision === "approved" ? "Signe" : "Refuse"}
+      <small>{decision === "approved" ? "Ledger" : "Rien ne sort"}</small>
+    </span>
+  );
+}
 
 /**
  * "Approve on my Ledger" / "Refuse" pair. Approval runs the server action that waits for the device; the mirror
@@ -32,12 +51,20 @@ export function ApproveRejectButtons({
   const router = useRouter();
   const { runOnLedger, activity } = useLedgerActivity();
   const [busy, setBusy] = useState<"approve" | "reject" | null>(null);
+  const [decision, setDecision] = useState<Decision | null>(null);
+
+  /** Lets the stamp land on the card, then refreshes (the request leaves the pending list). */
+  const settle = async (outcome: Decision): Promise<void> => {
+    setDecision(outcome);
+    await wait(STAMP_VISIBLE_MS);
+  };
 
   const onApprove = async (): Promise<void> => {
     setBusy("approve");
-    await runOnLedger(reviewLabel, approve, {
+    const result = await runOnLedger(reviewLabel, approve, {
       success: (outcome) => (outcome === "approved" ? approvedMessage : "Refusé sur le Ledger."),
     });
+    if (result.ok) await settle(result.data === "approved" ? "approved" : "rejected");
     setBusy(null);
     router.refresh();
   };
@@ -45,19 +72,26 @@ export function ApproveRejectButtons({
   const onReject = async (): Promise<void> => {
     setBusy("reject");
     const result = await reject();
-    if (result.ok) toast("Demande refusée.");
-    else toast.error(result.message);
+    if (result.ok) {
+      toast("Demande refusée.");
+      await settle("rejected");
+    } else toast.error(result.message);
     setBusy(null);
     router.refresh();
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <Button onClick={() => void onApprove()} disabled={busy !== null || activity !== null}>
+    <div className="relative flex flex-wrap items-center gap-2" data-outcome={decision ?? undefined}>
+      {decision !== null && (
+        <span className="absolute -top-8 right-0 z-10">
+          <DecisionStamp decision={decision} />
+        </span>
+      )}
+      <Button size="lg" onClick={() => void onApprove()} disabled={busy !== null || activity !== null}>
         {busy === "approve" ? <Loader2 className="animate-spin" /> : <PenLine />}
         {busy === "approve" ? "Vérifiez sur votre Ledger…" : approveLabel}
       </Button>
-      <Button variant="ghost" onClick={() => void onReject()} disabled={busy !== null}>
+      <Button variant="ghost" size="lg" onClick={() => void onReject()} disabled={busy !== null}>
         {busy === "reject" ? <Loader2 className="animate-spin" /> : <X />}
         Refuser
       </Button>

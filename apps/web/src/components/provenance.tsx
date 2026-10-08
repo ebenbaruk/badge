@@ -10,7 +10,7 @@ const PROVENANCE: Record<AllowedBy, { label: string; className: string; Icon: ty
   },
   own: {
     label: "Mon contexte",
-    className: "border-sky-500/25 bg-sky-500/10 text-sky-700 dark:text-sky-300",
+    className: "border-periwinkle/60 bg-periwinkle/20 text-brand-deep dark:text-periwinkle",
     Icon: User,
   },
   consent: {
@@ -36,7 +36,7 @@ export function ProvenanceBadge({ allowedBy, className }: { allowedBy: AllowedBy
   return (
     <span
       className={cn(
-        "inline-flex h-5 items-center gap-1 rounded-full border px-2 text-[11px] font-medium whitespace-nowrap",
+        "inline-flex h-6 items-center gap-1 rounded-pill border px-2.5 text-[11px] font-semibold whitespace-nowrap",
         tone,
         className,
       )}
