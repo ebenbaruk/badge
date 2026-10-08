@@ -13,6 +13,7 @@ import {
   XCircle,
   type LucideIcon,
 } from "lucide-react";
+import type { CSSProperties } from "react";
 import { formatTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { TaskStep, TaskStepKind } from "@/server/enclave/types";
@@ -35,26 +36,32 @@ const STEP_STYLE: Record<TaskStepKind, { Icon: LucideIcon; tone: string }> = {
 /** The agent's steps inside the enclave, as a vertical timeline. */
 export function TaskTimeline({ steps }: { steps: readonly TaskStep[] }) {
   return (
-    <ol className="relative space-y-3.5">
+    <ol className="relative space-y-4">
       {steps.map((step, index) => {
         const { Icon, tone } = STEP_STYLE[step.kind];
         const last = index === steps.length - 1;
         return (
-          <li key={`${step.kind}-${index}`} className="relative flex gap-3">
+          // New steps rise in as the agent progresses (first render only, never on a refresh).
+          <li
+            key={`${step.kind}-${index}`}
+            className="app-enter relative flex gap-3"
+            style={{ "--i": index } as CSSProperties}
+          >
             {!last && (
-              <span aria-hidden className="absolute top-6 bottom-[-14px] left-[11px] w-px bg-border" />
+              <span aria-hidden className="absolute top-7 bottom-[-16px] left-[13px] w-px bg-border" />
             )}
             <span
               className={cn(
-                "relative z-10 flex size-6 shrink-0 items-center justify-center rounded-full border bg-card",
+                "relative z-10 flex size-7 shrink-0 items-center justify-center rounded-full border-[1.5px] border-current/30 bg-card",
                 tone,
+                last && "ring-4 ring-current/10",
               )}
             >
               <Icon className="size-3.5" />
             </span>
             <div className="min-w-0 flex-1 pt-0.5">
               <div className="flex items-baseline justify-between gap-3">
-                <span className="text-[13px] font-medium">{step.title}</span>
+                <span className="text-[13px] font-semibold tracking-[-0.01em]">{step.title}</span>
                 {step.at !== undefined && (
                   <time className="shrink-0 font-mono text-[10px] text-muted-foreground tabular-nums">
                     {formatTime(step.at)}

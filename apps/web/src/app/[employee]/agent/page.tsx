@@ -17,13 +17,14 @@ export default async function AgentPage({ params }: { params: Promise<{ employee
     <div className="mx-auto max-w-5xl">
       <PageHeader
         title={`Agent de ${employee.firstName}`}
+        eyebrow="Agent · mémoire confidentielle"
         description="Votre agent interroge la mémoire confidentielle de l'enclave. Le contexte global et le vôtre sont utilisables d'office ; celui d'un collègue ne sort qu'avec son accord, signé sur son Ledger."
       />
       <AgentComposer
         employee={employee.id}
         targetName={EMPLOYEES[COMPROMISED_AGENT_TARGET[employee.id]].firstName}
       />
-      <div className="mt-10 space-y-10">
+      <div className="mt-12 space-y-12">
         {!tasks.ok ? (
           <EnclaveUnavailable failure={tasks} employee={employee.id} />
         ) : tasks.data.length === 0 ? (

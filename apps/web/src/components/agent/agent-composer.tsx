@@ -58,8 +58,8 @@ export function AgentComposer({ employee, targetName }: { employee: EmployeeId; 
     <form
       onSubmit={onSubmit}
       className={cn(
-        "rounded-xl border bg-card shadow-xs transition-colors focus-within:border-ring/60",
-        compromised && "border-danger/40 focus-within:border-danger/60",
+        "rounded-3xl border bg-card shadow-nav transition-[border-color,box-shadow] duration-300 ease-out-soft focus-within:border-ring/60 focus-within:shadow-focus",
+        compromised && "border-danger/45 bg-danger/[0.03] focus-within:border-danger/60",
       )}
     >
       <Textarea
@@ -68,15 +68,15 @@ export function AgentComposer({ employee, targetName }: { employee: EmployeeId; 
         onKeyDown={onKeyDown}
         placeholder="Demandez quelque chose à votre agent…"
         aria-label="Tâche pour l'agent"
-        className="min-h-20 resize-none border-0 bg-transparent px-4 pt-3.5 text-[14px] shadow-none focus-visible:ring-0 dark:bg-transparent"
+        className="min-h-24 resize-none rounded-3xl border-0 bg-transparent px-5 pt-4 text-[16px] font-medium shadow-none placeholder:text-muted-foreground/70 focus-visible:ring-0 dark:bg-transparent"
       />
-      <div className="flex flex-wrap items-center gap-2 px-3 pt-1 pb-3">
+      <div className="flex flex-wrap items-center gap-2 px-4 pt-1 pb-4">
         {SUGGESTIONS[employee].map((suggestion) => (
           <button
             key={suggestion}
             type="button"
             onClick={() => setTask(suggestion)}
-            className="max-w-full truncate rounded-full border bg-background px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            className="max-w-full truncate rounded-pill border bg-surface px-3.5 py-1.5 text-xs text-muted-foreground transition-[background-color,color,border-color] duration-300 ease-out-soft hover:border-foreground/30 hover:bg-card hover:text-foreground"
           >
             {suggestion}
           </button>
@@ -110,8 +110,8 @@ export function AgentComposer({ employee, targetName }: { employee: EmployeeId; 
           </Tooltip>
           <Button
             type="submit"
-            size="icon"
-            className="rounded-full"
+            size="icon-lg"
+            variant="night"
             aria-label="Envoyer"
             disabled={pending || task.trim().length === 0}
           >
