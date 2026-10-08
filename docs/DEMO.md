@@ -68,8 +68,11 @@ Deux terminaux :
 ```bash
 pnpm --filter @badge/enclave start                                              # enclave sur :8787
 pnpm desks:seed                                                                 # David et Emma rejoignent Research
-BADGE_CAL_TEST_KEY=$PWD/infra/keys/cal-test.pem pnpm --filter @badge/web dev    # http://localhost:3000
+BADGE_CAL_TEST_KEY=$PWD/infra/keys/cal-test.pem pnpm --filter @badge/web dev    # http://localhost:3000/demo
 ```
+
+La racine `http://localhost:3000` est la page de présentation publique ; la démo s'ouvre sur `/demo` (agent
+d'Alice), lien « Ouvrir la démo » de la page.
 
 `pnpm desks:seed` (enclave lancée, Speculos de David et Emma démarrés) inscrit David et Emma et les fait rejoindre le
 desk Research avec leurs propres Ledgers ; leurs revues sont validées automatiquement, c'est de la préparation. Il est
