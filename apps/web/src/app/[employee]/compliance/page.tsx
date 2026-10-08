@@ -29,8 +29,8 @@ const TYPE_TONE: Record<string, string> = {
   "policy.created": "bg-brand/12 text-brand",
   "consent.rejected": "bg-warning/14 text-warning",
   revoke: "bg-warning/14 text-warning",
-  "desk.share": "bg-violet-500/12 text-violet-600 dark:text-violet-300",
-  "compliance.reveal": "bg-violet-500/12 text-violet-600 dark:text-violet-300",
+  "desk.share": "bg-violet/12 text-violet dark:text-lavender",
+  "compliance.reveal": "bg-violet/12 text-violet dark:text-lavender",
 };
 
 /** Rule reasons as the enclave logs them in `rule.warn` / `rule.block` entries (French message, stable code). */
@@ -65,24 +65,43 @@ function DataCell({ data }: { data: Record<string, unknown> }) {
   );
 }
 
+/** Pastel art tiles of the reference: fixed colours in both themes, with their own ink. */
+const STAT_TILES = {
+  periwinkle: "bg-periwinkle text-periwinkle-ink",
+  peach: "bg-peach text-peach-ink",
+  lavender: "bg-lavender text-lavender-ink",
+} as const;
+
 function Stat({
   icon,
   label,
   value,
-  tone,
+  tile,
+  alarm = false,
 }: {
   icon: React.ReactNode;
   label: string;
   value: React.ReactNode;
-  tone?: string;
+  tile: keyof typeof STAT_TILES;
+  /** Problem state: the value turns to the fixed alarm red, readable on every pastel tile. */
+  alarm?: boolean;
 }) {
   return (
-    <div className="rounded-xl border bg-card p-4">
-      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-        {icon}
+    <div className={cn("app-enter app-lift flex min-h-36 flex-col rounded-[18px] p-5", STAT_TILES[tile])}>
+      <div className="flex items-center gap-2 text-[13px] font-medium">
+        <span className="flex size-7 items-center justify-center rounded-full bg-white/45 ring-1 ring-white/50">
+          {icon}
+        </span>
         {label}
       </div>
-      <div className={cn("mt-2 text-lg font-semibold tracking-tight", tone)}>{value}</div>
+      <div
+        className={cn(
+          "mt-auto pt-5 font-heading text-[32px] leading-none font-medium tracking-display",
+          alarm && "text-bad",
+        )}
+      >
+        {value}
+      </div>
     </div>
   );
 }
@@ -94,7 +113,7 @@ function AlertRow({ entry }: { entry: AuditEntryView }) {
   const owner =
     typeof entry.data.owner === "string" && isEmployeeId(entry.data.owner) ? entry.data.owner : null;
   return (
-    <li className="flex items-start gap-3 px-4 py-3 text-xs">
+    <li className="app-enter flex items-start gap-3 px-5 py-4 text-xs">
       {block ? (
         <ShieldX className="size-4 shrink-0 text-danger" />
       ) : (
@@ -102,12 +121,16 @@ function AlertRow({ entry }: { entry: AuditEntryView }) {
       )}
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <span className="font-medium">{block ? "Bloqué" : "Signalé"}</span>
+          <span className="rounded-pill border border-danger/35 bg-danger/8 px-2 py-0.5 mono-chip text-danger">
+            {block ? "Bloqué" : "Signalé"}
+          </span>
           <span className="text-muted-foreground">
             {isEmployeeId(entry.actor) ? `Agent de ${EMPLOYEES[entry.actor].name}` : "Demande d'un agent"} →
             contexte de {owner === null ? "?" : EMPLOYEES[owner].name}
           </span>
-          <time className="ml-auto text-muted-foreground">{formatDateTime(entry.ts)}</time>
+          <time className="ml-auto mono-label text-[10px] text-muted-foreground">
+            {formatDateTime(entry.ts)}
+          </time>
         </div>
         {reasons.length > 0 && (
           <ul className="mt-1.5 space-y-0.5 text-danger">
@@ -136,37 +159,45 @@ export default async function CompliancePage({ params }: { params: Promise<{ emp
     <div className="mx-auto max-w-6xl">
       <PageHeader
         title="Conformité"
+        eyebrow="Enclave · journal chaîné"
         description="Journal d'audit de l'enclave : chaque entrée est chaînée à la précédente par son empreinte SHA-256 et ne contient que des empreintes, jamais le texte des extraits."
       />
       <div className="grid gap-4 sm:grid-cols-3">
         <Stat
           icon={trusted ? <Link2 className="size-3.5" /> : <Link2Off className="size-3.5" />}
           label="Intégrité de la chaîne"
-          tone={trusted ? "text-success" : "text-danger"}
+          tile="periwinkle"
+          alarm={!trusted}
           value={
-            <span>
+            <span className="block">
               {!chain.ok
                 ? `Rompue à l'entrée ${chain.brokenAt}`
                 : chain.anchorProblem !== undefined
-                  ? `Non fiable : ${chain.anchorProblem}`
+                  ? "Non fiable"
                   : "Vérifiée"}
-              <span className="ml-2 text-xs font-normal text-muted-foreground">{chain.length} entrées</span>
+              {/* The anchor problem is a sentence: it goes on the small line, the tile keeps a short verdict. */}
+              <span className="mt-2 block font-sans text-xs font-medium tracking-normal opacity-75">
+                {chain.ok && chain.anchorProblem !== undefined ? `${chain.anchorProblem} · ` : ""}
+                {chain.length} entrées
+              </span>
             </span>
           }
         />
         <Stat
           icon={<ShieldAlert className="size-3.5" />}
           label="Alertes des règles"
-          tone={alerts.length > 0 ? "text-danger" : undefined}
+          tile="peach"
+          alarm={alerts.length > 0}
           value={alerts.length}
         />
         <Stat
           icon={<VenetianMask className="size-3.5" />}
           label="Partages anonymes scellés"
+          tile="lavender"
           value={sealed.length}
         />
       </div>
-      <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+      <div className="mt-3 flex flex-wrap items-center gap-1.5 rounded-pill border bg-card px-4 py-2 text-[11px] text-muted-foreground">
         Tête de chaîne <CopyableHash value={chain.headHash} />
         {chain.headSigner !== undefined && (
           <span className="inline-flex items-center gap-1.5">
@@ -187,7 +218,7 @@ export default async function CompliancePage({ params }: { params: Promise<{ emp
             rien signalé.
           </EmptyState>
         ) : (
-          <ul className="divide-y rounded-xl border border-danger/25 bg-card">
+          <ul className="divide-y overflow-hidden rounded-3xl border border-danger/30 bg-card">
             {[...alerts].reverse().map((entry) => (
               <AlertRow key={entry.seq} entry={entry} />
             ))}
@@ -200,11 +231,14 @@ export default async function CompliancePage({ params }: { params: Promise<{ emp
         {sealed.length === 0 ? (
           <EmptyState icon={<VenetianMask />} title="Aucun partage anonyme" />
         ) : (
-          <ul className="divide-y rounded-xl border bg-card">
+          <ul className="divide-y overflow-hidden rounded-3xl border bg-card">
             {sealed.map((item) => (
-              <li key={item.seq} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 text-xs">
+              <li
+                key={item.seq}
+                className="app-enter flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-4 text-xs"
+              >
                 <span className="font-mono text-muted-foreground">#{item.seq}</span>
-                <span className="font-medium">Desk {DESK_NAMES[item.sourceDesk]}</span>
+                <span className="font-semibold">Desk {DESK_NAMES[item.sourceDesk]}</span>
                 <span className="text-muted-foreground">{item.label}</span>
                 <span className="inline-flex items-center gap-1 text-muted-foreground">
                   scellé <CopyableHash value={item.sealed} />
@@ -217,7 +251,7 @@ export default async function CompliancePage({ params }: { params: Promise<{ emp
                       sourceDesk={DESK_NAMES[item.sourceDesk]}
                     />
                   ) : (
-                    <span className="font-medium text-violet-600 dark:text-violet-300">
+                    <span className="inline-flex animate-gallery-in items-center rounded-pill bg-lavender px-3 py-1 font-semibold text-lavender-ink">
                       {item.revealed.employee === undefined
                         ? "Identité levée"
                         : EMPLOYEES[item.revealed.employee].name}{" "}
@@ -236,9 +270,9 @@ export default async function CompliancePage({ params }: { params: Promise<{ emp
         {entries.length === 0 ? (
           <EmptyState icon={<ScrollText />} title="Journal vide" />
         ) : (
-          <div className="rounded-xl border bg-card">
+          <div className="overflow-hidden rounded-3xl border bg-card">
             <Table>
-              <TableHeader>
+              <TableHeader className="bg-surface/60 [&_th]:mono-label [&_th]:text-[10px] [&_th]:text-muted-foreground">
                 <TableRow>
                   <TableHead className="pl-4">#</TableHead>
                   <TableHead>Heure</TableHead>
@@ -260,7 +294,7 @@ export default async function CompliancePage({ params }: { params: Promise<{ emp
                     <TableCell>
                       <span
                         className={cn(
-                          "rounded-full px-2 py-0.5 font-mono text-[10.5px] font-medium",
+                          "rounded-pill px-2.5 py-1 font-mono text-[10.5px] font-semibold",
                           TYPE_TONE[entry.type] ?? "bg-muted text-muted-foreground",
                         )}
                       >

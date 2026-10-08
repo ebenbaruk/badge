@@ -72,7 +72,7 @@ export function RevealButton({
             scellée pour la conformité. La levée est définitive et inscrite au journal d&apos;audit chaîné.
           </DialogDescription>
         </DialogHeader>
-        <p className="rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
+        <p className="rounded-2xl border bg-surface px-4 py-3 text-xs leading-relaxed text-muted-foreground">
           Votre Ledger va signer le message de dérivation de votre clé de conformité. La clé n&apos;existe que
           le temps du déchiffrement, de votre côté : l&apos;enclave ne voit jamais l&apos;identité, seulement
           l&apos;avis de levée.
@@ -81,7 +81,7 @@ export function RevealButton({
           <DialogClose asChild>
             <Button variant="ghost">Annuler</Button>
           </DialogClose>
-          <Button onClick={() => void reveal()} disabled={busy}>
+          <Button variant="night" onClick={() => void reveal()} disabled={busy}>
             Signer sur mon Ledger
           </Button>
         </DialogFooter>
