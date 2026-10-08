@@ -29,7 +29,9 @@ import {
   type EmployeeId,
 } from "@/lib/directory";
 import { reasonForThirdParty } from "@/lib/format";
+import { uniqueFindings } from "@/lib/rule-findings";
 import { EnclaveError } from "../errors";
+import { groupRuleAlerts } from "./alerts";
 import type {
   AllowedBy,
   AttestationView,
@@ -51,7 +53,6 @@ import type {
 
 const COMPANY_OWNER = "company";
 const MS_PER_SECOND = 1000;
-const ALERT_TYPES: ReadonlySet<string> = new Set(["rule.warn", "rule.block"]);
 const DESK_SHARE = "desk.share";
 const COMPLIANCE_REVEAL = "compliance.reveal";
 /** Default title when the model's first line is already a bullet. */
@@ -260,6 +261,41 @@ function ownersOf(excerpts: ReadonlyArray<{ ownerId: string }>): string {
   return [...new Set(excerpts.map((e) => firstNameOf(ownerOf(e.ownerId))))].join(", ");
 }
 
+type RuleLevel = Exclude<Risk["level"], "ok">;
+
+/**
+ * One timeline step per (owner, level). The enclave evaluates each candidate excerpt on its own, so a compromised
+ * agent asking for a whole context gets the same verdict once per excerpt: listed as is, one attack would read as
+ * several. Steps keep the order of each group's first excerpt; reasons are the de-duplicated union.
+ */
+export function ruleSteps(excerpts: ReadonlyArray<{ ownerId: string; risk: Risk }>): TaskStep[] {
+  const groups = new Map<string, { ownerId: string; level: RuleLevel; risks: Risk[] }>();
+  for (const excerpt of excerpts) {
+    const { level } = excerpt.risk;
+    if (level === "ok") continue;
+    const key = `${excerpt.ownerId}\u0000${level}`;
+    const group = groups.get(key) ?? { ownerId: excerpt.ownerId, level, risks: [] };
+    group.risks.push(excerpt.risk);
+    groups.set(key, group);
+  }
+  return [...groups.values()].map(({ ownerId, level, risks }): TaskStep => {
+    const owner = firstNameOf(ownerOf(ownerId));
+    // Reasons address the owner ("your context"); this timeline is the requester's, so they name the owner.
+    const reasons = uniqueFindings(risks.flatMap(findingsOf)).map((finding) =>
+      reasonForThirdParty(finding.message, ownerNameOf(ownerId)),
+    );
+    const count = risks.length > 1 ? ` (${risks.length} excerpts)` : "";
+    return {
+      kind: level === "block" ? "rule_block" : "rule_warn",
+      title:
+        level === "block"
+          ? `Blocked by the rules before reaching ${owner}`
+          : `Flagged to ${owner} by enclave rules`,
+      detail: `${reasons.join(" ")}${count}`,
+    };
+  });
+}
+
 function taskSteps(task: Task, record: TaskRecord): TaskStep[] {
   const steps: TaskStep[] = [
     record.trapped
@@ -301,20 +337,7 @@ function taskSteps(task: Task, record: TaskRecord): TaskStep[] {
       detail: `${plural(viaPolicy.length, "excerpt")} with no new signature; every use is logged.`,
     });
   }
-  for (const excerpt of [...task.pending, ...task.blocked]) {
-    if (excerpt.risk.level === "ok") continue;
-    steps.push({
-      kind: excerpt.risk.level === "block" ? "rule_block" : "rule_warn",
-      title:
-        excerpt.risk.level === "block"
-          ? `Blocked by the rules before reaching ${firstNameOf(ownerOf(excerpt.ownerId))}`
-          : `Flagged to ${firstNameOf(ownerOf(excerpt.ownerId))} by enclave rules`,
-      // Reasons address the owner ("your context"); this timeline is the requester's, so they name the owner.
-      detail: excerpt.risk.reasons
-        .map((r) => reasonForThirdParty(r.message, ownerNameOf(excerpt.ownerId)))
-        .join(" "),
-    });
-  }
+  steps.push(...ruleSteps([...task.pending, ...task.blocked]));
   const consented = byVia("consent");
   if (consented.length > 0) {
     steps.push({
@@ -494,7 +517,7 @@ export function auditView(log: AuditLog, revealedSigners: ReadonlyMap<number, Em
       headHash: entries.at(-1)?.hash ?? zeroHash,
       ...(brokenAt === null ? {} : { brokenAt }),
     },
-    alerts: entries.filter((e) => ALERT_TYPES.has(e.type)),
+    alerts: groupRuleAlerts(entries),
     sealed,
   };
 }

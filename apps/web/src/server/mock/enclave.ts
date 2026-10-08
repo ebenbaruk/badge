@@ -9,6 +9,7 @@ import { complianceKeyRegistrationMessage } from "@badge/attest";
 import { isAddressEqual, keccak256, recoverMessageAddress, toHex, type Hex } from "viem";
 import { COMPANY_NAME, EMPLOYEES, type DeskId, type EmployeeId } from "@/lib/directory";
 import { EnclaveError } from "../errors";
+import { groupRuleAlerts } from "../enclave/alerts";
 import { consentHistoryEntry } from "../enclave/history";
 import type {
   AttestationView,
@@ -35,7 +36,6 @@ import * as desks from "./desks";
 import { createMockState, mockMeasurement, type MockState } from "./state";
 import * as tasks from "./tasks";
 
-const ALERT_TYPES: ReadonlySet<string> = new Set(["rule.warn", "rule.block"]);
 const APP_ID_BYTES = 20;
 
 export class MockEnclave implements EnclaveApi {
@@ -201,7 +201,7 @@ export class MockEnclave implements EnclaveApi {
     return {
       entries,
       chain: verifyChain(entries),
-      alerts: entries.filter((e) => ALERT_TYPES.has(e.type)),
+      alerts: groupRuleAlerts(entries),
       sealed: [...this.state.sealed.values()].map(desks.sealedView),
     };
   }

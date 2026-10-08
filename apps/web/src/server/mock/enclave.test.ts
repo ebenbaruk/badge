@@ -153,7 +153,7 @@ describe("mock enclave demo scenario", () => {
 
     const audit = await enclave.audit("chloe");
     expect(audit.chain.ok).toBe(true);
-    expect(audit.alerts.map((a) => a.type)).toContain("rule.warn");
+    expect(audit.alerts.map((a) => a.level)).toContain("warn");
     await expect(enclave.audit("alice")).rejects.toBeInstanceOf(EnclaveError);
   });
 

@@ -1,16 +1,15 @@
 import { BadgeCheck, Link2, Link2Off, ScrollText, ShieldAlert, ShieldX, VenetianMask } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { z } from "zod";
 import { RevealButton } from "@/components/compliance/reveal-button";
 import { CopyableHash } from "@/components/copyable-hash";
 import { EnclaveUnavailable } from "@/components/enclave-unavailable";
 import { EmptyState, PageHeader, SectionTitle } from "@/components/page-header";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DESK_NAMES, EMPLOYEES, isDeskId, isEmployeeId } from "@/lib/directory";
-import { formatDateTime, formatTime, reasonForThirdParty } from "@/lib/format";
+import { formatDateTime, formatTime, plural, reasonForThirdParty } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { enclave, type AuditEntryView } from "@/server/enclave";
+import { enclave, type RuleAlertView } from "@/server/enclave";
 import { employeeFromParams, load } from "@/server/load";
 
 export const metadata: Metadata = { title: "Compliance" };
@@ -32,9 +31,6 @@ const TYPE_TONE: Record<string, string> = {
   "desk.share": "bg-violet/12 text-violet dark:text-lavender",
   "compliance.reveal": "bg-violet/12 text-violet dark:text-lavender",
 };
-
-/** Rule reasons as the enclave logs them in `rule.warn` / `rule.block` entries (human-readable message, stable code). */
-const ruleReasonsSchema = z.array(z.object({ code: z.string(), message: z.string().optional() }));
 
 function actorLabel(actor: string): string {
   if (isEmployeeId(actor)) return EMPLOYEES[actor].name;
@@ -106,12 +102,10 @@ function Stat({
   );
 }
 
-function AlertRow({ entry }: { entry: AuditEntryView }) {
-  const block = entry.type === "rule.block";
-  const parsed = ruleReasonsSchema.safeParse(entry.data.reasons);
-  const reasons = parsed.success ? parsed.data : [];
-  const owner =
-    typeof entry.data.owner === "string" && isEmployeeId(entry.data.owner) ? entry.data.owner : null;
+/** One request against one owner's context, however many of its excerpts the rules flagged. */
+function AlertRow({ alert }: { alert: RuleAlertView }) {
+  const block = alert.level === "block";
+  const { owner, requester } = alert;
   return (
     <li className="app-enter flex items-start gap-3 px-5 py-4 text-xs">
       {block ? (
@@ -125,17 +119,18 @@ function AlertRow({ entry }: { entry: AuditEntryView }) {
             {block ? "Blocked" : "Flagged"}
           </span>
           <span className="text-muted-foreground">
-            {isEmployeeId(entry.actor) ? `${EMPLOYEES[entry.actor].name}'s agent` : "An agent's request"} →{" "}
+            {requester === null ? "An agent's request" : `${EMPLOYEES[requester].name}'s agent`} →{" "}
             {owner === null ? "?" : `${EMPLOYEES[owner].name}'s`} context
+            {alert.excerpts > 1 && ` · ${plural(alert.excerpts, "excerpt")}`}
           </span>
           <time className="ml-auto mono-label text-[10px] text-muted-foreground">
-            {formatDateTime(entry.ts)}
+            {formatDateTime(alert.ts)}
           </time>
         </div>
-        {reasons.length > 0 && (
+        {alert.reasons.length > 0 && (
           <ul className="mt-1.5 space-y-0.5 text-danger">
-            {reasons.map((reason) => (
-              <li key={reason.code} title={reason.code}>
+            {alert.reasons.map((reason) => (
+              <li key={`${reason.code}-${reason.message ?? ""}`} title={reason.code}>
                 {reason.message === undefined
                   ? reason.code
                   : reasonForThirdParty(reason.message, owner === null ? null : EMPLOYEES[owner].name)}
@@ -221,8 +216,8 @@ export default async function CompliancePage({ params }: { params: Promise<{ emp
           </EmptyState>
         ) : (
           <ul className="divide-y overflow-hidden rounded-3xl border border-danger/30 bg-card">
-            {[...alerts].reverse().map((entry) => (
-              <AlertRow key={entry.seq} entry={entry} />
+            {[...alerts].reverse().map((alert) => (
+              <AlertRow key={alert.seq} alert={alert} />
             ))}
           </ul>
         )}

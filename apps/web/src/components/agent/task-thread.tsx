@@ -8,6 +8,7 @@ import { PulseDot } from "@/components/motion/pulse-dot";
 import { Button } from "@/components/ui/button";
 import { EMPLOYEES, type EmployeeId } from "@/lib/directory";
 import { formatLength, formatTime, reasonForThirdParty } from "@/lib/format";
+import { uniqueFindings } from "@/lib/rule-findings";
 import { cn } from "@/lib/utils";
 import type { BlockedExcerptView, ContextOwner, TaskStatus, TaskView } from "@/server/enclave/types";
 import { TaskTimeline } from "./task-timeline";
@@ -45,10 +46,12 @@ function PendingCallout({ task, requester }: { task: TaskView; requester: Employ
     <div className="space-y-2">
       {owners.map((owner) => {
         const excerpts = task.pending.filter((p) => p.owner === owner);
-        // The enclave words rule reasons for the owner ("your context"); the requester reads them about the owner.
-        const findings = excerpts
-          .flatMap((p) => p.findings)
-          .map((f) => ({ ...f, message: reasonForThirdParty(f.message, EMPLOYEES[owner].name) }));
+        // One finding per reason, not per excerpt: the enclave flags each excerpt of the same request separately.
+        // It words them for the owner ("your context"); the requester reads them about the owner.
+        const findings = uniqueFindings(excerpts.flatMap((p) => p.findings)).map((f) => ({
+          ...f,
+          message: reasonForThirdParty(f.message, EMPLOYEES[owner].name),
+        }));
         const total = excerpts.reduce((sum, p) => sum + p.length, 0);
         return (
           <div key={owner} className="app-enter rounded-2xl border border-warning/35 bg-warning/6 p-4">

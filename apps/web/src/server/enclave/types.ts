@@ -316,10 +316,38 @@ export interface SealedIdentityView {
   revealed?: { employee?: EmployeeId; revealedAt: string };
 }
 
+/** A rule reason as logged in a `rule.warn` / `rule.block` entry (stable code, human-readable message). */
+export interface RuleAlertReason {
+  code: string;
+  message?: string;
+}
+
+/**
+ * One request's rule alerts against one owner. The log holds one `rule.*` entry per evaluated excerpt (and keeps
+ * them all); the compliance view groups them so one attack reads as one alert.
+ */
+export interface RuleAlertView {
+  /** Seq of the group's latest entry: unique, so a stable list key. */
+  seq: number;
+  /** Time of the group's latest entry. */
+  ts: string;
+  /** The most severe level among the grouped entries. */
+  level: Exclude<RuleOutcome, "ok">;
+  /** The task the flagged excerpts were requested for, when the log names it. */
+  taskId: string | null;
+  /** Whose agent made the request, when the log tells (directly or through `task.created`). */
+  requester: EmployeeId | null;
+  owner: EmployeeId | null;
+  /** Number of `rule.*` entries grouped (one per flagged excerpt). */
+  excerpts: number;
+  /** Union of the entries' reasons, de-duplicated by code and message, in first-seen order. */
+  reasons: RuleAlertReason[];
+}
+
 export interface AuditView {
   entries: AuditEntryView[];
   chain: ChainVerification;
-  alerts: AuditEntryView[];
+  alerts: RuleAlertView[];
   sealed: SealedIdentityView[];
 }
 

@@ -1,7 +1,15 @@
 import type { AttestationResult } from "@badge/attest";
 import type { AuditLog, Task } from "@badge/client";
 import { describe, expect, it } from "vitest";
-import { attestationView, auditView, deskIdOf, parseBrief, taskView, type TaskRecord } from "./live-views";
+import {
+  attestationView,
+  auditView,
+  deskIdOf,
+  parseBrief,
+  ruleSteps,
+  taskView,
+  type TaskRecord,
+} from "./live-views";
 
 const TASK_ID = `0x${"ab".repeat(32)}` as const;
 const CREATED_AT = 1_791_100_800;
@@ -122,6 +130,42 @@ describe("taskView", () => {
   it("refuses an owner the web directory does not know (contract break)", () => {
     const stranger = { ownerId: "mallory", ownerName: "M", excerptLabel: "x", excerptLength: 1 };
     expect(() => taskView(task({ allowed: [{ ...stranger, via: "consent" }] }), RECORD)).toThrow(/mallory/);
+  });
+});
+
+describe("ruleSteps", () => {
+  const full = { code: "FULL_CONTEXT_REQUEST", severity: "warn" as const, message: "100% of your context." };
+  const long = { code: "EXCERPT_LENGTH", severity: "warn" as const, message: "Unusually long excerpt." };
+  const block = { code: "OWNER_RATE", severity: "block" as const, message: "Too many requests." };
+
+  it("shows one flagged request as one step, with each reason once and the excerpt count", () => {
+    const steps = ruleSteps([
+      { ownerId: "bob", risk: { level: "warn", reasons: [full, long] } },
+      { ownerId: "bob", risk: { level: "warn", reasons: [full] } },
+      { ownerId: "bob", risk: { level: "warn", reasons: [full] } },
+      { ownerId: "bob", risk: { level: "warn", reasons: [full] } },
+    ]);
+    expect(steps).toEqual([
+      {
+        kind: "rule_warn",
+        title: "Flagged to Bob by enclave rules",
+        detail: "100% of Bob Durand's context. Unusually long excerpt. (4 excerpts)",
+      },
+    ]);
+  });
+
+  it("keeps one step per owner and level, skips ok excerpts, and omits the count for a single excerpt", () => {
+    const steps = ruleSteps([
+      { ownerId: "bob", risk: { level: "warn", reasons: [full] } },
+      { ownerId: "bob", risk: { level: "ok", reasons: [] } },
+      { ownerId: "bob", risk: { level: "block", reasons: [block] } },
+      { ownerId: "chloe", risk: { level: "warn", reasons: [full] } },
+    ]);
+    expect(steps.map((s) => [s.kind, s.title, s.detail])).toEqual([
+      ["rule_warn", "Flagged to Bob by enclave rules", "100% of Bob Durand's context."],
+      ["rule_block", "Blocked by the rules before reaching Bob", "Too many requests."],
+      ["rule_warn", "Flagged to Chloé by enclave rules", expect.stringMatching(/^100% of Chlo/)],
+    ]);
   });
 });
 
