@@ -43,6 +43,7 @@ infra/vendor/
 
 # Test captures
 **/__screens__/
+output/
 *.gif
 
 # Private working notes
