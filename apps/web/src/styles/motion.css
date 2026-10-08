@@ -1,0 +1,307 @@
+/*
+ * Motion foundation: keyframes behind the `animate-*` theme tokens and the CSS of the
+ * components in `src/components/motion`. Everything moves on `--ease-out-soft`.
+ *
+ * Hidden "before reveal" states only apply when motion is allowed AND scripting runs, so a
+ * reader with reduced motion or without JavaScript always sees the content.
+ */
+
+@keyframes nav-arrive {
+  from {
+    opacity: 0;
+    translate: 0 -20px;
+  }
+  to {
+    opacity: 1;
+    translate: 0;
+  }
+}
+
+@keyframes route-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes hero-type {
+  from {
+    opacity: 0;
+    filter: blur(10px);
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: none;
+  }
+}
+
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(-22px) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes pulse-dot {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 #836ef999;
+  }
+  50% {
+    box-shadow: 0 0 0 7px #836ef900;
+  }
+}
+
+@keyframes land {
+  from {
+    opacity: 0;
+    transform: scale(1.8) rotate(-20deg);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(-8deg);
+  }
+}
+
+@keyframes ticker {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes orbit {
+  to {
+    rotate: 360deg;
+  }
+}
+
+@keyframes drift {
+  to {
+    translate: 0 -14px;
+    rotate: 4deg;
+  }
+}
+
+@keyframes breathe {
+  to {
+    translate: calc(var(--layer, 1) * 4px) calc(var(--layer, 1) * -6px);
+  }
+}
+
+@keyframes bars {
+  to {
+    scale: 1 0.88;
+  }
+}
+
+@keyframes bob {
+  to {
+    translate: 0 -8px;
+  }
+}
+
+@keyframes gallery-in {
+  from {
+    opacity: 0.4;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ---------- Reveal / Stagger ---------- */
+
+@media (prefers-reduced-motion: no-preference) and (scripting: enabled) {
+  [data-reveal] {
+    transition:
+      opacity 0.8s var(--ease-out-soft),
+      transform 0.9s var(--ease-out-soft),
+      filter 0.8s var(--ease-out-soft);
+    transition-delay: var(--reveal-delay, 0ms);
+  }
+  [data-reveal]:not([data-visible]) {
+    opacity: 0;
+    transform: translateY(var(--reveal-y, 24px));
+    filter: blur(var(--reveal-blur, 0px));
+  }
+
+  [data-stagger] > [data-stagger-item] {
+    transition:
+      opacity 0.7s var(--ease-out-soft),
+      transform 0.8s var(--ease-out-soft);
+    transition-delay: calc(var(--stagger-delay, 0ms) + var(--i, 0) * var(--stagger-step, 70ms));
+  }
+  [data-stagger]:not([data-visible]) > [data-stagger-item] {
+    opacity: 0;
+    transform: translateY(var(--reveal-y, 18px));
+  }
+
+  /* Letter reveal: blur + lift + slight 3D tilt, one letter every 11 ms (capped at 45). */
+  [data-reveal-text] .reveal-letter {
+    transition:
+      opacity 0.55s var(--ease-out-soft),
+      transform 0.75s var(--ease-out-soft),
+      filter 0.65s var(--ease-out-soft);
+    transition-delay: calc(min(var(--i, 0), 45) * 11ms);
+  }
+  [data-reveal-text]:not([data-visible]) .reveal-letter {
+    opacity: 0;
+    filter: blur(5px);
+    transform: translateY(0.6em) rotateX(25deg);
+  }
+}
+
+.reveal-word {
+  display: inline-block;
+  white-space: pre;
+}
+
+.reveal-letter {
+  display: inline-block;
+  transform-origin: 50% 100%;
+}
+
+/* ---------- Rolling label (buttons and links swap their label vertically) ---------- */
+
+.rolling {
+  display: inline-grid;
+  overflow: hidden;
+  vertical-align: bottom;
+  line-height: 1.25;
+}
+
+.rolling > span {
+  grid-area: 1 / 1;
+  transition: transform 0.48s var(--ease-out-soft);
+}
+
+.rolling > span + span {
+  transform: translateY(115%);
+}
+
+:is(a, button, [data-rolling-host]):is(:hover, :focus-visible) .rolling > span:first-child {
+  transform: translateY(-115%);
+}
+
+:is(a, button, [data-rolling-host]):is(:hover, :focus-visible) .rolling > span + span {
+  transform: translateY(0);
+}
+
+/* Arrow nudge (↗) and "+" rotation used by links, CTAs and menu buttons. */
+.nudge-arrow {
+  display: inline-block;
+  transition: transform 0.4s var(--ease-out-soft);
+}
+
+:is(a, button):is(:hover, :focus-visible) .nudge-arrow {
+  transform: translate(2px, -2px);
+}
+
+.spin-plus {
+  display: inline-block;
+  transition: rotate 0.4s var(--ease-out-soft);
+}
+
+:is(a, button):is(:hover, :focus-visible) .spin-plus {
+  rotate: 90deg;
+}
+
+/* ---------- Marquee ---------- */
+
+.marquee {
+  overflow: hidden;
+  mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+}
+
+.marquee-track {
+  display: flex;
+  width: max-content;
+  animation: ticker var(--marquee-duration, 45s) linear infinite;
+}
+
+.marquee[data-reverse] .marquee-track {
+  animation-direction: reverse;
+}
+
+.marquee-group {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--marquee-gap, 80px);
+  padding-inline-end: var(--marquee-gap, 80px);
+}
+
+.marquee:is([data-paused], [data-offscreen]) .marquee-track,
+.marquee[data-pause-on-hover]:is(:hover, :focus-within) .marquee-track {
+  animation-play-state: paused;
+}
+
+/* ---------- Magnetic ---------- */
+
+.magnetic {
+  display: inline-block;
+  transform: translate(var(--magnet-x, 0px), var(--magnet-y, 0px));
+  transition: transform 0.45s var(--ease-out-soft);
+}
+
+/* ---------- Pulse dot ---------- */
+
+.pulse-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--color-violet);
+  animation: var(--animate-pulse-dot);
+}
+
+.pulse-dot[data-tone="on"] {
+  background: var(--primary);
+}
+
+.pulse-dot[data-tone="off"] {
+  background: var(--muted-foreground);
+  animation: none;
+}
+
+/* ---------- Reduced motion: kill every transition and animation, show final states ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+  .magnetic {
+    transform: none;
+  }
+  /* The marquee becomes a plain scrollable row: nothing moves on its own. */
+  .marquee {
+    overflow-x: auto;
+    mask-image: none;
+  }
+  .marquee-track {
+    animation: none !important;
+  }
+  .marquee-group[aria-hidden="true"],
+  .marquee-pause {
+    display: none;
+  }
+}

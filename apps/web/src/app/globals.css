@@ -1,13 +1,135 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "../styles/motion.css";
 
 @custom-variant dark (&:is(.dark *));
 
+/*
+ * Raw palette: fixed values that do not change with the theme (the landing is light with dark
+ * panels; pastel art cards keep their colour in both themes). Names avoid the shadcn semantic
+ * names (`accent`, `muted`...) on purpose: those are theme-aware and mapped below.
+ */
+@theme {
+  --color-paper: #f5f7fc;
+  --color-panel: #edf2fb;
+  --color-panel-2: #e1e9f7;
+  --color-line: #c8d3e5;
+  --color-ink: #111827;
+  --color-ink-soft: #1d2028;
+  --color-ink-muted: #52627a;
+  --color-ink-muted-2: #5e6168;
+  --color-ink-muted-3: #62656c;
+  --color-cobalt: #2455d6;
+  --color-cobalt-dim: #2455d61f;
+  --color-signal: #5c99ff;
+  --color-signal-hover: #92bbff;
+  --color-on-signal: #081a36;
+  --color-brand-deep: #143c91;
+  --color-violet: #6b4cbc;
+  --color-violet-glow: #836ef9;
+  --color-lavender: #c8bef9;
+  --color-lavender-ink: #282044;
+  --color-periwinkle: #9bb3eb;
+  --color-periwinkle-ink: #20283b;
+  --color-fog: #e0e2e8;
+  --color-fog-ink: #282e3c;
+  --color-peach: #e9ab86;
+  --color-peach-ink: #422c23;
+  --color-chip: #dadce2;
+  --color-night: #060010;
+  --color-night-2: #1b2231;
+  --color-graphite: #202225;
+  --color-graphite-2: #232936;
+  --color-warn: #8a5a13;
+  --color-bad: #b72f45;
+
+  /* The single easing of the brand: every transition uses it. `stamp` overshoots for seals. */
+  --ease-out-soft: cubic-bezier(0.22, 0.75, 0.15, 1);
+  --ease-stamp: cubic-bezier(0.2, 1.6, 0.4, 1);
+
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 18px;
+  --radius-2xl: 20px;
+  --radius-3xl: 24px;
+  --radius-4xl: 28px;
+  --radius-pill: 100px;
+
+  --shadow-nav: 0 4px 24px #0000000b;
+  --shadow-focus: 0 0 0 3px var(--color-cobalt-dim);
+  --drop-shadow-sculpture: 25px 35px 20px #262d3d2a;
+
+  --blur-glass: 18px;
+  --blur-veil: 10px;
+
+  /* Only additive breakpoints: the app screens rely on Tailwind's default sm/md/lg/xl. */
+  --breakpoint-xs: 23.125rem;
+  --breakpoint-3xl: 106.25rem;
+
+  /* Type scale (headings are always weight 500, never bold; tight negative tracking). */
+  --text-display-page: clamp(60px, 8.4vw, 130px);
+  --text-display-page--line-height: 1;
+  --text-display-page--letter-spacing: -0.075em;
+  --text-display-page--font-weight: 500;
+  --text-display-hero: clamp(32px, 4.3vw, 72px);
+  --text-display-hero--line-height: 1.04;
+  --text-display-hero--letter-spacing: -0.065em;
+  --text-display-hero--font-weight: 500;
+  --text-display-xl: clamp(44px, 5.5vw, 80px);
+  --text-display-xl--line-height: 1.05;
+  --text-display-xl--letter-spacing: -0.065em;
+  --text-display-xl--font-weight: 500;
+  --text-heading-xl: clamp(36px, 4.8vw, 76px);
+  --text-heading-xl--line-height: 1.07;
+  --text-heading-xl--letter-spacing: -0.06em;
+  --text-heading-xl--font-weight: 500;
+  --text-heading-lg: clamp(36px, 4.4vw, 66px);
+  --text-heading-lg--line-height: 1.05;
+  --text-heading-lg--letter-spacing: -0.06em;
+  --text-heading-lg--font-weight: 500;
+  --text-heading-md: clamp(32px, 3.6vw, 56px);
+  --text-heading-md--line-height: 1.08;
+  --text-heading-md--letter-spacing: -0.06em;
+  --text-heading-md--font-weight: 500;
+  --text-heading-sm: clamp(29px, 3vw, 44px);
+  --text-heading-sm--line-height: 1.2;
+  --text-heading-sm--letter-spacing: -0.055em;
+  --text-heading-sm--font-weight: 500;
+  --text-page-title: clamp(26px, 2.6vw, 36px);
+  --text-page-title--line-height: 1.12;
+  --text-page-title--letter-spacing: -0.045em;
+  --text-page-title--font-weight: 500;
+  --text-lede-lg: clamp(17px, 1.5vw, 23px);
+  --text-lede-lg--line-height: 1.55;
+  --text-lede: clamp(15px, 1.2vw, 18px);
+  --text-lede--line-height: 1.6;
+  --text-meta: 13px;
+  --text-meta--line-height: 1.5;
+  --text-micro: 11px;
+  --text-micro--line-height: 1.6;
+
+  --animate-nav-arrive: nav-arrive 0.85s var(--ease-out-soft) both;
+  --animate-route-in: route-in 0.6s var(--ease-out-soft) both;
+  --animate-hero-type: hero-type 1.3s 0.2s var(--ease-out-soft) both;
+  --animate-dialog-in: dialog-in 0.5s var(--ease-out-soft) both;
+  --animate-pulse-dot: pulse-dot 1.4s ease-in-out infinite;
+  --animate-land: land 0.45s var(--ease-stamp) both;
+  --animate-ticker: ticker 45s linear infinite;
+  --animate-orbit: orbit 20s linear infinite;
+  --animate-drift: drift 7s ease-in-out infinite alternate;
+  --animate-breathe: breathe 6s ease-in-out infinite alternate;
+  --animate-bob: bob 5s ease-in-out infinite alternate;
+  --animate-gallery-in: gallery-in 0.6s var(--ease-out-soft) both;
+}
+
+/* Theme-aware tokens: utilities resolve to the shadcn variables, which switch with `.dark`. */
 @theme inline {
-  --font-heading: var(--font-sans);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-mono);
+  --font-sans: var(--font-montserrat), "Helvetica Neue", Arial, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-heading: var(--font-montserrat), "Helvetica Neue", Arial, sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -45,105 +167,188 @@
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-danger: var(--danger);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  --color-surface: var(--surface);
+  --color-surface-strong: var(--surface-strong);
+  --color-surface-strong-foreground: var(--surface-strong-foreground);
 }
 
+/* Layout variables shared by the landing and the app shell (not utilities). */
 :root {
-  --background: oklch(0.99 0.002 270);
-  --foreground: oklch(0.17 0.01 270);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.17 0.01 270);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.17 0.01 270);
-  --primary: oklch(0.21 0.012 270);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.965 0.004 270);
-  --secondary-foreground: oklch(0.21 0.012 270);
-  --muted: oklch(0.965 0.004 270);
-  --muted-foreground: oklch(0.52 0.014 270);
-  --accent: oklch(0.955 0.006 270);
-  --accent-foreground: oklch(0.21 0.012 270);
-  --destructive: oklch(0.577 0.215 27);
-  --border: oklch(0.92 0.005 270);
-  --input: oklch(0.92 0.005 270);
-  --ring: oklch(0.62 0.17 275);
-  --brand: oklch(0.52 0.2 275);
-  --brand-foreground: oklch(0.985 0 0);
-  --success: oklch(0.6 0.15 155);
-  --warning: oklch(0.68 0.16 70);
-  --danger: oklch(0.58 0.21 27);
-  --chart-1: oklch(0.52 0.2 275);
-  --chart-2: oklch(0.6 0.15 155);
-  --chart-3: oklch(0.68 0.16 70);
-  --chart-4: oklch(0.58 0.21 27);
-  --chart-5: oklch(0.55 0.02 270);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.975 0.003 270);
-  --sidebar-foreground: oklch(0.17 0.01 270);
-  --sidebar-primary: oklch(0.52 0.2 275);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.94 0.008 270);
-  --sidebar-accent-foreground: oklch(0.17 0.01 270);
-  --sidebar-border: oklch(0.92 0.005 270);
-  --sidebar-ring: oklch(0.62 0.17 275);
+  --gutter: clamp(20px, 3vw, 56px);
+  --nav-top: 22px;
+  --scroll-padding: 110px;
 }
 
+@media (max-width: 700px) {
+  :root {
+    --nav-top: 16px;
+    --scroll-padding: 100px;
+  }
+}
+
+/* LIGHT — the reference palette (blue-tinted paper, near-black ink, cobalt actions). */
+:root {
+  --radius: 12px;
+  --background: #f5f7fc;
+  --foreground: #111827;
+  --card: #ffffff;
+  --card-foreground: #111827;
+  --popover: #eff1f5;
+  --popover-foreground: #1d2028;
+  --primary: #2455d6;
+  --primary-foreground: #ffffff;
+  --secondary: #edf2fb;
+  --secondary-foreground: #111827;
+  --muted: #e1e9f7;
+  --muted-foreground: #52627a;
+  --accent: #e1e9f7;
+  --accent-foreground: #111827;
+  --destructive: #b72f45;
+  --border: #c8d3e5;
+  --input: #c8d3e5;
+  --ring: #2455d6;
+  --brand: #143c91;
+  --brand-foreground: #f5f7fc;
+  --success: #1f7a4d;
+  --warning: #8a5a13;
+  --danger: #b72f45;
+  /* Field and pressed fills: panel grey on light, translucent white on dark. */
+  --surface: #edf2fb;
+  --surface-strong: #232936;
+  --surface-strong-foreground: #f5f7fc;
+  --chart-1: #2455d6;
+  --chart-2: #6b4cbc;
+  --chart-3: #9bb3eb;
+  --chart-4: #e9ab86;
+  --chart-5: #5c99ff;
+  --sidebar: #edf2fb;
+  --sidebar-foreground: #111827;
+  --sidebar-primary: #143c91;
+  --sidebar-primary-foreground: #f5f7fc;
+  --sidebar-accent: #e1e9f7;
+  --sidebar-accent-foreground: #111827;
+  --sidebar-border: #c8d3e5;
+  --sidebar-ring: #2455d6;
+}
+
+/* DARK — derived from the reference's night panels (#060010 hero/footer, #1b2231 tiles). */
 .dark {
-  --background: oklch(0.155 0.008 270);
-  --foreground: oklch(0.96 0.003 270);
-  --card: oklch(0.19 0.009 270);
-  --card-foreground: oklch(0.96 0.003 270);
-  --popover: oklch(0.2 0.01 270);
-  --popover-foreground: oklch(0.96 0.003 270);
-  --primary: oklch(0.93 0.004 270);
-  --primary-foreground: oklch(0.19 0.009 270);
-  --secondary: oklch(0.25 0.01 270);
-  --secondary-foreground: oklch(0.96 0.003 270);
-  --muted: oklch(0.24 0.01 270);
-  --muted-foreground: oklch(0.7 0.012 270);
-  --accent: oklch(0.26 0.012 270);
-  --accent-foreground: oklch(0.96 0.003 270);
-  --destructive: oklch(0.68 0.19 25);
-  --border: oklch(1 0 0 / 9%);
-  --input: oklch(1 0 0 / 14%);
-  --ring: oklch(0.65 0.17 275);
-  --brand: oklch(0.68 0.16 275);
-  --brand-foreground: oklch(0.15 0.01 270);
-  --success: oklch(0.72 0.15 155);
-  --warning: oklch(0.78 0.14 75);
-  --danger: oklch(0.7 0.18 25);
-  --chart-1: oklch(0.68 0.16 275);
-  --chart-2: oklch(0.72 0.15 155);
-  --chart-3: oklch(0.78 0.14 75);
-  --chart-4: oklch(0.7 0.18 25);
-  --chart-5: oklch(0.6 0.02 270);
-  --sidebar: oklch(0.17 0.009 270);
-  --sidebar-foreground: oklch(0.96 0.003 270);
-  --sidebar-primary: oklch(0.68 0.16 275);
-  --sidebar-primary-foreground: oklch(0.15 0.01 270);
-  --sidebar-accent: oklch(0.24 0.012 270);
-  --sidebar-accent-foreground: oklch(0.96 0.003 270);
-  --sidebar-border: oklch(1 0 0 / 8%);
-  --sidebar-ring: oklch(0.65 0.17 275);
+  --background: #060010;
+  --foreground: #eceff5;
+  --card: #0f1424;
+  --card-foreground: #eceff5;
+  --popover: #121828;
+  --popover-foreground: #eceff5;
+  --primary: #5c99ff;
+  --primary-foreground: #081a36;
+  --secondary: #1b2231;
+  --secondary-foreground: #eceff5;
+  --muted: #171b25;
+  --muted-foreground: #b8bdc8;
+  --accent: #1b2231;
+  --accent-foreground: #dee8ff;
+  --destructive: #ff6b81;
+  --border: #ffffff26;
+  --input: #ffffff30;
+  --ring: #a7c8ff;
+  --brand: #5c99ff;
+  --brand-foreground: #081a36;
+  --success: #5fd39a;
+  --warning: #f2b45a;
+  --danger: #ff6b81;
+  --surface: #ffffff0d;
+  --surface-strong: #5c99ff;
+  --surface-strong-foreground: #081a36;
+  --chart-1: #5c99ff;
+  --chart-2: #a8a0f4;
+  --chart-3: #89b9ff;
+  --chart-4: #e9ab86;
+  --chart-5: #c8bef9;
+  --sidebar: #0b0f1c;
+  --sidebar-foreground: #eceff5;
+  --sidebar-primary: #5c99ff;
+  --sidebar-primary-foreground: #081a36;
+  --sidebar-accent: #1b2231;
+  --sidebar-accent-foreground: #dee8ff;
+  --sidebar-border: #ffffff1f;
+  --sidebar-ring: #a7c8ff;
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
-  body {
-    @apply bg-background text-foreground antialiased;
-    font-feature-settings: "ss01", "cv11";
-  }
   html {
     @apply font-sans;
+    scroll-behavior: smooth;
+    scroll-padding-top: var(--scroll-padding);
+    -webkit-text-size-adjust: 100%;
   }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-weight: 500;
+    line-height: 1.6;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-heading);
+    font-weight: 500;
+    letter-spacing: -0.03em;
+    text-wrap: balance;
+  }
+  ::selection {
+    background: var(--color-signal);
+    color: var(--color-on-signal);
+  }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 3px;
+  }
+  a {
+    text-underline-offset: 0.2em;
+  }
+  button,
+  a,
+  summary {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Machine text (hashes, device labels, chips): JetBrains Mono, uppercase, spaced. */
+@utility mono-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.2;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+@utility mono-chip {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+@utility tracking-display {
+  letter-spacing: -0.06em;
+}
+
+@utility tracking-hero {
+  letter-spacing: -0.065em;
+}
+
+/* Frosted glass of the floating nav pill and the pills laid on pastel cards. */
+@utility glass {
+  background: color-mix(in srgb, var(--background) 92%, transparent);
+  border: 1px solid #ffffff70;
+  backdrop-filter: blur(var(--blur-glass));
+  -webkit-backdrop-filter: blur(var(--blur-glass));
 }
 
 /* Progress bar of a forwarded "Hold to sign" on the Ledger mirror. */
