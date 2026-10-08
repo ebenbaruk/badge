@@ -49,6 +49,11 @@ export default async function EmployeeLayout({
           setupPending={setupPending}
         />
         <div className="flex min-w-0 flex-1 flex-col">
+          {/* Fades the content scrolling under the floating bar, so text never reads through the glass. */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none sticky top-0 z-20 -mb-20 h-20 bg-linear-to-b from-background via-background/85 to-transparent"
+          />
           {/* Floating glass bar, like the reference's nav pill: it arrives from above on first load. */}
           <header className="sticky top-3 z-30 mx-3 mt-3 flex h-14 animate-nav-arrive items-center gap-3 rounded-pill px-2 shadow-nav glass md:mx-6">
             <EmployeeSwitcher current={employee.id} />

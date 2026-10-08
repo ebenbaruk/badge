@@ -7,7 +7,7 @@ import { RiskFindings } from "@/components/risk-findings";
 import { PulseDot } from "@/components/motion/pulse-dot";
 import { Button } from "@/components/ui/button";
 import { EMPLOYEES, type EmployeeId } from "@/lib/directory";
-import { formatLength, formatTime } from "@/lib/format";
+import { formatLength, formatTime, ofName } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { BlockedExcerptView, ContextOwner, TaskStatus, TaskView } from "@/server/enclave/types";
 import { TaskTimeline } from "./task-timeline";
@@ -47,7 +47,8 @@ function PendingCallout({ task }: { task: TaskView }) {
           <div key={owner} className="app-enter rounded-2xl border border-warning/35 bg-warning/6 p-4">
             <div className="flex flex-wrap items-center gap-3">
               <EmployeeAvatar employee={owner} size="sm" />
-              <div className="min-w-0 flex-1">
+              {/* A floor width so the button wraps below instead of squeezing the name into a column. */}
+              <div className="min-w-[12rem] flex-1">
                 <div className="text-[13px] font-semibold">
                   <PulseDot tone="live" className="mr-2 align-middle" />
                   En attente de {EMPLOYEES[owner].name}
@@ -201,7 +202,7 @@ export function TaskThread({ task, requester }: { task: TaskView; requester: Emp
           <span className="flex size-7 items-center justify-center rounded-full bg-card ring-1 ring-border">
             <Bot className="size-4 text-muted-foreground" />
           </span>
-          <span className="text-[13px] font-semibold">Agent de {EMPLOYEES[requester].firstName}</span>
+          <span className="text-[13px] font-semibold">Agent {ofName(EMPLOYEES[requester].firstName)}</span>
           {task.trapped && (
             <span className="inline-flex items-center gap-1 rounded-pill border border-danger/35 bg-danger/10 px-2.5 py-0.5 text-[11px] font-semibold text-danger">
               <Skull className="size-3" />
