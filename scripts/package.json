@@ -6,7 +6,8 @@
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
     "demo": "tsx --no-warnings=ExperimentalWarning demo.ts",
-    "seed-desks": "tsx --no-warnings=ExperimentalWarning seed-desks.ts"
+    "seed-desks": "tsx --no-warnings=ExperimentalWarning seed-desks.ts",
+    "prepare-demo": "tsx --no-warnings=ExperimentalWarning prepare-demo.ts"
   },
   "dependencies": {
     "@badge/attest": "workspace:*",

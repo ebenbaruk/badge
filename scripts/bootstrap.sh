@@ -9,12 +9,14 @@
 # Idempotent: every step is skipped or is a no-op when already done, running Speculos devices are left untouched.
 # Never prints a secret: the secrets file is only checked for the presence of variable names.
 #
-# Environment (same as infra/stack.sh): BADGE_ENV_FILE (default <repo>/../.env), BADGE_LLM_PROFILE (build | phala).
+# Environment (same as infra/stack.sh): BADGE_ENV_FILE (default <repo>/.env if present, else <repo>/../.env), BADGE_LLM_PROFILE (build | phala).
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 INFRA_DIR="$REPO_ROOT/infra"
-ENV_FILE="${BADGE_ENV_FILE:-$REPO_ROOT/../.env}"
+# A .env at the repository root (gitignored) wins over the historical ../.env next to the repository.
+if [ -z "${BADGE_ENV_FILE:-}" ] && [ -f "$REPO_ROOT/.env" ]; then ENV_FILE="$REPO_ROOT/.env"
+else ENV_FILE="${BADGE_ENV_FILE:-$REPO_ROOT/../.env}"; fi
 PROFILE="${BADGE_LLM_PROFILE:-build}"
 
 MIN_NODE_MAJOR=24
@@ -142,14 +144,11 @@ print_next_steps() {
     pnpm demo
     # if an enclave already listens on :8787 (web walk-through): BADGE_DEMO_ENCLAVE_PORT=8788 pnpm demo
 
-  Web walk-through (two terminals), then open http://localhost:3000:
-    pnpm --filter @badge/enclave start
-    pnpm desks:seed   # once the enclave is up: David and Emma join the Research desk with their Ledgers
-    BADGE_CAL_TEST_KEY=\$PWD/infra/keys/cal-test.pem pnpm --filter @badge/web dev
-    # rehearsals only ("Auto review" on the device mirror): prefix the web server with BADGE_REHEARSAL=1
+  Web demo, prepared (enrollments, agent sessions, desks), then open http://localhost:3000/demo:
+    pnpm demo:web            # --fresh for a clean run, --rehearsal for "Auto review", stop | status | logs
 
-  Click path and troubleshooting: docs/DEMO.md
-  Stop everything: infra/speculos.sh stop && infra/dstack-sim.sh stop && infra/stack.sh down
+  Walkthrough and troubleshooting: INSTALL.md
+  Stop everything: pnpm demo:web stop && infra/speculos.sh stop && infra/dstack-sim.sh stop && infra/stack.sh down
 EOF
 }
 

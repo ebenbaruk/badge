@@ -1,4 +1,9 @@
 {
   "extends": "./tsconfig.base.json",
-  "include": ["scripts/**/*.ts", "infra/seed/**/*.ts", "infra/cvm/**/*.ts"]
+  "include": ["scripts/**/*.ts", "infra/seed/**/*.ts", "infra/cvm/**/*.ts"],
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./apps/web/src/*"]
+    }
+  }
 }

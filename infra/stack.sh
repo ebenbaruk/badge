@@ -11,14 +11,16 @@
 # Environment:
 #   BADGE_LLM_PROFILE   build (default) | phala
 #   BADGE_LLM_CHAT_MODEL  optional chat model override for the selected profile
-#   BADGE_ENV_FILE      secrets file (default: <repo>/../.env). Only the gateway receives the upstream key.
+#   BADGE_ENV_FILE      secrets file (default: <repo>/.env if present, else <repo>/../.env). Only the gateway receives the upstream key.
 #   BADGE_STATE_DIR     generated secrets and the admin JWT (default: <repo>/infra/.data, gitignored)
 #   BADGE_PLATFORM      e.g. linux/amd64 for the Phala CVM; the images are then tagged with an -amd64 suffix
 set -euo pipefail
 
 INFRA_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$INFRA_DIR/.." && pwd)"
-ENV_FILE="${BADGE_ENV_FILE:-$REPO_ROOT/../.env}"
+# A .env at the repository root (gitignored) wins over the historical ../.env next to the repository.
+if [ -z "${BADGE_ENV_FILE:-}" ] && [ -f "$REPO_ROOT/.env" ]; then ENV_FILE="$REPO_ROOT/.env"
+else ENV_FILE="${BADGE_ENV_FILE:-$REPO_ROOT/../.env}"; fi
 STATE_DIR="${BADGE_STATE_DIR:-$INFRA_DIR/.data}"
 PROFILE="${BADGE_LLM_PROFILE:-build}"
 
