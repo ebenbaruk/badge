@@ -27,8 +27,8 @@ export function Hero() {
 
   return (
     <section ref={sectionRef} id="top" aria-labelledby="hero-title" className="lp-hero relative">
-      <div className="sticky top-0 h-svh p-2 md:p-3">
-        <div className="lp-hero-panel relative isolate flex h-full flex-col overflow-hidden rounded-xl bg-night text-paper">
+      <div className="sticky top-0 flex h-svh flex-col p-2 pb-0 md:p-3 md:pb-0">
+        <div className="lp-hero-panel relative isolate flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl bg-night text-paper">
           <div aria-hidden="true" className="lp-hero-art absolute inset-0 -z-10">
             <PlaceholderImage slot="hero-warp-poster" hideWatermark className="absolute inset-0 size-full" />
             <WarpCanvas gateRef={gateRef} paused={paused} still={reducedMotion} />
@@ -53,19 +53,22 @@ export function Hero() {
           </div>
 
           <div className="flex flex-1 flex-col justify-center px-4 md:px-7">
-            <h1 id="hero-title" className="lp-hero-title animate-hero-type text-display-hero">
-              <span className="lp-half lp-half-a">Votre contexte.</span>
-              <span aria-hidden="true" className="lp-gate">
-                <span className="lp-gate-plus">+</span>
-                <span className="lp-gate-check">✓</span>
-              </span>
-              <span className="lp-half lp-half-b">Votre accord.</span>
-            </h1>
-            <p className="mx-auto mt-6 max-w-[34em] text-center text-lede text-[#c9cfdc] md:mt-8">
-              Le Ledger devient le badge d&apos;entreprise de l&apos;ère des agents : vos agents puisent dans
-              la mémoire de l&apos;entreprise, et le contexte personnel de chacun ne sort qu&apos;avec sa
-              signature.
-            </p>
+            {/* The lede hangs below the title on wide screens so the "+" stays on the warp's vanishing point. */}
+            <div className="relative">
+              <h1 id="hero-title" className="lp-hero-title animate-hero-type text-display-hero">
+                <span className="lp-half lp-half-a">Votre contexte.</span>
+                <span aria-hidden="true" className="lp-gate">
+                  <span className="lp-gate-plus">+</span>
+                  <span className="lp-gate-check">✓</span>
+                </span>
+                <span className="lp-half lp-half-b">Votre accord.</span>
+              </h1>
+              <p className="lp-hero-lede mt-6 max-w-[30em] text-lede text-[#c9cfdc] md:mt-10 md:max-w-[26em]">
+                Le Ledger devient le badge d&apos;entreprise de l&apos;ère des agents : vos agents puisent
+                dans la mémoire de l&apos;entreprise, et le contexte personnel de chacun ne sort qu&apos;avec
+                sa signature.
+              </p>
+            </div>
           </div>
 
           <div className="grid items-end gap-5 px-4 pb-5 md:grid-cols-[1fr_auto_1fr] md:px-7 md:pb-7">
@@ -87,6 +90,12 @@ export function Hero() {
             </p>
           </div>
         </div>
+        <p
+          aria-hidden="true"
+          className="lp-scroll-hint flex h-9 shrink-0 items-center justify-center gap-3 text-micro text-ink-muted-2 md:h-11"
+        >
+          Défiler pour commencer <span className="lp-scroll-hint-arrow inline-block">↓</span>
+        </p>
       </div>
     </section>
   );

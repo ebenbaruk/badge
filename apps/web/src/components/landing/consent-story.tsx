@@ -84,8 +84,8 @@ export function ConsentStory() {
 
       <div className="mt-12 grid gap-8 lg:mt-20 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-16">
         <div className="sticky top-[96px] z-10 -mx-4 bg-paper/90 px-4 pb-4 backdrop-blur-md lg:top-0 lg:mx-0 lg:flex lg:h-svh lg:items-center lg:justify-center lg:bg-transparent lg:p-0 lg:backdrop-blur-none">
-          <div className="flex items-center justify-center gap-5 lg:block">
-            <LedgerFlex phase={phase} className="w-[min(150px,38vw)] lg:w-[min(340px,80%)]" />
+          <div className="flex items-center justify-center gap-5 lg:block lg:w-full">
+            <LedgerFlex phase={phase} className="w-[min(112px,30vw)] lg:mx-auto lg:w-[min(340px,70%)]" />
             <p aria-live="polite" className="mono-label text-ink-muted lg:mt-8 lg:text-center">
               {active + 1} / {STEPS.length} · {STEPS[active]?.title}
             </p>

@@ -131,14 +131,15 @@ function MomentCard({ moment, index }: { moment: Moment; index: number }) {
         {moment.watermark}
       </span>
 
-      <div className="lp-moment-art relative flex flex-1 items-center justify-center py-4">
-        <div className="lp-moment-sculpture w-[min(440px,70%)] md:w-[min(520px,46%)]">
+      <div className="lp-moment-art relative flex min-h-0 flex-1 items-center justify-center py-4">
+        <div className="lp-moment-sculpture w-[min(440px,70%,36svh)] md:w-[min(520px,46%,48svh)]">
           {moment.art === "zk" ? (
             <ZkSculpture />
           ) : (
             <PlaceholderImage
               slot={moment.art.slot}
               alt={moment.art.alt}
+              hideWatermark
               className="rounded-3xl shadow-[25px_35px_40px_#262d3d2a]"
             />
           )}

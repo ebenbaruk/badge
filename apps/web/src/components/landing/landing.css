@@ -59,6 +59,13 @@
   }
 }
 
+/* Without scroll choreography the extra runway would only be dead scrolling. */
+@media (prefers-reduced-motion: reduce) {
+  .lp-hero {
+    height: auto;
+  }
+}
+
 .lp-hero-title {
   display: flex;
   flex-direction: column;
@@ -102,10 +109,30 @@
     gap: 0.4em;
   }
   .lp-half-a {
-    text-align: right;
+    justify-self: start;
   }
   .lp-half-b {
-    text-align: left;
+    justify-self: end;
+  }
+}
+
+/* Tall enough screens: hang the lede below the title so the "+" sits on the warp's vanishing point. */
+@media (min-width: 768px) and (min-height: 720px) {
+  .lp-hero-lede {
+    position: absolute;
+    top: 100%;
+    left: 0;
+  }
+}
+
+/* "Défiler pour commencer": fades out as soon as the hero starts moving. */
+.lp-scroll-hint {
+  opacity: calc(1 - var(--progress, 0) * 6);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .lp-scroll-hint-arrow {
+    animation: bob 1.2s ease-in-out infinite alternate;
   }
 }
 

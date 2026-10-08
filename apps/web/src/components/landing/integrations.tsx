@@ -41,7 +41,13 @@ export function Integrations() {
               <span className="size-2.5 rounded-full bg-[#ffffff26]" />
               <span className="mono-label ml-3 text-[#8a90a0]">agent · alice</span>
             </div>
-            <pre className="overflow-x-auto p-5 font-mono text-[12px] leading-[1.8] md:p-6 md:text-[13px]">
+            {/* Focusable so keyboard users can scroll the transcript on narrow screens. */}
+            <pre
+              tabIndex={0}
+              role="region"
+              aria-label="Échange entre l'agent d'Alice et Badge"
+              className="overflow-x-auto p-5 font-mono text-[12px] leading-[1.8] md:p-6 md:text-[13px]"
+            >
               <code>
                 <span className="text-[#8a90a0]">{"› "}</span>
                 <span className="text-paper">Prépare le brief du rendez-vous Orion</span>
