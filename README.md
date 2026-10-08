@@ -100,7 +100,7 @@ Contre le CVM Phala déployé (vrai quote TDX exigé, toutes les épingles) :
 BADGE_ENCLAVE_URL=<endpoint> BADGE_ENCLAVE_OS_MEASUREMENTS_FILE=infra/cvm/expected-measurements.json pnpm demo
 ```
 
-Parcours web (deux terminaux), puis http://localhost:3000 :
+Parcours web (deux terminaux), puis http://localhost:3000 (page de présentation) et http://localhost:3000/demo (démo) :
 
 ```bash
 pnpm --filter @badge/enclave start
