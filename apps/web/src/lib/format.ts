@@ -85,3 +85,8 @@ export function formatLength(characters: number): string {
 export function plural(count: number, singular: string, pluralForm = `${singular}s`): string {
   return `${formatNumber(count)} ${count > 1 ? pluralForm : singular}`;
 }
+
+/** French "de" before a name, elided before a vowel sound: `ofName("Alice")` -> "d'Alice", `ofName("Bob")` -> "de Bob". */
+export function ofName(name: string): string {
+  return /^[aeiouyàâéèêëîïôûüh]/i.test(name) ? `d'${name}` : `de ${name}`;
+}

@@ -5,6 +5,7 @@ import { TaskThread } from "@/components/agent/task-thread";
 import { EnclaveUnavailable } from "@/components/enclave-unavailable";
 import { EmptyState, PageHeader } from "@/components/page-header";
 import { COMPROMISED_AGENT_TARGET, EMPLOYEES } from "@/lib/directory";
+import { ofName } from "@/lib/format";
 import { enclave } from "@/server/enclave";
 import { employeeFromParams, load } from "@/server/load";
 
@@ -16,7 +17,7 @@ export default async function AgentPage({ params }: { params: Promise<{ employee
   return (
     <div className="mx-auto max-w-5xl">
       <PageHeader
-        title={`Agent de ${employee.firstName}`}
+        title={`Agent ${ofName(employee.firstName)}`}
         eyebrow="Agent · mémoire confidentielle"
         description="Votre agent interroge la mémoire confidentielle de l'enclave. Le contexte global et le vôtre sont utilisables d'office ; celui d'un collègue ne sort qu'avec son accord, signé sur son Ledger."
       />

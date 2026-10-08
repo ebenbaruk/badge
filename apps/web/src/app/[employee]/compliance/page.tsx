@@ -8,7 +8,7 @@ import { EnclaveUnavailable } from "@/components/enclave-unavailable";
 import { EmptyState, PageHeader, SectionTitle } from "@/components/page-header";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DESK_NAMES, EMPLOYEES, isDeskId, isEmployeeId } from "@/lib/directory";
-import { formatDateTime, formatTime } from "@/lib/format";
+import { formatDateTime, formatTime, ofName } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { enclave, type AuditEntryView } from "@/server/enclave";
 import { employeeFromParams, load } from "@/server/load";
@@ -125,8 +125,10 @@ function AlertRow({ entry }: { entry: AuditEntryView }) {
             {block ? "Bloqué" : "Signalé"}
           </span>
           <span className="text-muted-foreground">
-            {isEmployeeId(entry.actor) ? `Agent de ${EMPLOYEES[entry.actor].name}` : "Demande d'un agent"} →
-            contexte de {owner === null ? "?" : EMPLOYEES[owner].name}
+            {isEmployeeId(entry.actor)
+              ? `Agent ${ofName(EMPLOYEES[entry.actor].name)}`
+              : "Demande d'un agent"}{" "}
+            → contexte de {owner === null ? "?" : EMPLOYEES[owner].name}
           </span>
           <time className="ml-auto mono-label text-[10px] text-muted-foreground">
             {formatDateTime(entry.ts)}

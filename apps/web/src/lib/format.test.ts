@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { estimateTokens, formatLength, formatRelative, percentSaved, plural, shortHex } from "./format";
+import {
+  estimateTokens,
+  formatLength,
+  formatRelative,
+  ofName,
+  percentSaved,
+  plural,
+  shortHex,
+} from "./format";
 
 /** French number formatting uses a narrow no-break space as thousands separator. */
 const NNBSP = " ";
@@ -34,5 +42,12 @@ describe("format helpers", () => {
     expect(formatRelative("2026-10-08T10:00:00Z", now)).toBe("demain");
     expect(formatRelative("2026-10-07T09:55:00Z", now)).toBe("il y a 5 minutes");
     expect(formatRelative("2026-10-07T10:00:10Z", now)).toBe("à l'instant");
+  });
+
+  it('elides "de" before a name starting with a vowel', () => {
+    expect(ofName("Alice")).toBe("d'Alice");
+    expect(ofName("Élodie")).toBe("d'Élodie");
+    expect(ofName("Bob")).toBe("de Bob");
+    expect(ofName("Chloé Bernard")).toBe("de Chloé Bernard");
   });
 });
