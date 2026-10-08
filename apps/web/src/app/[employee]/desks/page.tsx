@@ -12,6 +12,7 @@ import { CopyableHash } from "@/components/copyable-hash";
 import { DeskRequestForm } from "@/components/desks/desk-request-form";
 import { EnclaveUnavailable } from "@/components/enclave-unavailable";
 import { DevicePreviewCard } from "@/components/ledger/device-preview-card";
+import { PulseDot } from "@/components/motion/pulse-dot";
 import { ApproveRejectButtons, LedgerActionButton } from "@/components/ledger/sign-buttons";
 import { EmptyState, PageHeader, SectionTitle } from "@/components/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,13 +32,15 @@ const MIN_ANONYMITY_SET = 3;
 function DeskCard({ desk, employee }: { desk: DeskView; employee: Employee }) {
   const anonymous = desk.commitments.length >= MIN_ANONYMITY_SET;
   return (
-    <Card size="sm">
+    <Card className="app-enter app-lift rounded-3xl">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <VenetianMask className="size-4 text-brand" />
+        <CardTitle className="flex flex-wrap items-center gap-2.5 text-[20px] tracking-[-0.045em]">
+          <span className="flex size-8 items-center justify-center rounded-full bg-lavender text-lavender-ink">
+            <VenetianMask className="size-4" />
+          </span>
           Desk {desk.name}
           {desk.joined && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-success/12 px-2 py-0.5 text-[11px] font-medium text-success">
+            <span className="inline-flex animate-gallery-in items-center gap-1 rounded-pill border border-success/35 bg-success/10 px-2.5 py-0.5 text-[11px] font-semibold tracking-normal text-success">
               <BadgeCheck className="size-3" />
               Identité anonyme enregistrée
             </span>
@@ -48,8 +51,8 @@ function DeskCard({ desk, employee }: { desk: DeskView; employee: Employee }) {
       <CardContent className="space-y-3">
         <dl className="grid grid-cols-2 gap-3 text-xs">
           <div>
-            <dt className="text-muted-foreground">Identités enregistrées</dt>
-            <dd className="mt-0.5 flex flex-wrap items-center gap-x-1.5 font-medium whitespace-nowrap">
+            <dt className="mono-label text-[10px] text-muted-foreground">Identités enregistrées</dt>
+            <dd className="mt-1 flex flex-wrap items-center gap-x-1.5 font-medium whitespace-nowrap">
               <Users className="size-3.5 text-muted-foreground" />
               {desk.commitments.length} / {desk.directoryMembers} membres
               <span className={cn("text-[11px] font-normal", anonymous ? "text-success" : "text-warning")}>
@@ -58,12 +61,12 @@ function DeskCard({ desk, employee }: { desk: DeskView; employee: Employee }) {
             </dd>
           </div>
           <div>
-            <dt className="text-muted-foreground">Racine du groupe (Semaphore)</dt>
-            <dd className="mt-0.5">{desk.root === null ? "—" : <CopyableHash value={desk.root} />}</dd>
+            <dt className="mono-label text-[10px] text-muted-foreground">Racine du groupe (Semaphore)</dt>
+            <dd className="mt-1">{desk.root === null ? "—" : <CopyableHash value={desk.root} />}</dd>
           </div>
         </dl>
         {desk.isMember && !desk.joined && (
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-dashed p-3">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-dashed bg-surface/60 p-4">
             <p className="text-xs text-muted-foreground">
               Deux validations sur votre Ledger : dériver votre identité anonyme, puis l&apos;inscrire au desk
               (une seule si elle y est déjà inscrite).
@@ -84,21 +87,19 @@ function DeskCard({ desk, employee }: { desk: DeskView; employee: Employee }) {
 
 function IncomingRequest({ request, employee }: { request: DeskConsentView; employee: Employee }) {
   return (
-    <article className="rounded-xl border bg-card shadow-xs">
-      <div className="border-b px-5 py-4">
-        <div className="text-[14px]">
-          <span className="font-semibold">Le desk {DESK_NAMES[request.fromDesk]}</span>
-          <span className="text-muted-foreground">
+    <article className="app-decision-card app-enter overflow-hidden rounded-3xl border bg-card">
+      <div className="border-b bg-lavender px-6 py-5 text-lavender-ink">
+        <div className="text-[15px] leading-snug">
+          <span className="font-semibold tracking-[-0.02em]">Le desk {DESK_NAMES[request.fromDesk]}</span>
+          <span className="opacity-75">
             {" "}
             demande un extrait à un membre du desk {request.message.sourceDesk}
           </span>
         </div>
-        <p className="mt-1 text-[13px] text-muted-foreground">
-          Sous la règle d&apos;échange « {request.ruleLabel} »
-        </p>
+        <p className="mt-1 text-[13px] opacity-75">Sous la règle d&apos;échange « {request.ruleLabel} »</p>
       </div>
-      <div className="grid gap-5 px-5 py-4 lg:grid-cols-2">
-        <div className="space-y-3 text-xs">
+      <div className="grid gap-6 px-6 py-6 lg:grid-cols-2">
+        <div className="space-y-4 text-[13px]">
           <p className="text-muted-foreground">
             Si vous acceptez, le desk {DESK_NAMES[request.fromDesk]} reçoit l&apos;extrait et une preuve ZK
             qu&apos;il vient d&apos;un membre de votre desk, sans savoir lequel. Votre identité reste scellée
@@ -133,29 +134,29 @@ const UNDELIVERED_LABEL: Partial<Record<DeskRequestView["status"], string>> = {
 function OutgoingRequest({ request }: { request: DeskRequestView }) {
   const delivery = request.delivery;
   return (
-    <article className="rounded-xl border bg-card p-5 shadow-xs">
+    <article className="app-enter rounded-3xl border bg-card p-6">
       <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
         <span>
           Vers le desk <span className="font-medium text-foreground">{DESK_NAMES[request.toDesk]}</span>
         </span>
         <span>· {request.ruleLabel}</span>
-        <span className="ml-auto">{formatRelative(request.createdAt)}</span>
+        <span className="ml-auto mono-label text-[10px]">{formatRelative(request.createdAt)}</span>
       </div>
-      <p className="mt-2 text-[14px]">« {request.task} »</p>
+      <p className="mt-3 font-heading text-[19px] leading-snug tracking-[-0.04em]">« {request.task} »</p>
       {delivery === undefined ? (
         <div
           className={cn(
-            "mt-3 inline-flex items-center gap-1.5 text-xs",
-            request.status === "pending" ? "text-warning" : "text-danger",
+            "mt-4 inline-flex items-center gap-1.5 rounded-pill border px-3 py-1 text-xs font-semibold",
+            request.status === "pending" ? "border-warning/35 text-warning" : "border-danger/35 text-danger",
           )}
         >
-          <Hourglass className="size-3.5" />
+          {request.status === "pending" ? <PulseDot tone="live" /> : <Hourglass className="size-3.5" />}
           {UNDELIVERED_LABEL[request.status] ?? "En attente d'un membre du desk"}
         </div>
       ) : (
         <div
           className={cn(
-            "mt-4 rounded-lg border p-4",
+            "mt-4 animate-gallery-in rounded-2xl border p-5",
             delivery.proofVerified ? "border-success/30 bg-success/5" : "border-warning/35 bg-warning/5",
           )}
         >
@@ -207,6 +208,7 @@ export default async function DesksPage({ params }: { params: Promise<{ employee
     <div className="mx-auto max-w-5xl">
       <PageHeader
         title="Desks"
+        eyebrow="Muraille de Chine · preuve ZK"
         description="Partage entre équipes séparées par une « muraille de Chine » : l'enclave applique les règles d'échange, la réponse prouve (preuve ZK Semaphore) qu'elle vient d'un membre du desk, sans révéler lequel. Seule la conformité peut lever l'anonymat, et cette levée est journalisée."
       />
       <SectionTitle>Mes desks</SectionTitle>
@@ -239,9 +241,9 @@ export default async function DesksPage({ params }: { params: Promise<{ employee
               const fromDesk = myDesks[0];
               if (fromDesk === undefined) return null;
               return (
-                <Card key={desk.id} size="sm">
+                <Card key={desk.id} className="app-enter rounded-3xl">
                   <CardHeader>
-                    <CardTitle>
+                    <CardTitle className="text-[20px] tracking-[-0.045em]">
                       {fromDesk.name} → {desk.name}
                     </CardTitle>
                     <CardDescription>
