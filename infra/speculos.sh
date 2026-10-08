@@ -12,6 +12,8 @@
 #   emma  0xc70eC8094CCE52B6574A5a2b7bf0c7D8288d77cC   (infra/seed/acme.json must list the same addresses)
 set -euo pipefail
 cd "$(dirname "$0")"
+# shellcheck source=speculos-image.sh
+. ./speculos-image.sh
 
 if [ "${ETH_APP:-develop}" = "release" ]; then ELF="app-1.22.3-flex.elf"; else ELF="app-1.23.0-dev-flex.elf"; fi
 NAMES=(alice bob chloe david emma)
@@ -34,7 +36,7 @@ for i in "${!NAMES[@]}"; do
   n=${NAMES[$i]}; p=${PORTS[$i]}
   docker rm -f "speculos-$n" >/dev/null 2>&1 || true
   docker run -d --name "speculos-$n" -v "$PWD/apps:/speculos/apps" -p "$p:5000" \
-    ghcr.io/ledgerhq/speculos:latest \
+    "$SPECULOS_IMAGE" \
     --model flex --display headless --api-port 5000 --seed "${SEEDS[$i]}" "apps/$ELF" >/dev/null
   echo "$n -> http://localhost:$p ($ELF)"
 done

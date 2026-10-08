@@ -21,6 +21,7 @@ PROFILE="${BADGE_LLM_PROFILE:-build}"
 
 MIN_NODE_MAJOR=24
 MIN_PNPM_MAJOR=11
+MIN_DOCKER_MEMORY_BYTES=$((6 * 1024 * 1024 * 1024))
 DEVELOP_ELF="$INFRA_DIR/apps/app-1.23.0-dev-flex.elf"
 SPECULOS_NAMES=(alice bob chloe david emma)
 SPECULOS_PORTS=(5001 5002 5003 5004 5005)
@@ -54,34 +55,61 @@ required_env_names() {
   esac
 }
 
+# Install hints per missing tool (macOS with Homebrew / Debian-Ubuntu).
+install_hint() {
+  case "$1" in
+    docker) echo "install Docker Desktop (macOS) or Docker Engine with the Compose plugin (Linux)" ;;
+    node) echo "install Node.js 24 (https://nodejs.org, or: brew install node@24 / nvm install 24)" ;;
+    pnpm) echo "run: corepack enable (ships with Node), or: npm install -g pnpm@11" ;;
+    lsof) echo "macOS has it; Debian/Ubuntu: sudo apt-get install lsof" ;;
+    perl) echo "macOS has it; Debian/Ubuntu: sudo apt-get install perl" ;;
+    *) echo "install it with your package manager" ;;
+  esac
+}
+
 check_prerequisites() {
   step "Prerequisites"
-  local cmd
-  for cmd in docker node pnpm curl git openssl; do
-    command -v "$cmd" >/dev/null 2>&1 || die "'$cmd' not found in PATH"
+  # The dstack simulator (simulated TEE) only ships binaries for these two platforms.
+  case "$(uname -s)-$(uname -m)" in
+    Darwin-arm64 | Linux-x86_64) ok "platform $(uname -s) $(uname -m)" ;;
+    *) die "unsupported platform $(uname -s) $(uname -m): Badge runs locally on macOS (Apple Silicon) or Linux x86-64" ;;
+  esac
+  local cmd missing_tools=()
+  for cmd in docker node pnpm curl git openssl lsof perl; do
+    command -v "$cmd" >/dev/null 2>&1 || missing_tools+=("$cmd")
   done
+  if [ "${#missing_tools[@]}" -gt 0 ]; then
+    for cmd in "${missing_tools[@]}"; do printf '%s  xx%s %s not found: %s\n' "$RED" "$RESET" "$cmd" "$(install_hint "$cmd")" >&2; done
+    exit 1
+  fi
   command -v sha256sum >/dev/null 2>&1 || command -v shasum >/dev/null 2>&1 || die "neither sha256sum nor shasum found"
 
   local node_version pnpm_version
   node_version="$(node --version)"
-  [ "$(major_of "$node_version")" -ge "$MIN_NODE_MAJOR" ] || die "Node $MIN_NODE_MAJOR+ required (found $node_version)"
+  [ "$(major_of "$node_version")" -ge "$MIN_NODE_MAJOR" ] || die "Node $MIN_NODE_MAJOR+ required (found $node_version): $(install_hint node)"
   ok "Node $node_version"
   pnpm_version="$(pnpm --version)"
-  [ "$(major_of "$pnpm_version")" -ge "$MIN_PNPM_MAJOR" ] || die "pnpm $MIN_PNPM_MAJOR+ required (found $pnpm_version)"
+  [ "$(major_of "$pnpm_version")" -ge "$MIN_PNPM_MAJOR" ] || die "pnpm $MIN_PNPM_MAJOR+ required (found $pnpm_version): $(install_hint pnpm)"
   ok "pnpm $pnpm_version"
 
-  docker info >/dev/null 2>&1 || die "Docker is not running (macOS: open -a Docker)"
-  docker compose version >/dev/null 2>&1 || die "the Docker Compose plugin is missing"
+  docker info >/dev/null 2>&1 || die "Docker is not running (macOS: open -a Docker; Linux: sudo systemctl start docker)"
+  docker compose version >/dev/null 2>&1 || die "the Docker Compose plugin is missing: $(install_hint docker)"
+  local docker_memory
+  docker_memory="$(docker info --format '{{.MemTotal}}' 2>/dev/null || echo 0)"
+  if [ "$docker_memory" -gt 0 ] && [ "$docker_memory" -lt "$MIN_DOCKER_MEMORY_BYTES" ]; then
+    warn "Docker has $((docker_memory / 1024 / 1024)) MiB of memory; 6 GiB or more is recommended (Docker Desktop > Settings > Resources)"
+  fi
   ok "Docker $(docker version --format '{{.Server.Version}}' 2>/dev/null || echo running)"
 
-  [ -r "$ENV_FILE" ] || die "secrets file not readable: $ENV_FILE (copy .env.example there and fill it, or set BADGE_ENV_FILE)"
+  [ -r "$ENV_FILE" ] || die "secrets file not readable: $ENV_FILE. Run: cp .env.example .env && chmod 600 .env, then set BUILD_LLM_API_KEY (see INSTALL.md)"
   local name missing=()
   for name in $(required_env_names); do
     grep -qE "^${name}=.+" "$ENV_FILE" || missing+=("$name")
   done
   [ "${#missing[@]}" -eq 0 ] || die "missing or empty in $ENV_FILE for profile '$PROFILE': ${missing[*]}"
   local mode
-  mode="$(stat -f '%Lp' "$ENV_FILE" 2>/dev/null || stat -c '%a' "$ENV_FILE")"
+  # GNU stat first: on Linux, `stat -f` means file-system status and succeeds with unrelated output.
+  mode="$(stat -c '%a' "$ENV_FILE" 2>/dev/null || stat -f '%Lp' "$ENV_FILE")"
   [ "$mode" = "600" ] || warn "$ENV_FILE has mode $mode; chmod 600 recommended"
   ok "secrets file present, profile '$PROFILE' complete (values not read)"
 }
