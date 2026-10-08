@@ -1,8 +1,8 @@
 import type { Route } from "next";
-import { Bot, CheckCircle2, Circle, Fingerprint, KeyRound, RefreshCw, VenetianMask } from "lucide-react";
+import { Bot, Check, Fingerprint, KeyRound, RefreshCw, VenetianMask } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { CopyableHash } from "@/components/copyable-hash";
 import { EnclaveUnavailable } from "@/components/enclave-unavailable";
 import { LedgerActionButton } from "@/components/ledger/sign-buttons";
@@ -18,43 +18,73 @@ import { deviceName } from "@/server/messages";
 
 export const metadata: Metadata = { title: "Configuration" };
 
+/** Flow step states of the reference: finished, the one to do now, or waiting on an earlier step. */
+type StepState = "done" | "now" | "locked";
+
+const STEP_CHIP: Record<StepState, string> = {
+  done: "Fait",
+  now: "À faire",
+  locked: "Plus tard",
+};
+
+function stepState(done: boolean, unlocked: boolean): StepState {
+  if (done) return "done";
+  return unlocked ? "now" : "locked";
+}
+
 function Step({
   index,
-  done,
+  state,
   icon,
   title,
   description,
   children,
 }: {
   index: number;
-  done: boolean;
+  state: StepState;
   icon: ReactNode;
   title: string;
   description: ReactNode;
   children: ReactNode;
 }) {
   return (
-    <li className="relative flex gap-4 rounded-xl border bg-card p-5 shadow-xs">
+    <li
+      data-state={state}
+      className={cn(
+        "app-enter relative flex gap-5 rounded-2xl border p-6 transition-[background-color,border-color] duration-500 ease-out-soft",
+        state === "now" && "border-muted-foreground/60 bg-card shadow-nav",
+        state === "done" && "bg-card",
+        state === "locked" && "bg-surface",
+      )}
+      style={{ "--i": index } as CSSProperties}
+    >
       <div
         className={cn(
-          "flex size-9 shrink-0 items-center justify-center rounded-full border",
-          done ? "border-success/40 bg-success/10 text-success" : "text-muted-foreground",
+          "flex size-10 shrink-0 items-center justify-center rounded-full border-[1.5px] transition-colors duration-500 ease-out-soft",
+          state === "done" && "border-primary bg-primary text-primary-foreground",
+          state === "now" && "border-primary text-primary",
+          state === "locked" && "border-muted-foreground/40 text-muted-foreground",
         )}
       >
-        {icon}
+        {state === "done" ? <Check className="size-4" /> : icon}
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <span className="text-[11px] font-medium text-muted-foreground">Étape {index}</span>
-          {done ? (
-            <CheckCircle2 className="size-3.5 text-success" />
-          ) : (
-            <Circle className="size-3.5 text-muted-foreground/60" />
-          )}
+          <span className="mono-label text-[10px] text-muted-foreground">Étape {index}</span>
+          <span
+            className={cn(
+              "rounded-pill border px-2 py-0.5 mono-chip",
+              state === "done" && "border-success/35 text-success",
+              state === "now" && "border-primary/40 text-primary",
+              state === "locked" && "text-muted-foreground",
+            )}
+          >
+            {STEP_CHIP[state]}
+          </span>
         </div>
-        <h2 className="mt-0.5 text-[15px] font-semibold">{title}</h2>
-        <div className="mt-1 text-[13px] leading-relaxed text-muted-foreground">{description}</div>
-        <div className="mt-4">{children}</div>
+        <h2 className="mt-2 text-[20px] leading-snug tracking-[-0.045em]">{title}</h2>
+        <div className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">{description}</div>
+        <div className="mt-5">{children}</div>
       </div>
     </li>
   );
@@ -78,16 +108,19 @@ export default async function OnboardingPage({ params }: { params: Promise<{ emp
     <div className="mx-auto max-w-3xl">
       <PageHeader
         title="Configuration"
+        eyebrow="Deux signatures · une journée de travail"
         description={`Deux signatures sur le Ledger de ${employee.firstName} relient son identité à l'enclave attestée et délèguent à son agent le droit de faire des demandes, jamais celui de lire le contexte des autres.`}
       />
-      <div className="mb-6 flex flex-wrap items-center gap-2 rounded-xl border bg-muted/30 px-4 py-3 text-xs">
-        <span className="text-muted-foreground">Mesure de l&apos;enclave signée dans chaque message :</span>
+      <div className="mb-8 flex flex-wrap items-center gap-2 rounded-2xl bg-brand-deep px-5 py-4 text-xs text-paper [&_button]:text-paper/90 [&_button:hover]:text-paper">
+        <span className="mono-label text-[10px] text-signal-hover">
+          Mesure de l&apos;enclave signée dans chaque message
+        </span>
         <CopyableHash value={attestation.data.measurement} full />
       </div>
       <ol className="space-y-4">
         <Step
           index={1}
-          done={enrolled}
+          state={stepState(enrolled, true)}
           icon={<Fingerprint className="size-4" />}
           title="Associer mon Ledger à mon identité"
           description={
@@ -99,7 +132,7 @@ export default async function OnboardingPage({ params }: { params: Promise<{ emp
           }
         >
           {enrolled ? (
-            <p className="text-xs text-success">
+            <p className="inline-flex rounded-pill border border-success/35 bg-success/8 px-3 py-1 text-xs font-semibold text-success">
               Inscrit{" "}
               {enrollment.data.enrolledAt === undefined ? "" : formatRelative(enrollment.data.enrolledAt)}.
             </p>
@@ -114,7 +147,7 @@ export default async function OnboardingPage({ params }: { params: Promise<{ emp
         </Step>
         <Step
           index={2}
-          done={session !== undefined}
+          state={stepState(session !== undefined, enrolled)}
           icon={<Bot className="size-4" />}
           title="Autoriser mon agent"
           description="Une clé de session est générée pour votre agent ; votre Ledger lui délègue le droit de faire des demandes pendant une journée de travail (8 heures)."
@@ -123,19 +156,19 @@ export default async function OnboardingPage({ params }: { params: Promise<{ emp
             <div className="space-y-3">
               <dl className="grid gap-2 text-xs sm:grid-cols-2">
                 <div>
-                  <dt className="text-muted-foreground">Agent</dt>
-                  <dd className="mt-0.5 font-medium">{session.agentName}</dd>
+                  <dt className="mono-label text-[10px] text-muted-foreground">Agent</dt>
+                  <dd className="mt-1 font-medium">{session.agentName}</dd>
                 </div>
                 <div>
-                  <dt className="text-muted-foreground">Expire</dt>
-                  <dd className="mt-0.5">
+                  <dt className="mono-label text-[10px] text-muted-foreground">Expire</dt>
+                  <dd className="mt-1">
                     {formatDateTime(session.expiresAt)}{" "}
                     <span className="text-muted-foreground">({formatRelative(session.expiresAt)})</span>
                   </dd>
                 </div>
                 <div className="sm:col-span-2">
-                  <dt className="text-muted-foreground">Clé de session</dt>
-                  <dd className="mt-0.5">
+                  <dt className="mono-label text-[10px] text-muted-foreground">Clé de session</dt>
+                  <dd className="mt-1">
                     <CopyableHash value={session.sessionKey} full />
                   </dd>
                 </div>
@@ -164,7 +197,7 @@ export default async function OnboardingPage({ params }: { params: Promise<{ emp
         {employee.role === "compliance" && (
           <Step
             index={3}
-            done={complianceKey !== undefined}
+            state={stepState(complianceKey !== undefined, session !== undefined)}
             icon={<KeyRound className="size-4" />}
             title="Enregistrer ma clé de conformité"
             description="Les identités des partages anonymes entre desks sont scellées pour vous seule. Votre clé est dérivée d'une signature de votre Ledger : elle n'est stockée nulle part et se recalcule à chaque levée d'anonymat."
@@ -172,14 +205,14 @@ export default async function OnboardingPage({ params }: { params: Promise<{ emp
             {complianceKey !== undefined ? (
               <dl className="grid gap-2 text-xs sm:grid-cols-2">
                 <div className="sm:col-span-2">
-                  <dt className="text-muted-foreground">Clé publique X25519</dt>
-                  <dd className="mt-0.5">
+                  <dt className="mono-label text-[10px] text-muted-foreground">Clé publique X25519</dt>
+                  <dd className="mt-1">
                     <CopyableHash value={complianceKey.publicKey} full />
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-muted-foreground">Enregistrée</dt>
-                  <dd className="mt-0.5">{formatRelative(complianceKey.registeredAt)}</dd>
+                  <dt className="mono-label text-[10px] text-muted-foreground">Enregistrée</dt>
+                  <dd className="mt-1">{formatRelative(complianceKey.registeredAt)}</dd>
                 </div>
               </dl>
             ) : session !== undefined ? (
@@ -198,7 +231,7 @@ export default async function OnboardingPage({ params }: { params: Promise<{ emp
         {employee.desks.length > 0 && (
           <Step
             index={3}
-            done={desksJoined}
+            state={stepState(desksJoined, session !== undefined)}
             icon={<VenetianMask className="size-4" />}
             title="Rejoindre mon desk"
             description="Pour répondre anonymement aux autres desks : votre identité anonyme est dérivée de votre Ledger, rien n'est stocké."
