@@ -58,7 +58,7 @@ export function AgentComposer({ employee, targetName }: { employee: EmployeeId; 
     <form
       onSubmit={onSubmit}
       className={cn(
-        "rounded-3xl border bg-card shadow-nav transition-[border-color,box-shadow] duration-300 ease-out-soft focus-within:border-ring/60 focus-within:shadow-focus",
+        "workspace-composer rounded-3xl border bg-card shadow-nav transition-[border-color,box-shadow] duration-300 ease-out-soft focus-within:border-ring/60 focus-within:shadow-focus",
         compromised && "border-danger/45 bg-danger/[0.03] focus-within:border-danger/60",
       )}
     >

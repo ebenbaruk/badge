@@ -1,5 +1,6 @@
 import { MessageSquareDashed } from "lucide-react";
 import type { Metadata } from "next";
+import { WorkspaceIntro } from "@/components/agent/workspace-intro";
 import { AgentComposer } from "@/components/agent/agent-composer";
 import { TaskThread } from "@/components/agent/task-thread";
 import { EnclaveUnavailable } from "@/components/enclave-unavailable";
@@ -16,6 +17,7 @@ export default async function AgentPage({ params }: { params: Promise<{ employee
   const tasks = await load(() => enclave().listTasks(employee.id));
   return (
     <div className="mx-auto max-w-5xl">
+      <WorkspaceIntro firstName={employee.firstName} />
       <PageHeader
         title={`Agent ${ofName(employee.firstName)}`}
         eyebrow="Agent · mémoire confidentielle"

@@ -41,7 +41,7 @@ export default async function EmployeeLayout({
   return (
     <LedgerActivityProvider>
       <AutoRefresh />
-      <div className="flex min-h-svh">
+      <div className="badge-workspace flex min-h-svh">
         <AppSidebar
           employee={employee.id}
           isCompliance={employee.role === "compliance"}

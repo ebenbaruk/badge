@@ -1,8 +1,9 @@
+import Image from "next/image";
+import { Sculpture } from "./sculpture";
 import { cn } from "@/lib/utils";
 
 /**
- * Image slots of the landing (see `public/landing/ASSETS.md`). Each slot keeps the background
- * colour of its future image, so the page already reads right before the images exist.
+ * Shared artwork slots. Background colours reserve a stable surface while each image loads.
  */
 export const LANDING_IMAGE_SLOTS = {
   "hero-warp-poster": { background: "#060010", ink: "#b5d6ff", ratio: "16 / 10", watermark: "Warp" },
@@ -26,48 +27,56 @@ export type LandingImageSlot = keyof typeof LANDING_IMAGE_SLOTS;
 
 export interface PlaceholderImageProps {
   slot: LandingImageSlot;
-  /** Accessible description of the future image; omit for a purely decorative slot. */
+  /** Accessible description of the illustration; omit for a purely decorative slot. */
   alt?: string;
   className?: string;
-  /** Hide the giant watermark word (small tiles). */
+  /** Legacy prop retained for existing call sites; artwork never displays a watermark. */
   hideWatermark?: boolean;
 }
 
-/**
- * Stand-in for a generated image: the slot's solid colour, a faint watermark word and a small
- * mono label `IMG · <slot>`. Never a broken image. Takes the radius of its container.
- */
-export function PlaceholderImage({ slot, alt, className, hideWatermark = false }: PlaceholderImageProps) {
-  const { background, ink, ratio, watermark } = LANDING_IMAGE_SLOTS[slot];
+/** Optimized artwork exported from the shared studio illustration collection. */
+export function PlaceholderImage({ slot, alt, className }: PlaceholderImageProps) {
+  const { background, ratio } = LANDING_IMAGE_SLOTS[slot];
+  const sculpture =
+    slot === "act-memory"
+      ? "memory"
+      : slot === "act-ledger"
+        ? "signer"
+        : slot === "act-refusal"
+          ? "shield"
+          : slot === "act-attest"
+            ? "enclave"
+            : null;
+  if (sculpture)
+    return (
+      <div
+        role={alt ? "img" : undefined}
+        aria-label={alt}
+        className={cn("relative grid place-items-center", className)}
+        style={{ aspectRatio: ratio }}
+      >
+        <Sculpture kind={sculpture} />
+      </div>
+    );
+  const file =
+    slot === "hero-warp-poster" || slot === "og-image"
+      ? "memory-hero"
+      : slot === "persona-bob"
+        ? "persona-alice"
+        : slot;
   return (
     <div
-      role={alt ? "img" : undefined}
-      aria-label={alt}
-      aria-hidden={alt ? undefined : true}
       data-slot-id={slot}
-      className={cn(
-        "@container relative isolate grid place-items-center overflow-hidden rounded-[inherit]",
-        className,
-      )}
-      style={{ background, color: ink, aspectRatio: ratio }}
+      className={cn("relative isolate overflow-hidden rounded-[inherit]", className)}
+      style={{ background, aspectRatio: ratio }}
     >
-      {/* Soft top-left light, like the studio lighting of the future renders. */}
-      <div
-        aria-hidden="true"
-        className="absolute inset-0 -z-10"
-        style={{ background: "radial-gradient(120% 90% at 20% 10%, #ffffff2e, transparent 60%)" }}
+      <Image
+        src={`/landing/${file}.webp`}
+        alt={alt ?? ""}
+        fill
+        sizes={slot.startsWith("tile-") ? "(max-width: 640px) 85vw, 115px" : "(max-width: 768px) 80vw, 520px"}
+        className={cn("object-cover", slot === "persona-bob" && "-hue-rotate-30")}
       />
-      {!hideWatermark && (
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 bottom-[6%] text-center text-[clamp(48px,14cqw,220px)] leading-none font-semibold tracking-[-0.08em] opacity-[0.055] select-none"
-        >
-          {watermark}
-        </span>
-      )}
-      <span aria-hidden="true" className="mono-label opacity-70">
-        IMG · {slot}
-      </span>
     </div>
   );
 }

@@ -1,12 +1,14 @@
 # Images de la page d'accueil
 
-Tous les fichiers vont dans `apps/web/public/landing/`. Tant qu'une image n'existe pas, la page affiche
-`<PlaceholderImage slot="…" />` (`src/components/landing/placeholder-image.tsx`) : la couleur de fond du
-slot, un mot en filigrane et l'étiquette `IMG · <id>`. Jamais d'image cassée.
+Les quatre grandes illustrations utilisent des sculptures SVG animées dans
+`src/components/landing/sculpture.tsx`, avec les mouvements dans `src/styles/sculptures.css`.
+Le héros présente une séquence d’interface animée (demande, accord, partage), sans image de fond.
+Le bandeau Agent garde un fond uni adapté au thème, sans image
+derrière le texte. Les fichiers WebP restent disponibles pour les petites tuiles, preuves et personnages.
+Les anciens rendus du héros et des quatre actes sont conservés, mais ne sont plus utilisés à ces endroits.
 
-Contraintes d'export : WebP qualité 80, **300 Ko maximum** par image ; pour les quatre sculptures des
-actes, exporter aussi une version PNG à fond transparent quand c'est possible (elles se posent alors sur
-la couleur CSS de la carte). Les prompts sont en anglais (meilleur rendu des générateurs d'images).
+Les spécifications ci-dessous conservent la direction artistique et les prompts de référence ; les tailles
+indiquées dans le tableau sont les cibles de production initiales.
 
 ## Direction artistique commune
 

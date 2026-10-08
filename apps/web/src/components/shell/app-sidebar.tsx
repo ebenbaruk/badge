@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   Bot,
   FileSignature,
+  Fingerprint,
   Inbox,
   KeyRound,
   ScrollText,
@@ -101,13 +102,47 @@ export function AppSidebar({
   setupPending: boolean;
 }) {
   return (
-    <aside className="sticky top-0 hidden h-svh w-64 shrink-0 flex-col border-r bg-sidebar px-4 py-6 md:flex">
-      <div className="px-2 pb-8">
-        <BrandLockup />
-      </div>
-      <div className="mb-2 px-3 mono-label text-muted-foreground">Mon espace</div>
-      <nav className="flex flex-col gap-1" aria-label="Navigation principale">
-        {MAIN_NAV.map((item) => (
+    <>
+      <aside className="workspace-sidebar sticky top-0 hidden h-svh w-64 shrink-0 flex-col border-r bg-sidebar px-4 py-6 md:flex">
+        <div className="px-2 pb-8">
+          <BrandLockup />
+        </div>
+        <div className="mb-2 px-3 mono-label text-muted-foreground">Mon espace</div>
+        <nav className="flex flex-col gap-1" aria-label="Navigation principale">
+          {MAIN_NAV.map((item) => (
+            <NavLink
+              key={item.section}
+              employee={employee}
+              item={item}
+              count={
+                item.section === "consents"
+                  ? counts.consents
+                  : item.section === "desks"
+                    ? counts.desks
+                    : undefined
+              }
+            />
+          ))}
+          {isCompliance && (
+            <>
+              <div className="mt-6 mb-2 px-3 mono-label text-muted-foreground">Conformité</div>
+              <NavLink employee={employee} item={COMPLIANCE_ITEM} />
+            </>
+          )}
+        </nav>
+        <div className="workspace-sidebar-note mt-auto mb-5 rounded-2xl border p-4">
+          <Fingerprint className="mb-3 size-6 text-primary" />
+          <p className="text-xs font-semibold">Votre contexte vous appartient.</p>
+          <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+            Chaque partage commence par votre accord.
+          </p>
+        </div>
+        <div className="flex flex-col gap-1 border-t pt-4">
+          <NavLink employee={employee} item={SETUP_ITEM} attention={setupPending} />
+        </div>
+      </aside>
+      <nav aria-label="Navigation mobile" className="workspace-mobile-nav md:hidden">
+        {[...MAIN_NAV, ...(isCompliance ? [COMPLIANCE_ITEM] : []), SETUP_ITEM].map((item) => (
           <NavLink
             key={item.section}
             employee={employee}
@@ -119,18 +154,10 @@ export function AppSidebar({
                   ? counts.desks
                   : undefined
             }
+            attention={item.section === "onboarding" && setupPending}
           />
         ))}
-        {isCompliance && (
-          <>
-            <div className="mt-6 mb-2 px-3 mono-label text-muted-foreground">Conformité</div>
-            <NavLink employee={employee} item={COMPLIANCE_ITEM} />
-          </>
-        )}
       </nav>
-      <div className="mt-auto flex flex-col gap-1 border-t pt-4">
-        <NavLink employee={employee} item={SETUP_ITEM} attention={setupPending} />
-      </div>
-    </aside>
+    </>
   );
 }

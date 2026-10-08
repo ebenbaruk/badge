@@ -1,0 +1,41 @@
+.badge-sculpture {
+  width: 100%;
+}
+.badge-sculpture svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .sculpture-layer {
+    animation: sculpture-separate 6s ease-in-out infinite alternate;
+  }
+  .sculpture-layer-0 {
+    --lift: 9px;
+  }
+  .sculpture-layer-1 {
+    --lift: -3px;
+    animation-delay: -0.5s;
+  }
+  .sculpture-layer-2 {
+    --lift: -18px;
+    animation-delay: -1s;
+  }
+  .sculpture-object {
+    animation: sculpture-hover 6s ease-in-out infinite alternate;
+  }
+  [data-paused="true"] .badge-sculpture * {
+    animation-play-state: paused;
+  }
+}
+@keyframes sculpture-separate {
+  to {
+    translate: 0 var(--lift);
+  }
+}
+@keyframes sculpture-hover {
+  to {
+    translate: 0 -12px;
+  }
+}

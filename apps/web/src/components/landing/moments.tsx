@@ -33,7 +33,7 @@ const MOMENTS: readonly Moment[] = [
     tone: "bg-fog text-fog-ink",
     art: {
       slot: "act-ledger",
-      alt: "Un appareil de signature à écran e-ink, posé en biais, anneau bleu de signature.",
+      alt: "Un appareil de signature stylisé, avec un écran et une coche de validation.",
     },
   },
   {
@@ -46,7 +46,7 @@ const MOMENTS: readonly Moment[] = [
     tone: "bg-periwinkle text-periwinkle-ink",
     art: {
       slot: "act-refusal",
-      alt: "Des barres de données dont la plus haute, rouge, est arrêtée par un bouclier de verre.",
+      alt: "Un bouclier protège des barres de données.",
     },
     stamp: "Refuse · aspiration massive",
   },
@@ -58,7 +58,7 @@ const MOMENTS: readonly Moment[] = [
     cursor: "Déléguer",
     watermark: "Accord",
     tone: "bg-lavender text-lavender-ink",
-    art: { slot: "act-memory", alt: "Des anneaux de mémoire empilés, reliés par un point lumineux." },
+    art: { slot: "act-memory", alt: "Trois anneaux de mémoire lavande empilés." },
   },
   {
     id: "revocation",
@@ -68,7 +68,7 @@ const MOMENTS: readonly Moment[] = [
     cursor: "Révoquer",
     watermark: "Stop",
     tone: "bg-peach text-peach-ink",
-    art: { slot: "act-attest", alt: "Un cube de verre scellé entouré d'anneaux d'orbite." },
+    art: { slot: "act-attest", alt: "Un cube scellé entouré d’une orbite." },
   },
   {
     id: "desks",
@@ -140,7 +140,7 @@ function MomentCard({ moment, index }: { moment: Moment; index: number }) {
               slot={moment.art.slot}
               alt={moment.art.alt}
               hideWatermark
-              className="rounded-3xl shadow-[25px_35px_40px_#262d3d2a]"
+              className="rounded-3xl"
             />
           )}
         </div>

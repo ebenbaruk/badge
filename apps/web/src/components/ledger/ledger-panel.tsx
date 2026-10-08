@@ -75,7 +75,7 @@ export function LedgerPanel({
       <Button
         variant="night"
         size="lg"
-        className="fixed right-5 bottom-5 z-40 shadow-nav xl:hidden"
+        className="fixed right-5 bottom-[calc(88px+env(safe-area-inset-bottom))] z-40 md:bottom-5 shadow-nav xl:hidden"
         onClick={() => setDialogOpen(true)}
       >
         {activity === null ? <Smartphone /> : <PulseDot tone="on" />}
