@@ -48,8 +48,8 @@ function PendingCallout({ task }: { task: TaskView }) {
             <div className="flex flex-wrap items-center gap-3">
               <EmployeeAvatar employee={owner} size="sm" />
               <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2 text-[13px] font-semibold">
-                  <PulseDot tone="live" />
+                <div className="text-[13px] font-semibold">
+                  <PulseDot tone="live" className="mr-2 align-middle" />
                   En attente de {EMPLOYEES[owner].name}
                   <span className="ml-1.5 font-normal text-muted-foreground">· sur son Ledger</span>
                 </div>
@@ -209,7 +209,7 @@ export function TaskThread({ task, requester }: { task: TaskView; requester: Emp
             </span>
           )}
           <span
-            className="min-w-0 truncate mono-label text-[10px] normal-case text-muted-foreground"
+            className="min-w-0 truncate font-mono text-[10.5px] text-muted-foreground"
             title={task.taskLabel}
           >
             tâche « {task.taskLabel} »

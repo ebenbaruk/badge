@@ -89,7 +89,7 @@ function PendingRequest({ request, owner }: { request: ConsentRequestView; owner
               {request.excerpt.tags.map((tag) => (
                 <span
                   key={tag}
-                  className="rounded-pill border bg-surface px-2 py-0.5 mono-chip text-foreground normal-case"
+                  className="rounded-pill border bg-surface px-2 py-0.5 font-mono text-[10.5px] tracking-normal text-foreground normal-case"
                 >
                   {tag}
                 </span>

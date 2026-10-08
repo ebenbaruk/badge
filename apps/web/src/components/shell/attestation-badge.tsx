@@ -75,7 +75,7 @@ export function AttestationBadge({
           {tone === "failed" ? <Icon className="size-3.5" /> : <span className="app-halo-dot" aria-hidden />}
           {label}
           {attestation !== null && (
-            <span className="hidden mono-label opacity-75 lg:inline">
+            <span className="hidden font-mono text-[11px] font-normal opacity-75 lg:inline">
               {attestation.measurement.slice(0, 10)}…{attestation.measurement.slice(-4)}
             </span>
           )}
