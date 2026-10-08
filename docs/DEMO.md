@@ -1,5 +1,8 @@
 # Démonstration
 
+> L'interface est désormais en anglais et la démo web se lance en une commande (`pnpm demo:web`) : le parcours à
+> jour, avec les libellés exacts, est dans [`INSTALL.md`](../INSTALL.md). Cette page sera réécrite.
+
 Deux façons de montrer Badge, sur la même pile locale (cinq Ledgers Speculos, TEE simulé par dstack, mémoire
 Honcho, LLM du profil choisi) :
 

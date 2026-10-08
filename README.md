@@ -115,7 +115,7 @@ Acme, entreprise fictive. Alice (Ventes), Bob (Grands comptes), Chloé (Juridiqu
 8. **Dans la harness de chacun.** Le même parcours est accessible à tout agent compatible MCP, avec quatre outils
    (`badge_get_context`, `badge_task_status`, `badge_list_my_consents`, `badge_attestation`).
 
-Comment la jouer (CLI et parcours web cliqué) : [`docs/DEMO.md`](docs/DEMO.md).
+Comment la jouer (CLI et parcours web cliqué) : [`INSTALL.md`](INSTALL.md).
 
 ## Ce qui est réel, ce qui est simulé
 
@@ -131,26 +131,20 @@ Comment la jouer (CLI et parcours web cliqué) : [`docs/DEMO.md`](docs/DEMO.md).
 
 ## Démarrage rapide
 
-Prérequis : **Docker** (avec Compose), **Node 24**, **pnpm 11**, `curl`, `git`, `openssl`, et un fichier de secrets
-hors du dépôt (`../.env` par défaut, ou `BADGE_ENV_FILE`) rempli d'après [`.env.example`](.env.example).
+Tout tourne en local, sans compte cloud ni Ledger physique : **guide complet d'installation et parcours de démo dans
+[`INSTALL.md`](INSTALL.md)**. Prérequis : Docker (avec Compose), Node 24, pnpm 11 et une clé d'API compatible OpenAI.
 
 ```bash
+cp .env.example .env && chmod 600 .env   # renseigner BUILD_LLM_API_KEY
 scripts/bootstrap.sh     # prérequis, installation, artefacts, 5 Speculos, simulateur dstack, mémoire, jeu de démo
 pnpm demo                # le scénario complet en direct (18 étapes), chaque étape vérifiée
+pnpm demo:web            # la démo web préparée : http://localhost:3000 (présentation) et /demo (produit)
 ```
 
 Contre le CVM Phala déployé (vrai quote TDX exigé, toutes les épingles) :
 
 ```bash
 BADGE_ENCLAVE_URL=<endpoint> BADGE_ENCLAVE_OS_MEASUREMENTS_FILE=infra/cvm/expected-measurements.json pnpm demo
-```
-
-Parcours web (deux terminaux), puis http://localhost:3000 (page de présentation) et http://localhost:3000/demo (démo) :
-
-```bash
-pnpm --filter @badge/enclave start
-pnpm desks:seed          # une fois l'enclave lancée : David et Emma rejoignent le desk Research
-BADGE_CAL_TEST_KEY=$PWD/infra/keys/cal-test.pem pnpm --filter @badge/web dev
 ```
 
 Brancher Badge sur un agent : [`apps/mcp/README.md`](apps/mcp/README.md).

@@ -31,18 +31,27 @@ Suites that need running infrastructure, kept outside the default run:
 - `pnpm --filter @badge/attest|@badge/enclave|@badge/mcp test:sim`: dstack simulator.
 - `pnpm --filter @badge/enclave test:live`: Honcho stack + LLM.
 
-Local stack, in order (`scripts/bootstrap.sh` does it all, idempotently):
+Local demo (full guide for humans: `INSTALL.md`):
 
 ```bash
-infra/setup.sh                      # Speculos image, ETH app ELFs, Semaphore artifacts, test CAL key
-infra/speculos.sh                   # 5 Flex devices: alice 5001, bob 5002, chloe 5003, david 5004, emma 5005
-infra/dstack-sim.sh start           # dstack simulator on 127.0.0.1:8090
-infra/stack.sh up && infra/stack.sh seed   # Honcho + pgvector + egress gateway, Honcho API on 127.0.0.1:8000
-pnpm --filter @badge/enclave start  # enclave on :8787 (BADGE_DATA_DIR for a fresh DB)
-pnpm desks:seed                     # David + Emma join desk Research with their Ledgers (desk shares need >= 3)
-BADGE_CAL_TEST_KEY=$PWD/infra/keys/cal-test.pem BADGE_REHEARSAL=1 pnpm --filter @badge/web dev  # "/" landing, "/demo" app
-pnpm demo                           # 18-step live end-to-end scenario; starts its own enclave
+scripts/bootstrap.sh   # prerequisites, install, artifacts, 5 Speculos, dstack simulator, Honcho stack, seed (idempotent)
+pnpm demo              # 18-step live end-to-end scenario; starts its own enclave (8788 if the web demo holds 8787)
+pnpm demo:web          # enclave :8787 + demo:prepare + web :3000 (production build, presenter mode)
+pnpm demo:web --fresh | --rehearsal | --dev     # clean state | "Auto review" button | Next dev server
+pnpm demo:web stop | status | logs [web|enclave]
 ```
+
+`pnpm demo:web` (`scripts/demo-web.sh`) is the way to bring the web demo up, and to bring it back. Agent sessions
+last 8 hours by design ("one working day"). When they expire, the UI says the session has expired and the enclave
+refuses requests. Re-running `pnpm demo:web` renews them all: `pnpm demo:prepare` (`scripts/prepare-demo.ts`) signs
+the setup on the Speculos Ledgers, with every review auto-approved since it is setup, then writes the session keys
+into `apps/web/.data`. It must run while the web server is stopped, and the launcher handles that ordering.
+Processes started by the launcher log to `infra/.data/demo-web/`.
+
+Individual pieces, if needed: `infra/setup.sh`, `infra/speculos.sh` (alice 5001, bob 5002, chloe 5003, david 5004,
+emma 5005), `infra/dstack-sim.sh start` (:8090), `infra/stack.sh up && infra/stack.sh seed` (Honcho on :8000),
+`pnpm --filter @badge/enclave start` (:8787, `BADGE_DATA_DIR` for a fresh DB),
+`BADGE_CAL_TEST_KEY=$PWD/infra/keys/cal-test.pem [BADGE_REHEARSAL=1] pnpm --filter @badge/web dev`.
 
 Against a deployed CVM:
 
@@ -56,8 +65,8 @@ Phala: `infra/phala-up.sh` (refuses without `PHALA_CONFIRM_SPEND=yes`), `infra/p
 locally first with `infra/cvm/rehearse.sh up [--real-llm] | check | down`. Never leave a CVM running, and ask
 before any spend.
 
-Secrets live outside the repo in `../.env` (`BADGE_ENV_FILE`): BUILD_LLM__, PHALA_AI__, PHALA_CLOUD_API_KEY.
-Scripts read them by name and never print them.
+Secrets: `.env` at the repo root (gitignored), else `../.env`, or `BADGE_ENV_FILE`; template in `.env.example`
+(BUILD_LLM__, PHALA_AI__, PHALA_CLOUD_API_KEY). Scripts read them by name and never print them.
 
 ## Architecture
 
@@ -143,3 +152,20 @@ simulated`). It also holds the attested channel (X25519 + HKDF + AES-GCM, `repor
 - Never mention Plastic Labs or Neuromancer in product copy or the pitch.
 - Demo identities use public BIP-39 test mnemonics (in `infra/speculos.sh`); Ledger addresses are in
   `infra/seed/acme.json`.
+
+## The demo is a living thing
+
+Badge ships as a back-end product: a confidential memory that holds the company context and every employee's
+personal context, injects the right context for each task, and asks the owner's Ledger before a personal excerpt
+leaves. The web app and the Speculos Ledgers exist to make that visible to a jury in five minutes. The walkthrough is
+in `INSTALL.md` §4 and the pitch beats are in `README.md` ("Le scénario de démonstration").
+
+- Run the walkthrough yourself before changing anything: `pnpm demo:web --fresh --rehearsal`, then follow INSTALL.md §4.
+- Proposals that make the demo smoother or clearer for a jury are welcome: copy, ordering, what a screen emphasises,
+  fewer clicks. Examples are a step that needs explaining, a label that reads like jargon, or a wait with no feedback.
+  Describe the change and get the go-ahead of the person you are working with (Eli or Alexandre, the two
+  presenters) before making it. They decide what the jury sees.
+- Keep the guarantees intact: every personal excerpt still needs a Ledger signature or a signed standing agreement,
+  the UI never computes risk itself, and the clear-signing screens stay exact.
+- After a change: `pnpm typecheck && pnpm test && pnpm lint`, `pnpm demo` (18/18), then play the walkthrough in the
+  browser with `pnpm demo:web` (presenter mode, real hold-to-sign) and update INSTALL.md §4 if a label moved.
