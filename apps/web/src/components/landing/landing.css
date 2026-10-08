@@ -24,6 +24,11 @@
   overflow-x: clip;
 }
 
+/* Lenis animates the scroll itself: the native smooth behaviour would fight it frame by frame. */
+html.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
 .lp-skip {
   position: fixed;
   top: 12px;

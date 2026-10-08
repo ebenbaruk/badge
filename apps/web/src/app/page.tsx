@@ -9,6 +9,7 @@ import { JumpGrid } from "@/components/landing/jump-grid";
 import { Moments } from "@/components/landing/moments";
 import { NavPill } from "@/components/landing/nav-pill";
 import { SiteFooter } from "@/components/landing/site-footer";
+import { SmoothScroll } from "@/components/landing/smooth-scroll";
 import { TechStrip } from "@/components/landing/tech-strip";
 import { Trust } from "@/components/landing/trust";
 import "@/components/landing/landing.css";
@@ -31,6 +32,7 @@ export const metadata: Metadata = {
 export default function Landing() {
   return (
     <div className="lp">
+      <SmoothScroll />
       <a href="#contenu" className="lp-skip">
         Aller au contenu
       </a>
