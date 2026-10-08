@@ -52,6 +52,15 @@ Individual pieces, if needed: `infra/setup.sh`, `infra/speculos.sh` (alice 5001,
 emma 5005), `infra/dstack-sim.sh start` (:8090), `infra/stack.sh up && infra/stack.sh seed` (Honcho on :8000),
 `pnpm --filter @badge/enclave start` (:8787, `BADGE_DATA_DIR` for a fresh DB),
 `BADGE_CAL_TEST_KEY=$PWD/infra/keys/cal-test.pem [BADGE_REHEARSAL=1] pnpm --filter @badge/web dev`.
+`pnpm desks:seed` only enrolls David and Emma into the Research desk; `pnpm demo:prepare` already includes it.
+
+`scripts/` imports web modules through the `@/*` → `apps/web/src/*` path alias (`scripts/tsconfig.json`,
+`tsconfig.scripts.json`): `prepare-demo.ts` writes agent sessions with the web's own `AgentStore`, so changing that
+store's format (`apps/web/src/server/agent-store.ts`) must keep `pnpm demo:prepare` working.
+
+Pinned artifacts: the Speculos image digest lives in `infra/speculos-image.sh`; the Ethereum app, Semaphore circuits
+and test CAL key are fetched by `infra/setup.sh` and checked against SHA-256 values there. Bumping any of them means
+updating the pin and its checksum together, otherwise setup refuses the file.
 
 Against a deployed CVM:
 
@@ -66,7 +75,7 @@ locally first with `infra/cvm/rehearse.sh up [--real-llm] | check | down`. Never
 before any spend.
 
 Secrets: `.env` at the repo root (gitignored), else `../.env`, or `BADGE_ENV_FILE`; template in `.env.example`
-(BUILD_LLM__, PHALA_AI__, PHALA_CLOUD_API_KEY). Scripts read them by name and never print them.
+(`BUILD_LLM_*`, `PHALA_AI_*`, `PHALA_CLOUD_API_KEY`). Scripts read them by name and never print them.
 
 ## Architecture
 
@@ -86,7 +95,11 @@ Next.
   - The Ledger displays fields in **struct order**, so displayed fields come first.
   - The Ledger renders **ASCII only** (`toDeviceAscii`).
 
-  A test enforces both invariants. The package also holds the wire codecs (bigints as decimal strings) and the
+  A test enforces both invariants. Changing a device label or intent also changes the golden filter hex in
+  `packages/ledger/test/clearSign.test.ts` (recompute it, never guess) and must be checked on Speculos
+  (`test:speculos`). Changing an EIP-191 derivation message (`deskIdentityDeriveMessage`, `complianceKeyDeriveMessage`)
+  changes the derived desk identities and compliance key: existing demo state is then stale (`pnpm demo:web --fresh`).
+  The package also holds the wire codecs (bigints as decimal strings) and the
   fail-closed `verifyBadgeSignature` + `check*` validators. Stateful checks (nonces, revocation) belong to the
   enclave.
 
@@ -126,7 +139,9 @@ simulated`). It also holds the attested channel (X25519 + HKDF + AES-GCM, `repor
   - The server side is the per-employee device bridge (Speculos via `@badge/ledger`) and the agent runtime. It talks
     to the enclave through `@badge/client` (`src/server/enclave/live.ts`); `BADGE_ENCLAVE_MODE=mock` is for UI work
     only.
-  - The UI never computes risk; it shows the enclave's verdicts.
+  - The UI never computes risk; it shows the enclave's verdicts. The enclave rates every candidate excerpt of a task,
+    so one compromised-agent request yields several `rule.*` audit entries: the web groups them per request for display
+    only (`src/server/enclave/alerts.ts`, `src/lib/rule-findings.ts`). The audit chain itself keeps every entry.
   - Device routes are CSRF-guarded. Auto-review only exists with `BADGE_REHEARSAL=1`.
   - Agent runtime state persists in `BADGE_WEB_DATA_DIR`.
   - "/" is the marketing landing (`src/components/landing`; image slots and prompts in `public/landing/ASSETS.md`).
