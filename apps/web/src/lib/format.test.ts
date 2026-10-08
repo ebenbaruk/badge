@@ -4,6 +4,7 @@ import {
   formatLength,
   formatRelative,
   ofName,
+  reasonForThirdParty,
   percentSaved,
   plural,
   shortHex,
@@ -49,5 +50,31 @@ describe("format helpers", () => {
     expect(ofName("Élodie")).toBe("d'Élodie");
     expect(ofName("Bob")).toBe("de Bob");
     expect(ofName("Chloé Bernard")).toBe("de Chloé Bernard");
+  });
+});
+
+describe("reasonForThirdParty", () => {
+  it("rephrases owner-addressed rule reasons for the compliance officer", () => {
+    expect(reasonForThirdParty("La tâche demande 100 % de votre contexte personnel.", "Bob Durand")).toBe(
+      "La tâche demande 100 % du contexte personnel de Bob Durand.",
+    );
+    expect(
+      reasonForThirdParty(
+        "L'agent demande l'intégralité de votre contexte, pas un extrait ciblé.",
+        "Bob Durand",
+      ),
+    ).toBe("L'agent demande l'intégralité du contexte de Bob Durand, pas un extrait ciblé.");
+    expect(reasonForThirdParty("12 demandes sur votre contexte depuis une heure.", "Alice Martin")).toBe(
+      "12 demandes sur le contexte d'Alice Martin depuis une heure.",
+    );
+  });
+
+  it("leaves neutral reasons untouched and names an unknown owner generically", () => {
+    expect(
+      reasonForThirdParty("Extrait inhabituellement long (900 caractères, seuil 600).", "Bob Durand"),
+    ).toBe("Extrait inhabituellement long (900 caractères, seuil 600).");
+    expect(reasonForThirdParty("40 % de votre contexte personnel.", null)).toBe(
+      "40 % du contexte personnel du propriétaire.",
+    );
   });
 });

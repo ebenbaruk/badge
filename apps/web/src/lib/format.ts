@@ -90,3 +90,16 @@ export function plural(count: number, singular: string, pluralForm = `${singular
 export function ofName(name: string): string {
   return /^[aeiouyàâéèêëîïôûüh]/i.test(name) ? `d'${name}` : `de ${name}`;
 }
+
+/**
+ * The enclave writes rule reasons for the owner who reviews the request ("votre contexte"). The audit log shows the
+ * same reasons to the compliance officer, for whom "votre" would wrongly point at her own context: rephrase them
+ * in the third person, naming the owner.
+ */
+export function reasonForThirdParty(message: string, ownerName: string | null): string {
+  const of = ownerName === null ? "du propriétaire" : ofName(ownerName);
+  return message
+    .replace(/de votre contexte personnel/g, `du contexte personnel ${of}`)
+    .replace(/de votre contexte/g, `du contexte ${of}`)
+    .replace(/sur votre contexte/g, `sur le contexte ${of}`);
+}

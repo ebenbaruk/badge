@@ -8,7 +8,7 @@ import { EnclaveUnavailable } from "@/components/enclave-unavailable";
 import { EmptyState, PageHeader, SectionTitle } from "@/components/page-header";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DESK_NAMES, EMPLOYEES, isDeskId, isEmployeeId } from "@/lib/directory";
-import { formatDateTime, formatTime, ofName } from "@/lib/format";
+import { formatDateTime, formatTime, ofName, reasonForThirdParty } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { enclave, type AuditEntryView } from "@/server/enclave";
 import { employeeFromParams, load } from "@/server/load";
@@ -138,7 +138,9 @@ function AlertRow({ entry }: { entry: AuditEntryView }) {
           <ul className="mt-1.5 space-y-0.5 text-danger">
             {reasons.map((reason) => (
               <li key={reason.code} title={reason.code}>
-                {reason.message ?? reason.code}
+                {reason.message === undefined
+                  ? reason.code
+                  : reasonForThirdParty(reason.message, owner === null ? null : EMPLOYEES[owner].name)}
               </li>
             ))}
           </ul>
