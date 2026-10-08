@@ -14,6 +14,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { BrandLockup } from "@/components/brand";
+import { PulseDot } from "@/components/motion/pulse-dot";
 import type { EmployeeId } from "@/lib/directory";
 import { cn } from "@/lib/utils";
 
@@ -61,18 +62,29 @@ function NavLink({
       href={href as Route}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "group flex h-8 items-center gap-2.5 rounded-md px-2.5 text-[13px] font-medium text-sidebar-foreground/75 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground",
-        active && "bg-sidebar-accent text-sidebar-foreground",
+        "group flex h-9 items-center gap-2.5 rounded-pill px-3 text-[13px] font-medium text-sidebar-foreground/70 transition-[background-color,color,translate] duration-300 ease-out-soft hover:translate-x-0.5 hover:bg-sidebar-accent hover:text-sidebar-foreground",
+        active &&
+          "bg-surface-strong text-surface-strong-foreground hover:translate-x-0 hover:bg-surface-strong hover:text-surface-strong-foreground",
       )}
     >
-      <Icon className={cn("size-4 text-muted-foreground", active && "text-brand")} />
+      <Icon
+        className={cn(
+          "size-4 text-muted-foreground transition-colors duration-300 group-hover:text-foreground",
+          active && "text-current group-hover:text-current",
+        )}
+      />
       <span className="flex-1 truncate">{item.label}</span>
       {count !== undefined && count > 0 && (
-        <span className="rounded-full bg-brand px-1.5 py-px text-[10px] font-semibold text-brand-foreground tabular-nums">
+        <span
+          className={cn(
+            "inline-flex h-5 min-w-5 animate-gallery-in items-center justify-center rounded-pill bg-brand px-1.5 mono-chip text-brand-foreground tabular-nums",
+            active && "bg-signal text-on-signal",
+          )}
+        >
           {count}
         </span>
       )}
-      {attention === true && <span className="size-1.5 rounded-full bg-warning" aria-label="À faire" />}
+      {attention === true && <PulseDot tone="live" label="À faire" className="size-2" />}
     </Link>
   );
 }
@@ -89,11 +101,12 @@ export function AppSidebar({
   setupPending: boolean;
 }) {
   return (
-    <aside className="sticky top-0 hidden h-svh w-60 shrink-0 flex-col border-r bg-sidebar px-3 py-4 md:flex">
-      <div className="px-1.5 pb-5">
+    <aside className="sticky top-0 hidden h-svh w-64 shrink-0 flex-col border-r bg-sidebar px-4 py-6 md:flex">
+      <div className="px-2 pb-8">
         <BrandLockup />
       </div>
-      <nav className="flex flex-col gap-0.5" aria-label="Navigation principale">
+      <div className="mb-2 px-3 mono-label text-muted-foreground">Mon espace</div>
+      <nav className="flex flex-col gap-1" aria-label="Navigation principale">
         {MAIN_NAV.map((item) => (
           <NavLink
             key={item.section}
@@ -110,14 +123,12 @@ export function AppSidebar({
         ))}
         {isCompliance && (
           <>
-            <div className="mt-4 mb-1 px-2.5 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
-              Conformité
-            </div>
+            <div className="mt-6 mb-2 px-3 mono-label text-muted-foreground">Conformité</div>
             <NavLink employee={employee} item={COMPLIANCE_ITEM} />
           </>
         )}
       </nav>
-      <div className="mt-auto flex flex-col gap-0.5">
+      <div className="mt-auto flex flex-col gap-1 border-t pt-4">
         <NavLink employee={employee} item={SETUP_ITEM} attention={setupPending} />
       </div>
     </aside>

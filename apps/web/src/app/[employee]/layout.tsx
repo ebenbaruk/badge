@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { serverConfig } from "@/server/config";
 import { enclave } from "@/server/enclave";
 import { employeeFromParams, load } from "@/server/load";
+import "@/styles/app.css";
 
 export default async function EmployeeLayout({
   children,
@@ -48,11 +49,12 @@ export default async function EmployeeLayout({
           setupPending={setupPending}
         />
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b bg-background/80 px-4 backdrop-blur-md md:px-6">
+          {/* Floating glass bar, like the reference's nav pill: it arrives from above on first load. */}
+          <header className="sticky top-3 z-30 mx-3 mt-3 flex h-14 animate-nav-arrive items-center gap-3 rounded-pill px-2 shadow-nav glass md:mx-6">
             <EmployeeSwitcher current={employee.id} />
-            <div className="ml-auto flex items-center gap-2">
+            <div className="ml-auto flex items-center gap-2 pr-1">
               {api.mode === "mock" && (
-                <Badge variant="outline" className="hidden text-muted-foreground sm:inline-flex">
+                <Badge variant="chip" className="hidden sm:inline-flex">
                   Enclave fictive (développement)
                 </Badge>
               )}
@@ -63,7 +65,7 @@ export default async function EmployeeLayout({
               <ThemeToggle />
             </div>
           </header>
-          <main className="flex-1 px-4 py-8 md:px-8">{children}</main>
+          <main className="flex-1 px-4 pt-10 pb-16 md:px-8 lg:px-10">{children}</main>
         </div>
         <LedgerPanel
           employee={employee.id}

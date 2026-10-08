@@ -18,18 +18,18 @@ export function EnclaveUnavailable({
 }) {
   const needsSession = failure.code === "NO_SESSION";
   return (
-    <div className="mx-auto mt-16 max-w-md rounded-xl border border-dashed p-8 text-center">
+    <div className="mx-auto mt-16 max-w-md animate-gallery-in rounded-3xl border border-dashed bg-surface/50 p-10 text-center">
       {needsSession ? (
-        <Bot className="mx-auto size-6 text-muted-foreground" />
+        <Bot className="mx-auto size-7 text-muted-foreground" />
       ) : (
-        <PlugZap className="mx-auto size-6 text-muted-foreground" />
+        <PlugZap className="mx-auto size-7 text-muted-foreground" />
       )}
-      <h2 className="mt-3 text-sm font-medium">{failure.message}</h2>
+      <h2 className="mt-4 text-lg leading-snug tracking-[-0.04em]">{failure.message}</h2>
       {failure.detail !== undefined && !needsSession && (
         <p className="mt-2 font-mono text-[11px] break-words text-muted-foreground">{failure.detail}</p>
       )}
       {needsSession && (
-        <Button asChild size="sm" className="mt-4">
+        <Button asChild variant="night" className="mt-5">
           <Link href={`/${employee}/onboarding` as Route}>Ouvrir la configuration</Link>
         </Button>
       )}

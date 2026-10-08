@@ -1,0 +1,179 @@
+/*
+ * Motion of the employee screens (`/[employee]/…`): state transitions that utilities cannot express
+ * (entry of freshly rendered rows, Ledger glow, signature stamps). Plain CSS on the theme variables;
+ * every rule moves on `--ease-out-soft` and the reduced-motion block of `motion.css` neutralises it.
+ *
+ * Entries use `@starting-style`: an element animates the first time it is rendered (a new timeline
+ * step, a new request), never again on a `router.refresh()`, and nothing is hidden without CSS support.
+ */
+
+/* ---------- Entry of freshly rendered blocks ---------- */
+
+.app-enter {
+  transition:
+    opacity 0.6s var(--ease-out-soft),
+    translate 0.7s var(--ease-out-soft);
+  transition-delay: calc(var(--i, 0) * 60ms);
+}
+
+@starting-style {
+  .app-enter {
+    opacity: 0;
+    translate: 0 10px;
+  }
+}
+
+/* Bars that fill on arrival (token counter). */
+.app-fill {
+  transition: width 1.2s var(--ease-out-soft) 0.15s;
+}
+
+@starting-style {
+  .app-fill {
+    width: 0 !important;
+  }
+}
+
+/* Lifted card on hover (pointer devices only: no sticky hover on touch). */
+@media (hover: hover) and (pointer: fine) {
+  .app-lift {
+    transition:
+      translate 0.45s var(--ease-out-soft),
+      box-shadow 0.45s var(--ease-out-soft),
+      border-color 0.3s var(--ease-out-soft);
+  }
+  .app-lift:hover {
+    translate: 0 -2px;
+    box-shadow: 0 14px 34px -18px #1b223155;
+  }
+}
+
+/* ---------- Attestation pill: a breathing halo in the tone colour ---------- */
+
+@keyframes app-halo {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 55%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 6px color-mix(in srgb, currentColor 0%, transparent);
+  }
+}
+
+.app-halo-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: currentColor;
+  animation: app-halo 1.8s ease-in-out infinite;
+}
+
+/* ---------- Ledger mirror: glow while the device waits for a signature ---------- */
+
+.app-ledger-frame {
+  position: relative;
+  isolation: isolate;
+}
+
+.app-ledger-frame::before {
+  content: "";
+  position: absolute;
+  inset: -10px;
+  z-index: -1;
+  border-radius: 40px;
+  background: conic-gradient(
+    from 0deg,
+    var(--color-signal),
+    var(--color-violet-glow),
+    var(--color-periwinkle),
+    var(--color-signal)
+  );
+  filter: blur(18px);
+  opacity: 0;
+  scale: 0.94;
+  transition:
+    opacity 0.6s var(--ease-out-soft),
+    scale 0.8s var(--ease-out-soft);
+}
+
+.app-ledger-frame[data-awaiting]::before {
+  opacity: 0.75;
+  scale: 1;
+  animation:
+    orbit 6s linear infinite,
+    app-glow-breathe 2.4s ease-in-out infinite alternate;
+}
+
+@keyframes app-glow-breathe {
+  from {
+    opacity: 0.45;
+  }
+  to {
+    opacity: 0.85;
+  }
+}
+
+/* ---------- Signature stamps (consent approved / refused) ---------- */
+
+.app-stamp {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 92px;
+  height: 92px;
+  border: 2px dashed currentColor;
+  border-radius: 50%;
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  line-height: 1.1;
+  text-transform: uppercase;
+  transform: rotate(-8deg);
+  animation: var(--animate-land);
+  pointer-events: none;
+}
+
+.app-stamp small {
+  font-size: 9px;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  opacity: 0.8;
+}
+
+@keyframes app-shake {
+  0%,
+  100% {
+    translate: 0;
+  }
+  20%,
+  60% {
+    translate: -6px;
+  }
+  40%,
+  80% {
+    translate: 6px;
+  }
+}
+
+/* The card holding a decision reacts as a whole: settles in green, or shakes once on a refusal. */
+.app-decision-card {
+  transition:
+    border-color 0.4s var(--ease-out-soft),
+    box-shadow 0.4s var(--ease-out-soft),
+    opacity 0.6s var(--ease-out-soft);
+}
+
+.app-decision-card:has([data-outcome="approved"]) {
+  border-color: color-mix(in srgb, var(--success) 55%, transparent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--success) 12%, transparent);
+}
+
+.app-decision-card:has([data-outcome="rejected"]) {
+  border-color: color-mix(in srgb, var(--danger) 45%, transparent);
+  opacity: 0.8;
+  animation: app-shake 0.36s ease-in-out;
+}
