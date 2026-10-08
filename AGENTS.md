@@ -137,7 +137,9 @@ simulated`). It also holds the attested channel (X25519 + HKDF + AES-GCM, `repor
   - **No `Co-Authored-By` trailer**, and no mention of AI assistants or "lab" in commit messages or other tracked
     files. `AGENTS.md` and its `CLAUDE.md` symlink are the only agent-related files tracked, on purpose.
   - The sibling `../lab` repo (research spikes, spec) is private and is never referenced from here.
-- Docs and UI copy are in French. Strings shown on the Ledger are ASCII. Code comments are in English and explain why.
+- Everything the jury sees is in English: UI and landing copy, Ledger screens, the Acme dataset, LLM outputs, the
+  `pnpm demo` narration and MCP texts (locale `en-US`). Docs (`README.md`, `docs/`) are still in French for now.
+  Strings shown on the Ledger are ASCII. Code comments are in English and explain why.
 - Never mention Plastic Labs or Neuromancer in product copy or the pitch.
 - Demo identities use public BIP-39 test mnemonics (in `infra/speculos.sh`); Ledger addresses are in
   `infra/seed/acme.json`.
