@@ -6,10 +6,13 @@ import { fileURLToPath } from "node:url";
 export const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../../..");
 
 /**
- * Default secrets file: one level above the repository, so it can never be committed by accident.
+ * Historical default secrets file: one level above the repository, so it can never be committed by accident.
  * Override with BADGE_ENV_FILE.
  */
 export const DEFAULT_ENV_FILE = resolve(REPO_ROOT, "../.env");
+
+/** Secrets file at the repository root (gitignored): what INSTALL.md asks a fresh clone to create. */
+export const REPO_ENV_FILE = resolve(REPO_ROOT, ".env");
 
 const ENV_LINE = /^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$/;
 
@@ -47,8 +50,15 @@ export function readEnvFile(path: string): Record<string, string> {
   return parseEnvFile(readFileSync(path, "utf8"));
 }
 
-/** Resolves the secrets file path: BADGE_ENV_FILE (absolute or relative to the cwd), else {@link DEFAULT_ENV_FILE}. */
-export function resolveEnvFilePath(env: NodeJS.ProcessEnv = process.env): string {
+/**
+ * Resolves the secrets file path: BADGE_ENV_FILE (absolute or relative to the cwd), else {@link REPO_ENV_FILE} when
+ * it exists, else {@link DEFAULT_ENV_FILE}. Same order as infra/stack.sh and scripts/bootstrap.sh.
+ */
+export function resolveEnvFilePath(
+  env: NodeJS.ProcessEnv = process.env,
+  fileExists: (path: string) => boolean = existsSync,
+): string {
   const configured = env["BADGE_ENV_FILE"];
-  return configured ? resolve(configured) : DEFAULT_ENV_FILE;
+  if (configured) return resolve(configured);
+  return fileExists(REPO_ENV_FILE) ? REPO_ENV_FILE : DEFAULT_ENV_FILE;
 }

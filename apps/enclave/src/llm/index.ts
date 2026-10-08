@@ -7,7 +7,14 @@ export {
   type OpenAiCompatibleClientOptions,
   type StructuredCompletionOptions,
 } from "./client";
-export { DEFAULT_ENV_FILE, parseEnvFile, readEnvFile, REPO_ROOT, resolveEnvFilePath } from "./env-file";
+export {
+  DEFAULT_ENV_FILE,
+  parseEnvFile,
+  readEnvFile,
+  REPO_ENV_FILE,
+  REPO_ROOT,
+  resolveEnvFilePath,
+} from "./env-file";
 export { LlmConfigError, LlmOutputError, LlmRequestError } from "./errors";
 export { toStrictJsonSchema } from "./json-schema";
 export {
