@@ -27,9 +27,9 @@ function typeLabel(grant: GrantView): string {
 
 function GrantsTable({ grants, owner, active }: { grants: GrantView[]; owner: EmployeeId; active: boolean }) {
   return (
-    <div className="overflow-hidden rounded-xl border bg-card">
+    <div className="app-enter overflow-hidden rounded-3xl border bg-card">
       <Table className="table-fixed">
-        <TableHeader>
+        <TableHeader className="bg-surface/60 [&_th]:mono-label [&_th]:text-[10px] [&_th]:text-muted-foreground">
           <TableRow>
             <TableHead className="w-40 pl-4">Bénéficiaire</TableHead>
             <TableHead>Accès</TableHead>
@@ -87,7 +87,7 @@ function GrantsTable({ grants, owner, active }: { grants: GrantView[]; owner: Em
 function RevokeAllBar({ owner, recipients }: { owner: EmployeeId; recipients: readonly EmployeeId[] }) {
   if (recipients.length === 0) return null;
   return (
-    <div className="mb-3 flex flex-wrap items-center gap-2">
+    <div className="mb-4 flex flex-wrap items-center gap-2">
       {recipients.map((recipient) => (
         <LedgerActionButton
           key={recipient}
@@ -115,11 +115,14 @@ export default async function AccessPage({ params }: { params: Promise<{ employe
     <div className="mx-auto max-w-5xl">
       <PageHeader
         title="Accès et révocation"
+        eyebrow="Un geste et tout s'arrête"
         description="Tout ce que vous avez accordé, au même endroit. Une révocation est signée sur votre Ledger : l'enclave invalide l'accord et renouvelle la clé de chiffrement de vos données, la demande suivante exigera un nouvel accord."
       />
-      <div className="mb-8 flex items-start gap-3 rounded-xl border bg-muted/30 p-4 text-xs text-muted-foreground">
-        <RotateCcwKey className="mt-0.5 size-4 shrink-0 text-brand" />
-        <p>
+      <div className="mb-10 flex items-start gap-4 rounded-3xl bg-periwinkle p-5 text-[13px] leading-relaxed text-periwinkle-ink">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-white/45 ring-1 ring-white/50">
+          <RotateCcwKey className="size-4" />
+        </span>
+        <p className="pt-1.5">
           Un accord ponctuel couvre un extrait précis (par son empreinte) pour une tâche ; un accord permanent
           couvre une étiquette de contexte pour une équipe. Les deux se révoquent de la même façon.
         </p>

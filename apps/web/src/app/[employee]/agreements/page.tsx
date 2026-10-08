@@ -27,11 +27,12 @@ export default async function AgreementsPage({ params }: { params: Promise<{ emp
     <div className="mx-auto max-w-5xl">
       <PageHeader
         title="Accords permanents"
+        eyebrow="Signé une fois · révocable"
         description="Contre la fatigue de validation : autorisez une équipe à utiliser une partie étiquetée de votre contexte, pour un usage précis et une durée bornée. Les extraits restent plafonnés, chaque usage est compté et journalisé."
       />
-      <Card>
+      <Card className="app-enter rounded-3xl [--card-spacing:--spacing(6)]">
         <CardHeader>
-          <CardTitle>Nouvel accord</CardTitle>
+          <CardTitle className="text-[22px] tracking-[-0.045em]">Nouvel accord</CardTitle>
           <CardDescription>
             Exemple : « l&apos;équipe Ventes peut utiliser mes notes Orion pour des briefs clients, 30 jours
             ».
@@ -49,9 +50,9 @@ export default async function AgreementsPage({ params }: { params: Promise<{ emp
             Sans accord, chaque usage de votre contexte personnel vous est demandé au cas par cas.
           </EmptyState>
         ) : (
-          <div className="rounded-xl border bg-card">
+          <div className="app-enter overflow-hidden rounded-3xl border bg-card">
             <Table>
-              <TableHeader>
+              <TableHeader className="bg-surface/60 [&_th]:mono-label [&_th]:text-[10px] [&_th]:text-muted-foreground">
                 <TableRow>
                   <TableHead className="pl-4">Équipe</TableHead>
                   <TableHead>Contexte</TableHead>
@@ -67,7 +68,7 @@ export default async function AgreementsPage({ params }: { params: Promise<{ emp
                   <TableRow key={policy.id} className={policy.status === "active" ? undefined : "opacity-55"}>
                     <TableCell className="pl-4 font-medium">{policy.granteeTeam}</TableCell>
                     <TableCell>
-                      <span className="rounded-md border bg-muted/40 px-1.5 py-0.5 font-mono text-[11px]">
+                      <span className="rounded-pill border bg-surface px-2.5 py-0.5 font-mono text-[11px]">
                         {policy.contextTag}
                       </span>
                     </TableCell>
@@ -81,7 +82,7 @@ export default async function AgreementsPage({ params }: { params: Promise<{ emp
                     <TableCell className="text-right font-mono tabular-nums">{policy.uses}</TableCell>
                     <TableCell className="pr-4 text-right">
                       {policy.status !== "active" ? (
-                        <span className="text-xs text-muted-foreground">
+                        <span className="rounded-pill border px-2 py-0.5 mono-chip text-muted-foreground">
                           {policy.status === "revoked" ? "Révoqué" : "Expiré"}
                         </span>
                       ) : (
