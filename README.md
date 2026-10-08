@@ -42,6 +42,51 @@ d'une manière qu'une équipe conformité peut auditer.
 
 Architecture, flux, messages signés et modèle de menace : [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
+## La frontière : ce que l'agent fait seul, ce que l'humain approuve
+
+La règle tient en une phrase : **l'agent cherche, sélectionne et rédige seul ; tout ce qui sort du contexte privé
+d'une personne exige sa signature sur son Ledger** (ou un accord permanent qu'elle a elle-même signé). L'enclave
+applique cette règle et refuse par défaut ; l'agent ne peut que _demander_.
+
+| L'agent agit seul (aucune signature)                                                                                             | L'humain approuve sur son Ledger (écran que l'agent ne peut pas falsifier)                                                                                                   |
+| -------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Chercher dans la mémoire de l'enclave (contexte global, le sien, celui des collègues)                                            | Rejoindre Badge : `EmployeeEnroll`                                                                                                                                           |
+| Classer les extraits candidats (pertinence, données personnelles)                                                                | Déléguer à son agent une clé de session bornée (12 h max), qui ne sert qu'à demander : `AgentSession`                                                                        |
+| Utiliser le contexte global et le contexte de son propre employé                                                                 | **Chaque extrait qui quitte le contexte privé d'un collègue** : `ContextShare` (destinataire, extrait, longueur, tâche, expiration, empreinte du texte, mesure de l'enclave) |
+| Réutiliser un accord déjà signé, tant qu'il n'a pas expiré ni été révoqué                                                        | Un accord permanent, borné en équipe, étiquette, taille et durée : `ContextPolicy`                                                                                           |
+| Utiliser un accord permanent dans ses bornes (chaque usage est journalisé ; un extrait jugé personnel repasse par une signature) | Toute révocation, avec un libellé préparé par l'enclave qui nomme le vrai périmètre : `ContextRevoke`                                                                        |
+| Rédiger le brief dans l'enclave, à partir des seuls extraits autorisés                                                           | Rejoindre un desk et partager anonymement : `DeskJoin`, `DeskShare` + preuve ZK                                                                                              |
+| Solliciter un desk selon une règle d'échange                                                                                     | Enregistrer la clé de conformité, puis lever l'anonymat d'un partage (Chloé, conformité)                                                                                     |
+
+Ce qu'aucune signature ne débloque : au-delà des plafonds anti-aspiration (taille d'extrait, nombre de personnes
+visées, fréquence), la demande est bloquée avant même d'atteindre le propriétaire.
+
+## Les primitives Ledger réellement implémentées
+
+| Primitive                                                                                          | Usage dans Badge                                                                                                                                                                          | Code                                                                                                                                           |
+| -------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Signer DMK** (`@ledgerhq/device-management-kit`, `device-signer-kit-ethereum`) : `signTypedData` | Les 7 messages EIP-712 de Badge, vérifiés dans l'enclave (signature, mesure, expiration, nonce, empreinte)                                                                                | [`packages/ledger/src/signer.ts`](packages/ledger/src/signer.ts)                                                                               |
+| **Clear signing** (filtres EIP-712, modèle ERC-7730)                                               | Nos descripteurs compilés en filtres signés : l'écran affiche « Partager avec », « Extrait », « Longueur », « Tache », « Expire le », « Empreinte », « Enclave », jamais de blind signing | [`packages/ledger/src/clearSign.ts`](packages/ledger/src/clearSign.ts), [`packages/consent/src/messages.ts`](packages/consent/src/messages.ts) |
+| **Signature EIP-191 déterministe** (`signPersonalMessage`)                                         | Dérivation, sans rien stocker, de l'identité anonyme de desk (Semaphore) et de la clé de conformité                                                                                       | [`packages/zk`](packages/zk), [`packages/attest/src/compliance.ts`](packages/attest/src/compliance.ts)                                         |
+| **Carnet d'adresses** (`device-contacts-kit`, app Ethereum 1.23 develop)                           | « Destinataire : Alice (Ventes) » certifié par l'appareil (option, voir plus bas)                                                                                                         | [`packages/ledger/src/contacts.ts`](packages/ledger/src/contacts.ts)                                                                           |
+| **Speculos** (Flex émulé)                                                                          | 5 appareils pilotés par l'API REST, et un miroir cliquable de l'écran dans l'application web                                                                                              | [`packages/ledger/src/speculos.ts`](packages/ledger/src/speculos.ts)                                                                           |
+
+## Ce qui existait avant le 7 octobre
+
+Par transparence, conformément au règlement : **tout le code de ce dépôt a été écrit pendant le hackathon.** Le
+premier commit date du 7 octobre 2026 à 15:42 CEST, après le lancement de 15:00. Avant le lancement, l'équipe avait
+préparé, dans un dépôt de recherche séparé et non publié :
+
+- une spécification et une étude de faisabilité ;
+- de petits essais techniques jetables, pour vérifier que les briques tiennent : signature EIP-712 et clear signing
+  via le DMK sur Speculos, carnet d'adresses, Honcho en local, simulateur dstack, identité Semaphore dérivée d'une
+  signature.
+
+Aucun de ces fichiers n'a été copié ici : le produit a été réécrit de zéro. Dépendances tierces utilisées telles
+quelles : Honcho v3.2.2 (une ligne corrigée dans l'image, voir `infra/honcho/Dockerfile`), l'app Ethereum de Ledger
+compilée depuis son dépôt public, la clé CAL et les mnémoniques de **test** publiques. Le dépôt de recherche peut
+être montré au jury sur demande.
+
 ## Le scénario de démonstration
 
 Acme, entreprise fictive. Alice (Ventes), Bob (Grands comptes), Chloé (Juridique et conformité), David et Emma
