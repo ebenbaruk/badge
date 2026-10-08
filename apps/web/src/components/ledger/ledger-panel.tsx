@@ -1,7 +1,8 @@
 "use client";
 
-import { Loader2, Smartphone } from "lucide-react";
+import { Smartphone } from "lucide-react";
 import { useEffect, useState } from "react";
+import { PulseDot } from "@/components/motion/pulse-dot";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { EmployeeId } from "@/lib/directory";
@@ -18,14 +19,23 @@ function ActivityBanner() {
       </p>
     );
   }
+  // Deep royal blue: the reference's colour for what matters now. Keyed so each new review replays the entry.
   return (
-    <div className="rounded-lg border border-brand/30 bg-brand/8 p-3 text-xs">
-      <div className="flex items-center gap-2 font-medium text-foreground">
-        <Loader2 className="size-3.5 animate-spin text-brand" />
+    <div
+      key={activity.startedAt}
+      className="animate-gallery-in rounded-2xl bg-brand-deep p-4 text-xs text-paper shadow-[0_18px_40px_-20px_var(--color-brand-deep)]"
+    >
+      <div className="flex items-center gap-2 mono-label text-signal-hover">
+        <PulseDot tone="on" />
+        Signature attendue
+      </div>
+      <div className="mt-2.5 text-[15px] leading-snug font-semibold tracking-[-0.03em]">
         Vérifiez sur le Ledger
       </div>
-      <p className="mt-1 text-muted-foreground">{activity.label}</p>
-      <p className="mt-1 text-muted-foreground">Faites défiler, puis maintenez « Hold to sign ».</p>
+      <p className="mt-1 text-paper/75">{activity.label}</p>
+      <p className="mt-2 border-t border-paper/15 pt-2 text-paper/60">
+        Faites défiler, puis maintenez « Hold to sign ».
+      </p>
     </div>
   );
 }
@@ -53,20 +63,22 @@ export function LedgerPanel({
 
   return (
     <>
-      <aside className="sticky top-0 hidden h-svh w-[330px] shrink-0 flex-col gap-4 overflow-y-auto border-l bg-sidebar/60 px-5 py-5 xl:flex">
-        <div className="flex items-center gap-2 text-[13px] font-medium">
-          <Smartphone className="size-4 text-muted-foreground" />
-          Ledger
+      <aside className="sticky top-0 hidden h-svh w-[340px] shrink-0 flex-col gap-5 overflow-y-auto border-l bg-sidebar px-6 py-6 xl:flex">
+        <div className="flex items-center justify-between">
+          <div className="font-heading text-xl leading-none font-medium tracking-[-0.05em]">Ledger</div>
+          <span className="mono-label text-muted-foreground">Clear signing</span>
         </div>
         <ActivityBanner />
         <LedgerMirror key={employee} employee={employee} deviceLabel={deviceLabel} rehearsal={rehearsal} />
       </aside>
 
       <Button
-        className="fixed right-5 bottom-5 z-40 rounded-full shadow-lg xl:hidden"
+        variant="night"
+        size="lg"
+        className="fixed right-5 bottom-5 z-40 shadow-nav xl:hidden"
         onClick={() => setDialogOpen(true)}
       >
-        <Smartphone />
+        {activity === null ? <Smartphone /> : <PulseDot tone="on" />}
         Ledger
       </Button>
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

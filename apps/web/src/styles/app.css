@@ -72,16 +72,10 @@
 
 /* ---------- Ledger mirror: glow while the device waits for a signature ---------- */
 
-.app-ledger-frame {
-  position: relative;
-  isolation: isolate;
-}
-
-.app-ledger-frame::before {
-  content: "";
+/* The glow is a sibling painted under the bezel (no z-index games, so a scaled bezel stays on top). */
+.app-ledger-glow {
   position: absolute;
   inset: -10px;
-  z-index: -1;
   border-radius: 40px;
   background: conic-gradient(
     from 0deg,
@@ -93,12 +87,13 @@
   filter: blur(18px);
   opacity: 0;
   scale: 0.94;
+  pointer-events: none;
   transition:
     opacity 0.6s var(--ease-out-soft),
     scale 0.8s var(--ease-out-soft);
 }
 
-.app-ledger-frame[data-awaiting]::before {
+[data-awaiting] > .app-ledger-glow {
   opacity: 0.75;
   scale: 1;
   animation:

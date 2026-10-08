@@ -187,12 +187,16 @@ export function LedgerMirror({
 
   return (
     <div className="flex flex-col items-center gap-3">
-      <div className="flex w-full items-center justify-between text-xs">
-        <span className="font-medium text-foreground">{deviceLabel}</span>
+      <div className="flex w-full items-center justify-between gap-3">
+        <span className="min-w-0 truncate mono-label text-[10px] text-muted-foreground">{deviceLabel}</span>
         <span
           className={cn(
-            "inline-flex items-center gap-1.5",
-            offline ? "text-danger" : live ? "text-success" : "text-muted-foreground",
+            "inline-flex shrink-0 items-center gap-1.5 rounded-pill border px-2 py-1 mono-chip transition-colors duration-300",
+            offline
+              ? "border-danger/35 text-danger"
+              : live
+                ? "border-success/35 text-success"
+                : "text-muted-foreground",
           )}
         >
           <Radio className={cn("size-3", live && !offline && "animate-pulse")} />
@@ -200,60 +204,65 @@ export function LedgerMirror({
         </span>
       </div>
 
-      {/* Ledger Flex: thick dark bezel around a 480 x 600 touch screen. */}
-      <div
-        className={cn(
-          "relative w-full max-w-[300px] rounded-[30px] bg-gradient-to-b from-neutral-800 to-neutral-950 p-[14px] shadow-xl ring-1 ring-black/40 transition-shadow dark:from-neutral-700 dark:to-neutral-900",
-          activity !== null && "shadow-[0_0_0_3px_var(--color-brand),0_20px_40px_-12px_rgba(0,0,0,0.5)]",
-        )}
-      >
-        <div className="absolute top-1/2 -right-[3px] h-14 w-[3px] -translate-y-1/2 rounded-r bg-neutral-700" />
+      {/* Ledger Flex: thick graphite bezel around a 480 x 600 touch screen; it glows while a signature is awaited. */}
+      <div className="relative w-full max-w-[300px]" data-awaiting={activity !== null ? "" : undefined}>
+        <span aria-hidden className="app-ledger-glow" />
         <div
-          ref={screenRef}
-          role="application"
-          aria-label={`Écran du Ledger : cliquer pour toucher, maintenir pour « Hold to sign », glisser vers la gauche pour la page suivante`}
-          className="relative cursor-pointer touch-none overflow-hidden rounded-[16px] bg-white select-none"
-          style={{ aspectRatio: `${FLEX_SCREEN_SIZE.width} / ${FLEX_SCREEN_SIZE.height}` }}
-          onPointerEnter={() => setHovered(true)}
-          onPointerLeave={() => setHovered(false)}
-          onPointerDown={onPointerDown}
-          onPointerUp={onPointerUp}
-          onPointerCancel={() => {
-            if (press.current !== null) window.clearTimeout(press.current.timer);
-            press.current = null;
-          }}
+          className={cn(
+            "relative rounded-[30px] bg-gradient-to-b from-graphite-2 to-night p-[14px] shadow-[0_24px_48px_-20px_#06001099] ring-1 ring-black/40 transition-[scale] duration-500 ease-out-soft",
+            activity !== null && "scale-[1.02]",
+          )}
         >
-          {frame === null ? (
-            <div className="flex size-full items-center justify-center text-neutral-400">
-              <Loader2 className="size-5 animate-spin" />
-            </div>
-          ) : (
-            // Object URL of the latest PNG frame: next/image adds nothing for a 5 fps local stream.
-            <img src={frame} alt="" draggable={false} className="pointer-events-none size-full" />
-          )}
-          {offline && frame !== null && <div className="absolute inset-0 bg-white/70 backdrop-blur-[1px]" />}
-          {ripple !== null && (
-            <span
-              key={ripple.key}
-              className="pointer-events-none absolute size-10 -translate-x-1/2 -translate-y-1/2 animate-ping rounded-full bg-brand/40"
-              style={{
-                left: `${(ripple.x / FLEX_SCREEN_SIZE.width) * 100}%`,
-                top: `${(ripple.y / FLEX_SCREEN_SIZE.height) * 100}%`,
-              }}
-            />
-          )}
-          {holding && (
-            <div className="absolute inset-x-0 bottom-0 h-1 bg-neutral-200">
-              <div
-                className="h-full bg-brand"
-                style={{ animation: `badge-hold ${HOLD_FEEDBACK_MS}ms linear forwards` }}
+          <div className="absolute top-1/2 -right-[3px] h-14 w-[3px] -translate-y-1/2 rounded-r bg-graphite" />
+          <div
+            ref={screenRef}
+            role="application"
+            aria-label={`Écran du Ledger : cliquer pour toucher, maintenir pour « Hold to sign », glisser vers la gauche pour la page suivante`}
+            className="relative cursor-pointer touch-none overflow-hidden rounded-[16px] bg-white select-none"
+            style={{ aspectRatio: `${FLEX_SCREEN_SIZE.width} / ${FLEX_SCREEN_SIZE.height}` }}
+            onPointerEnter={() => setHovered(true)}
+            onPointerLeave={() => setHovered(false)}
+            onPointerDown={onPointerDown}
+            onPointerUp={onPointerUp}
+            onPointerCancel={() => {
+              if (press.current !== null) window.clearTimeout(press.current.timer);
+              press.current = null;
+            }}
+          >
+            {frame === null ? (
+              <div className="flex size-full items-center justify-center text-neutral-400">
+                <Loader2 className="size-5 animate-spin" />
+              </div>
+            ) : (
+              // Object URL of the latest PNG frame: next/image adds nothing for a 5 fps local stream.
+              <img src={frame} alt="" draggable={false} className="pointer-events-none size-full" />
+            )}
+            {offline && frame !== null && (
+              <div className="absolute inset-0 bg-white/70 backdrop-blur-[1px]" />
+            )}
+            {ripple !== null && (
+              <span
+                key={ripple.key}
+                className="pointer-events-none absolute size-10 -translate-x-1/2 -translate-y-1/2 animate-ping rounded-full bg-signal/50"
+                style={{
+                  left: `${(ripple.x / FLEX_SCREEN_SIZE.width) * 100}%`,
+                  top: `${(ripple.y / FLEX_SCREEN_SIZE.height) * 100}%`,
+                }}
               />
-            </div>
-          )}
+            )}
+            {holding && (
+              <div className="absolute inset-x-0 bottom-0 h-1.5 bg-fog">
+                <div
+                  className="h-full bg-gradient-to-r from-signal to-violet-glow"
+                  style={{ animation: `badge-hold ${HOLD_FEEDBACK_MS}ms linear forwards` }}
+                />
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      <p className="flex items-center gap-1.5 text-center text-[11px] leading-tight text-muted-foreground">
+      <p className="flex items-center gap-1.5 text-center text-[11px] leading-tight text-muted-foreground/90">
         <Hand className="size-3 shrink-0" />
         Cliquer pour toucher · maintenir pour signer · glisser pour défiler
       </p>
