@@ -106,8 +106,13 @@ export class DeskService {
     return this.ctx.clock.now().getTime();
   }
 
-  /** GET /v1/desks/:desk: what a member needs to build their proof. */
-  getDesk(deskId: string): DeskWire {
+  /**
+   * GET /v1/desks/:desk: what a member needs to build their proof, and whether the caller registered an identity in
+   * this desk. `joined` only ever describes the caller (the enclave knows it from the Ledger-signed DeskJoin), so an
+   * agent can tell its employee is already in, even when the join was signed elsewhere (another app, a setup script),
+   * without revealing which commitment is whose.
+   */
+  getDesk(caller: Caller, deskId: string): DeskWire {
     const desk = this.ctx.directory.requireDesk(deskId);
     const commitments = this.members.commitments(desk.id);
     return {
@@ -116,6 +121,7 @@ export class DeskService {
       members: commitments.length,
       commitments: commitments.map((c) => c.toString(10)),
       root: commitments.length === 0 ? null : deskGroupRoot(commitments).toString(10),
+      joined: this.members.has(desk.id, caller.employeeId),
     };
   }
 
@@ -165,7 +171,7 @@ export class DeskService {
         },
       });
     });
-    return this.getDesk(desk.id);
+    return this.getDesk(caller, desk.id);
   }
 
   private pickRule(fromDesk: Desk, ruleId: string | undefined): ExchangeRule {

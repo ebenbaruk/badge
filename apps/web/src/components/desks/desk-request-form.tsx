@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { DESK_NAMES, type DeskId, type EmployeeId } from "@/lib/directory";
 import { requestFromDesk } from "@/server/actions/desks";
 
-const DEFAULT_QUESTION = "Industrial sensor market trends and component prices";
+const DEFAULT_QUESTION = "Onchain lending market trends and stablecoin rates";
 
 /** Asks another desk across an exchange rule; the answer comes back without the sharer's identity. */
 export function DeskRequestForm({
