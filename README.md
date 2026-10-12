@@ -1,209 +1,59 @@
 # Badge
 
-**Le Ledger comme badge d'entreprise pour l'ère des agents.**
+**Your agents know more. You decide what.**
 
-Badge est une couche mémoire pour les entreprises « AI native ». Elle connaît le contexte global de l'entreprise et
-le contexte personnel de chaque employé, choisit pour chaque tâche le contexte utile, et ne laisse sortir un extrait
-personnel qu'avec l'accord de son propriétaire, **signé en clair sur son Ledger**, sur un écran que l'agent ne peut
-pas falsifier. Tout se passe dans une enclave confidentielle (Intel TDX sur Phala) que chaque client vérifie avant de
-lui parler, et Badge se branche sur l'agent de chacun par un serveur MCP.
+Badge is a company memory for AI agents, and it turns each employee's Ledger into their company badge. It finds the context a task needs, and a colleague's notes leave only once that colleague signs.
 
-Projet de l'équipe **DVB** pour le Ledger N3XT Hackathon @ OP3N 2026.
+## The problem
 
-## Le problème
+Alice, in Sales, asks her agent to prepare tomorrow's meeting with a client. Bob has followed that client for years and keeps notes on it. The best context belongs to one person, and today it's all or nothing: Bob keeps his notes and her agent works blind, or everything goes to one server, its operator can read it all, and one prompt injection drains it. Access rights decide in advance who reads which folder; they cannot ask Bob about one paragraph and one task.
 
-Un agent IA ne vaut que le contexte qu'on lui donne. Dans une entreprise, ce contexte est de deux natures : le
-contexte **global** (l'entreprise, ses clients, ses offres), ouvert à tous, et le contexte **personnel** de chaque
-employé (ses notes, ses rendez-vous, ses comptes), qui n'appartient qu'à lui. Le travail avance mieux quand ce
-contexte personnel circule : la commerciale qui prépare un rendez-vous gagnerait à connaître les notes du collègue qui
-suit le compte depuis des années.
+A tap for every action would stop an agent cold. We free the agent and guard the context.
 
-Aujourd'hui, c'est tout ou rien : soit chacun garde son contexte pour lui, soit on verse tout dans un outil commun et
-n'importe quel agent, y compris un agent piégé par une injection de prompt, peut tout aspirer. Il manque une façon de
-partager **extrait par extrait, avec l'accord explicite du propriétaire**, à l'échelle d'une grande entreprise et
-d'une manière qu'une équipe conformité peut auditer.
+## How it works
 
-## Comment ça marche
+Badge is built to run in an enclave, a confidential VM (Intel TDX, on Phala Cloud) whose attestation every connecting app checks before sending anything.
 
-1. **Une enclave confidentielle** (CVM Intel TDX, Phala dstack) héberge la mémoire (Honcho, mémoire open source), le
-   moteur de politique et le journal de conformité. Chaque client vérifie sa quote TDX et sa mesure avant d'ouvrir un
-   canal chiffré ; le LLM est Phala Confidential AI, joint par une passerelle de sortie unique.
-2. **Chaque employé délègue à son agent** une clé de session bornée (8 h), signée sur son Ledger : elle permet de
-   _demander_ du contexte, jamais de le lire sans accord.
-3. **Pour une tâche**, l'enclave sélectionne les extraits pertinents. Le contexte global et les notes du demandeur
-   passent ; l'extrait d'un collègue passe une porte déterministe et des règles anti-aspiration, puis attend son
-   accord.
-4. **Le propriétaire signe sur son Ledger** un message EIP-712 lisible : destinataire, extrait, longueur, tâche,
-   expiration, empreinte du texte et mesure de l'enclave. Le brief est ensuite rédigé dans l'enclave, à partir des
-   seuls extraits autorisés.
-5. **Pour l'entreprise** : accords permanents bornés et révocables (contre la fatigue de validation), révocation
-   avec rotation de clé, journal chaîné sans aucun texte d'extrait, partage anonyme entre desks à travers un mur de
-   Chine (preuves ZK Semaphore), dont seule la conformité peut lever l'anonymat avec une clé dérivée de son Ledger.
+1. On her Ledger, Alice gives her agent an 8-hour session key. Through the web app or any MCP client, the agent can ask for context but can never browse a colleague's notes or approve anything.
+2. The enclave adds company context and Alice's own notes, and finds relevant notes in Bob's memory. It never selects notes he tagged personal, HR or confidential, and until Bob agrees, Alice sees none of his text.
+3. Bob reads the full excerpt in Badge, then the request on his Ledger: "Share with: Alice Martin (Sales)", the start of the excerpt (60 characters at most) and its length, the task, the expiry, a fingerprint of the whole excerpt and the enclave measurement. He holds to sign. The brief is drafted from allowed excerpts only and goes to Alice's agent.
+4. A hijacked agent, simulated in the demo by a request for all of Bob's context, tagged notes included, is flagged by the enclave's anti-scraping rules. Bob rejects it on his Ledger and nothing leaves. An excerpt over 8,000 characters, a task reaching more than 6 colleagues, or more than 60 excerpts asked of one person within an hour are refused before anyone is asked.
+5. For routine use, Bob signs once: Sales may use his notes on that client for client briefs, for 30 days. Every use is logged, a flagged request still comes to him, and one signature revokes it all.
+6. Across a Chinese wall, a desk answers under a zero-knowledge proof: Alice learns that a Research member shared, not who. The compliance log keeps the member's identity sealed to a key derived from the Ledger of Chloé, in compliance.
 
-Architecture, flux, messages signés et modèle de menace : [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+## Why Ledger
 
-## La frontière : ce que l'agent fait seul, ce que l'humain approuve
+Without the Ledger, consent is a button the web server or a hijacked agent can press, and on a phone a compromised app can show one thing and sign another. A Ledger's screen is driven by its secure element. Badge's seven EIP-712 messages are clear-signed through Ledger's Device Management Kit; the five that enrol, delegate or release context carry the enclave measurement, so a consent signed for other code fails. Like a company badge, each employee's Ledger carries their identity: it enrols them, delegates to their agent, consents, revokes and derives their anonymous desk identity. The enclave guarantees which code runs; the Ledger guarantees that Bob, and only Bob, approved what leaves.
 
-La règle tient en une phrase : **l'agent cherche, sélectionne et rédige seul ; tout ce qui sort du contexte privé
-d'une personne exige sa signature sur son Ledger** (ou un accord permanent qu'elle a elle-même signé). L'enclave
-applique cette règle et refuse par défaut ; l'agent ne peut que _demander_.
+## Who pays, and what we ask
 
-| L'agent agit seul (aucune signature)                                                                                             | L'humain approuve sur son Ledger (écran que l'agent ne peut pas falsifier)                                                                                                   |
-| -------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Chercher dans la mémoire de l'enclave (contexte global, le sien, celui des collègues)                                            | Rejoindre Badge : `EmployeeEnroll`                                                                                                                                           |
-| Classer les extraits candidats (pertinence, données personnelles)                                                                | Déléguer à son agent une clé de session bornée (12 h max), qui ne sert qu'à demander : `AgentSession`                                                                        |
-| Utiliser le contexte global et le contexte de son propre employé                                                                 | **Chaque extrait qui quitte le contexte privé d'un collègue** : `ContextShare` (destinataire, extrait, longueur, tâche, expiration, empreinte du texte, mesure de l'enclave) |
-| Réutiliser un accord déjà signé, tant qu'il n'a pas expiré ni été révoqué                                                        | Un accord permanent, borné en équipe, étiquette, taille et durée : `ContextPolicy`                                                                                           |
-| Utiliser un accord permanent dans ses bornes (chaque usage est journalisé ; un extrait jugé personnel repasse par une signature) | Toute révocation, avec un libellé préparé par l'enclave qui nomme le vrai périmètre : `ContextRevoke`                                                                        |
-| Rédiger le brief dans l'enclave, à partir des seuls extraits autorisés                                                           | Rejoindre un desk et partager anonymement : `DeskJoin`, `DeskShare` + preuve ZK                                                                                              |
-| Solliciter un desk selon une règle d'échange                                                                                     | Enregistrer la clé de conformité, puis lever l'anonymat d'un partage (Chloé, conformité)                                                                                     |
+Companies pay per seat for the memory and consent layer in their own enclave, plus one Ledger per employee, used every day. We ask Ledger to sign Badge's clear-signing descriptors so a real Ledger shows these requests, and to help run a first pilot with a Ledger Enterprise customer.
 
-Ce qu'aucune signature ne débloque : au-delà des plafonds anti-aspiration (taille d'extrait, nombre de personnes
-visées, fréquence), la demande est bloquée avant même d'atteindre le propriétaire.
+## Real, simulated, and limits
 
-## Les primitives Ledger réellement implémentées
+- **Ledger:** five Speculos Flex emulators run Ledger's Ethereum app on public test seeds. Their requests are approved by a script in `pnpm demo`, and the live steps by hand on a screen mirror in the web demo. Only the Speculos transport is wired, and the clear-signing filters use app-ethereum's test key, which only Speculos accepts.
+- **Enclave:** on your machine, Badge runs on the dstack simulator, which stands in for Phala's TEE, and the app shows an amber "Simulated TEE" label instead of the green "Attested enclave" one. The services are also packaged for an Intel TDX VM on Phala Cloud (`infra/cvm/`). A first deployment ran there on 7 Oct, with its measurements pinned in the repo; we start the VM for live demos and stop it afterwards, as it is billed by the hour.
+- **Real in both:** Ledger signatures and their checks, the encrypted channel, Semaphore proofs, the policy engine, a hash-chained log that holds no excerpt text.
+- **Model:** your OpenAI-compatible provider locally; from the VM, Phala Confidential AI behind one gateway, whose attestation Badge does not check. The model runs outside Badge's enclave and reads every note when it is stored and candidate excerpts before Bob signs: in the VM, the operator cannot read the memory, but the model provider sees what it processes.
+- **Limits:** on the device, the fingerprint stands for everything past the start shown on screen. Revocation is enforced by the policy engine and cannot recall an excerpt already delivered. Desk anonymity holds against colleagues, not against the enclave, and in the demo rests on three members with public test seeds.
 
-| Primitive                                                                                          | Usage dans Badge                                                                                                                                                                          | Code                                                                                                                                           |
-| -------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Signer DMK** (`@ledgerhq/device-management-kit`, `device-signer-kit-ethereum`) : `signTypedData` | Les 7 messages EIP-712 de Badge, vérifiés dans l'enclave (signature, mesure, expiration, nonce, empreinte)                                                                                | [`packages/ledger/src/signer.ts`](packages/ledger/src/signer.ts)                                                                               |
-| **Clear signing** (filtres EIP-712, modèle ERC-7730)                                               | Nos descripteurs compilés en filtres signés : l'écran affiche « Partager avec », « Extrait », « Longueur », « Tache », « Expire le », « Empreinte », « Enclave », jamais de blind signing | [`packages/ledger/src/clearSign.ts`](packages/ledger/src/clearSign.ts), [`packages/consent/src/messages.ts`](packages/consent/src/messages.ts) |
-| **Signature EIP-191 déterministe** (`signPersonalMessage`)                                         | Dérivation, sans rien stocker, de l'identité anonyme de desk (Semaphore) et de la clé de conformité                                                                                       | [`packages/zk`](packages/zk), [`packages/attest/src/compliance.ts`](packages/attest/src/compliance.ts)                                         |
-| **Carnet d'adresses** (`device-contacts-kit`, app Ethereum 1.23 develop)                           | « Destinataire : Alice (Ventes) » certifié par l'appareil (option, voir plus bas)                                                                                                         | [`packages/ledger/src/contacts.ts`](packages/ledger/src/contacts.ts)                                                                           |
-| **Speculos** (Flex émulé)                                                                          | 5 appareils pilotés par l'API REST, et un miroir cliquable de l'écran dans l'application web                                                                                              | [`packages/ledger/src/speculos.ts`](packages/ledger/src/speculos.ts)                                                                           |
+## Run it
 
-## Ce qui existait avant le 7 octobre
-
-Par transparence, conformément au règlement : **tout le code de ce dépôt a été écrit pendant le hackathon.** Le
-premier commit date du 7 octobre 2026 à 15:42 CEST, après le lancement de 15:00. Avant le lancement, l'équipe avait
-préparé, dans un dépôt de recherche séparé et non publié :
-
-- une spécification et une étude de faisabilité ;
-- de petits essais techniques jetables, pour vérifier que les briques tiennent : signature EIP-712 et clear signing
-  via le DMK sur Speculos, carnet d'adresses, Honcho en local, simulateur dstack, identité Semaphore dérivée d'une
-  signature.
-
-Aucun de ces fichiers n'a été copié ici : le produit a été réécrit de zéro. Dépendances tierces utilisées telles
-quelles : Honcho v3.2.2 (une ligne corrigée dans l'image, voir `infra/honcho/Dockerfile`), l'app Ethereum de Ledger
-compilée depuis son dépôt public, la clé CAL et les mnémoniques de **test** publiques. Le dépôt de recherche peut
-être montré au jury sur demande.
-
-## Le scénario de démonstration
-
-Acme, entreprise fictive. Alice (Ventes), Bob (Grands comptes), Chloé (Juridique et conformité), David et Emma
-(Stratégie, desk Research), chacun avec son propre Ledger.
-
-1. **Brief Orion.** L'agent d'Alice prépare son rendez-vous avec le client Orion. Le contexte global et ses notes
-   passent ; les notes Orion de Bob attendent son accord, sans qu'Alice en voie une ligne. La note personnelle de Bob
-   (ses congés) n'est même pas proposée.
-2. **Accord sur le Ledger.** Bob lit sur son appareil « Partager avec : Alice Martin (Ventes) », l'extrait, la tâche,
-   l'expiration et signe. Le brief arrive, avec la provenance de chaque extrait et les jetons économisés ; la note RH
-   confidentielle de Chloé n'y est pas.
-3. **Agent piégé.** Un agent compromis demande « tout ce que tu sais sur Bob ». L'enclave signale la demande ; Bob voit
-   l'alerte et refuse sur son Ledger. Rien n'est livré.
-4. **Révocation.** Bob révoque tout ce qu'il a partagé avec Alice. L'enclave prépare le message exact et son Ledger
-   en nomme la vraie portée (« Tout ce que j'ai partage avec Alice Martin + accords equipe Ventes ») ; sa clé de
-   données tourne et la demande suivante exige de nouveau son accord.
-5. **Accord permanent.** Bob signe une fois : « l'équipe Ventes peut utiliser mes notes Orion pour des briefs
-   clients, 500 caractères max, 30 jours ». Les demandes suivantes passent sans le solliciter, chaque usage est
-   journalisé.
-6. **Mur de Chine.** Alice (desk Origination) demande un fait de marché au desk Research, dont Bob, David et Emma
-   sont membres, chacun inscrit avec son Ledger. Bob le partage avec une preuve ZK d'appartenance : Alice sait qu'un
-   membre de Research a répondu, pas lequel. L'enclave refuse toute demande tant que le desk source compte moins de
-   trois membres inscrits (`ANONYMITY_SET_TOO_SMALL`).
-7. **Conformité.** Chloé vérifie le journal chaîné et sa tête signée par l'enclave (troncature ou retour en arrière
-   détectés), puis lève l'anonymat du partage avec une clé dérivée de son Ledger ; la levée elle-même est journalisée.
-8. **Dans la harness de chacun.** Le même parcours est accessible à tout agent compatible MCP, avec quatre outils
-   (`badge_get_context`, `badge_task_status`, `badge_list_my_consents`, `badge_attestation`).
-
-Comment la jouer (CLI et parcours web cliqué) : [`INSTALL.md`](INSTALL.md).
-
-## Ce qui est réel, ce qui est simulé
-
-| Élément                      | Dans la démo                                                                                                                                                                                                                                                       | En production                                                                                                                                                                   |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Ledger                       | **Speculos**, l'émulateur officiel de Ledger (cinq Flex, graines de test BIP-39 publiques), qui exécute le vrai binaire de l'app Ethereum. L'équipe n'a pas d'appareils ; Ledger autorise Speculos pour la finale.                                                 | N'importe quel Ledger avec l'app Ethereum ; le code de signature (Device Management Kit) est le même.                                                                           |
-| Clear signing                | Filtres EIP-712 signés avec la **clé CAL de test** publique d'app-ethereum, acceptée par Speculos seulement (un vrai appareil répond `6a80`).                                                                                                                      | Descripteur ERC-7730 de Badge soumis au registre de clear signing et **signé par Ledger**.                                                                                      |
-| Noms de contacts sur l'écran | Le destinataire est un champ texte signé, préparé et vérifié par l'enclave. Le carnet d'adresses de l'appareil (nom certifié par l'appareil) est implémenté, mais exige l'app Ethereum `develop` 1.23 (compilée par `infra/build-eth-app.sh`).                     | Activé dès la publication du carnet d'adresses dans une version de l'app Ethereum.                                                                                              |
-| TEE                          | **Simulateur dstack** 0.5.3 en local : quote figée, badge ambre « TEE simulé ». **Vrai CVM Phala déjà déployé et vérifié** : quote Intel, TCB `UpToDate`, compose hash, app id, OS et KMS épinglés, aller-retour par le canal attesté ; `pnpm demo` le vise aussi. | **CVM Intel TDX sur Phala** : déploiement, épinglage des mesures et arrêt scriptés ([`docs/DEPLOY.md`](docs/DEPLOY.md)), répétition locale complète du CVM avant toute dépense. |
-| LLM                          | Profil `build` (API compatible OpenAI) en développement, ou profil `phala`.                                                                                                                                                                                        | Phala Confidential AI, seule sortie du CVM, par la passerelle qui détient la clé.                                                                                               |
-| Données                      | Entreprise fictive Acme (15 notes, cinq employés). Le groupe d'anonymat du desk Research est fait de trois vrais détenteurs de Ledger (Bob, David, Emma), aux graines de test publiques : l'anonymat y reste illustratif.                                          | Annuaire et contexte issus des outils de l'entreprise.                                                                                                                          |
-| Toujours réel                | Signatures Ledger et leur vérification, canal attesté et sa cryptographie, preuves Groth16 Semaphore, moteur de politique, règles anti-aspiration, révocations, journal chaîné, mémoire et LLM.                                                                    |                                                                                                                                                                                 |
-
-## Démarrage rapide
-
-Tout tourne en local, sans compte cloud ni Ledger physique : **guide complet d'installation et parcours de démo dans
-[`INSTALL.md`](INSTALL.md)**. Prérequis : Docker (avec Compose), Node 24, pnpm 11 et une clé d'API compatible OpenAI.
+Needs macOS (Apple Silicon) or Linux x86-64 (we used WSL2 on Windows), Docker, Node.js 24, pnpm 11 and an OpenAI-compatible API with structured outputs and embeddings.
 
 ```bash
-cp .env.example .env && chmod 600 .env   # renseigner BUILD_LLM_API_KEY
-scripts/bootstrap.sh     # prérequis, installation, artefacts, 5 Speculos, simulateur dstack, mémoire, jeu de démo
-pnpm demo                # le scénario complet en direct (18 étapes), chaque étape vérifiée
-pnpm demo:web            # la démo web préparée : http://localhost:3000 (présentation) et /demo (produit)
+git clone https://github.com/ebenbaruk/badge.git && cd badge
+cp .env.example .env && chmod 600 .env   # set BUILD_LLM_API_KEY
+scripts/bootstrap.sh   # 5 Speculos, dstack simulator, memory, demo data
+pnpm demo              # 18 asserted steps, about 5 minutes, a few cents of LLM calls
+pnpm demo:web          # http://localhost:3000/demo
+pnpm test
 ```
 
-Contre le CVM Phala déployé (vrai quote TDX exigé, toutes les épingles) :
+Guides: [INSTALL.md](INSTALL.md) for the full local setup, [apps/mcp/README.md](apps/mcp/README.md) to connect an MCP client.
 
-```bash
-BADGE_ENCLAVE_URL=<endpoint> BADGE_ENCLAVE_OS_MEASUREMENTS_FILE=infra/cvm/expected-measurements.json pnpm demo
-```
+## Built during the contest
 
-Brancher Badge sur un agent : [`apps/mcp/README.md`](apps/mcp/README.md).
+First commit `c7a96c2`: 7 Oct 2026, 15:42 Paris time (13:42 UTC), after the 15:00 start. No code from our pre-contest spikes was copied. We used AI coding assistants as working tools. Pre-contest work and every third-party piece with its licence: [PROVENANCE.md](PROVENANCE.md).
 
-## Organisation du dépôt
-
-| Dossier            | Rôle                                                                                                                                        |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `packages/consent` | Messages EIP-712 de Badge, descripteurs de clear signing, vérification des signatures (pur, sans E/S)                                       |
-| `packages/ledger`  | Signature sur Ledger via le Device Management Kit, filtres de clear signing, pilotage de Speculos                                           |
-| `packages/zk`      | Identités anonymes de desk (Semaphore v4) et preuves d'appartenance                                                                         |
-| `packages/attest`  | Vérification d'attestation TDX (dstack), canal chiffré attesté, boîtes scellées, clé de conformité                                          |
-| `packages/client`  | SDK typé de l'API de l'enclave, partagé par l'application web, le serveur MCP et la démo                                                    |
-| `apps/enclave`     | Service confidentiel : politique, consentements, mémoire, LLM, desks, conformité, journal chaîné                                            |
-| `apps/web`         | Application des employés et de la conformité (Next.js), miroir des Ledgers, runtime d'agent                                                 |
-| `apps/mcp`         | Serveur MCP : Badge dans la harness d'agent de chaque employé                                                                               |
-| `infra`            | Speculos, simulateur dstack, mémoire Honcho et passerelle, jeu de démonstration, CVM Phala                                                  |
-| `scripts`          | `bootstrap.sh` (pile locale en une commande), `demo.ts` (`pnpm demo`) et `seed-desks.ts` (`pnpm desks:seed`)                                |
-| `docs`             | [Architecture](docs/ARCHITECTURE.md), [démonstration](docs/DEMO.md), [API de l'enclave](docs/enclave-api.md), [déploiement](docs/DEPLOY.md) |
-
-## Tests
-
-```bash
-pnpm test        # plus de 600 tests, sans réseau ni appareil, en une quinzaine de secondes
-pnpm lint        # ESLint + Prettier
-pnpm typecheck
-```
-
-Les tests unitaires couvrent la logique critique (politique de consentement, vérification des signatures,
-attestation, preuves ZK) et un test de contrat fait jouer tout le scénario au SDK contre l'application réelle de
-l'enclave. Suites en direct, sur la pile locale :
-
-| Commande                                                                                 | Ce qu'elle vérifie                                                  |
-| ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| `pnpm --filter @badge/attest test:sim`, `@badge/enclave test:sim`, `@badge/mcp test:sim` | Canal attesté de bout en bout contre le simulateur dstack           |
-| `pnpm --filter @badge/ledger test:speculos`                                              | Signatures en clear signing sur les Speculos                        |
-| `pnpm --filter @badge/enclave test:live`                                                 | Mémoire et LLM réels (quelques appels payants)                      |
-| `pnpm demo`                                                                              | Le scénario complet, avec de vraies signatures sur les cinq Ledgers |
-
-## Modèle de sécurité en bref
-
-- **Le Ledger fait foi** : aucun extrait personnel ne sort de son périmètre sans une signature du propriétaire sur un
-  écran que ni l'agent ni le serveur web ne contrôlent. Le message signé porte l'empreinte du texte exact et la mesure
-  de l'enclave.
-- **L'enclave est vérifiée avant d'être crue** : quote TDX, rejeu des mesures, compose hash, app id, image OS et
-  KMS épinglés, puis seulement un canal chiffré. Réseau interne scellé, une seule sortie vers le LLM confidentiel,
-  dont l'hôte est figé dans le code attesté (seule la clé est secrète), secrets générés dans le CVM.
-- **Échec fermé partout** : nonces consommés de façon atomique, expirations, horloge et anti-rejeu sur chaque requête,
-  règles anti-aspiration déterministes, accord permanent jamais appliqué à une demande signalée.
-- **Auditable sans être indiscret** : journal append-only chaîné par sha256, sans texte d'extrait, dont la tête est
-  signée par une clé de l'enclave (dérivée du KMS) ; anonymat des desks levé uniquement par la conformité, avec une
-  clé dérivée de son Ledger, et chaque levée est journalisée.
-
-Menaces, atténuations et risques résiduels : [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md#5-modèle-de-menace).
-
-## Licence
-
-[MIT](LICENSE).
-
-## Équipe
-
-**DVB**, pour le Ledger N3XT Hackathon @ OP3N 2026.
+Licence: [MIT](LICENSE) for the code in this repository; the memory layer it builds on, Honcho, is under AGPL-3.0. Team: DVB (De Vinci Blockchain).
