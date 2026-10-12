@@ -23,7 +23,7 @@ Badge is built to run in an enclave, a confidential VM (Intel TDX, on Phala Clou
 
 ## Why Ledger
 
-Without the Ledger, consent is a button the web server or a hijacked agent can press, and on a phone a compromised app can show one thing and sign another. A Ledger's screen is driven by its secure element. Badge's seven EIP-712 messages are clear-signed through Ledger's Device Management Kit; the five that enrol, delegate or release context carry the enclave measurement, so a consent signed for other code fails. Like a company badge, each employee's Ledger carries their identity: it enrols them, delegates to their agent, consents, revokes and derives their anonymous desk identity. The enclave guarantees which code runs; the Ledger guarantees that Bob, and only Bob, approved what leaves.
+Without the Ledger, consent is a button the web server or a hijacked agent can press, and on a phone a compromised app can show one thing and sign another. On Ledger's current devices, from the Nano S Plus to the Flex, the screen is driven by the secure element. Badge's seven EIP-712 messages are clear-signed through Ledger's Device Management Kit; the five that enrol, delegate or release context carry the enclave measurement, so a consent signed for other code fails. Like a company badge, each employee's Ledger carries their identity: it enrols them, delegates to their agent, consents, revokes and derives their anonymous desk identity. The enclave guarantees which code runs; the Ledger guarantees that Bob, and only Bob, approved what leaves.
 
 ## Who pays, and what we ask
 
@@ -35,7 +35,7 @@ Companies pay per seat for the memory and consent layer in their own enclave, pl
 - **Enclave:** on your machine, Badge runs on the dstack simulator, which stands in for Phala's TEE, and the app shows an amber "Simulated TEE" label instead of the green "Attested enclave" one. The services are also packaged for an Intel TDX VM on Phala Cloud (`infra/cvm/`). A first deployment ran there on 7 Oct, with its measurements pinned in the repo; we start the VM for live demos and stop it afterwards, as it is billed by the hour.
 - **Real in both:** Ledger signatures and their checks, the encrypted channel, Semaphore proofs, the policy engine, a hash-chained log that holds no excerpt text.
 - **Model:** your OpenAI-compatible provider locally; from the VM, Phala Confidential AI behind one gateway, whose attestation Badge does not check. The model runs outside Badge's enclave and reads every note when it is stored and candidate excerpts before Bob signs: in the VM, the operator cannot read the memory, but the model provider sees what it processes.
-- **Limits:** on the device, the fingerprint stands for everything past the start shown on screen. Revocation is enforced by the policy engine and cannot recall an excerpt already delivered. Desk anonymity holds against colleagues, not against the enclave, and in the demo rests on three members with public test seeds.
+- **Limits:** on the device, the fingerprint stands for everything past the start shown on screen. Revocation is enforced by the policy engine and cannot recall an excerpt already delivered. Desk anonymity holds against colleagues, not against the enclave, and in the demo rests on three members with public test seeds. The device screen shows the recipient, the start of the excerpt and the task: whoever can read Bob's screen or browser reads them too.
 
 ## Run it
 
