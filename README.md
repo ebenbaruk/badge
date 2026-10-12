@@ -2,7 +2,7 @@
 
 **Your agents know more. You decide what.**
 
-Badge is a company memory for AI agents, and it turns each employee's Ledger into their company badge. It finds the context a task needs, and a colleague's notes leave only once that colleague signs.
+Badge is a company memory for AI agents, and it turns each employee's Ledger into their company badge. Your agent gets the context it needs. If that's a colleague's notes, the colleague approves first, on their Ledger.
 
 ## The problem
 
