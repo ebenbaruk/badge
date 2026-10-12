@@ -20,7 +20,7 @@ The team used AI coding assistants as working tools.
 | Montserrat and JetBrains Mono fonts, and the wordmark outlined from Montserrat | `apps/web/public/fonts/`, `design/fonts/`, `brand/wordmark.svg` | OFL-1.1 |
 | Public BIP-39 test-vector mnemonics for the five emulated Ledgers              | `infra/speculos.sh`, one test                                   | MIT     |
 
-The source, licence and tooling of the logo, the wordmark, the fonts, the three app icons in `apps/web/public/` and the Open Graph image are recorded in [`design/provenance.json`](design/provenance.json). Earlier versions of the landing page used illustrations generated from text prompts written on 8 Oct; they were removed before submission and remain in the history.
+Every visual in the repository is recorded with its source, licence and tooling in [`design/provenance.json`](design/provenance.json): the logo, the wordmark, the fonts, the icons, the Open Graph image, the landing illustrations generated with an image model from the team's prompts during the contest (prompts in [`apps/web/public/landing/ASSETS.md`](apps/web/public/landing/ASSETS.md)), and an illustration drawn as SVG in `design/art/`.
 
 ## Fetched by the scripts, not committed
 
