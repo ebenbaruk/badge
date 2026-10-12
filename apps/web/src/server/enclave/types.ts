@@ -62,7 +62,7 @@ export interface RevealNoticeInput {
 
 export interface CreateTaskInput {
   task: string;
-  /** Short ASCII label shown on the owner's device ("brief Orion"). */
+  /** Short ASCII label shown on the owner's device ("Morpho meeting brief"). */
   taskLabel: string;
   /**
    * Demo of a prompt-injected agent: instead of a task-scoped search, it asks for the whole personal context of
@@ -234,6 +234,11 @@ export interface DeskView {
   /** Whether the viewer belongs to this desk in the directory, and has registered their identity. */
   isMember: boolean;
   joined: boolean;
+  /**
+   * An exchange rule lets another desk ask this desk's members for context, anonymously: only then does the group
+   * need its anonymity set (3 Ledger-joined members). A desk that only receives (Origination) never needs it.
+   */
+  askedAnonymously: boolean;
   allowedTopics: string[];
   /** An exchange rule lets one of the viewer's desks request from this desk. */
   requestable: boolean;

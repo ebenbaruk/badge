@@ -1,12 +1,15 @@
 # @badge/web
 
 Application des employés et de la conformité (Next.js App Router, React 19, Tailwind v4, shadcn/ui), clair et
-sombre, interface en français. Le serveur Next joue deux rôles :
+sombre, interface en anglais. Le serveur Next joue deux rôles :
 
 - **pont vers les Ledger** de chaque employé (Speculos Flex) : miroir d'écran, gestes, signatures réelles
   (`@badge/ledger`) vérifiées avec `@badge/consent` avant tout envoi ;
 - **runtime d'agent** : transforme la tâche tapée par l'employé en requête à l'enclave, détient la clé de session
   déléguée par `AgentSession` (conservée sur disque, voir plus bas) et l'identité anonyme de desk (en mémoire).
+
+Jeu de données de démo : l'entreprise Coinbase et son client Morpho (`infra/seed/coinbase.json`).
+Illustrative scenario, not affiliated with Coinbase or Morpho.
 
 ## Écrans (`/[employé]/…`)
 
@@ -34,7 +37,7 @@ uniquement en répétition, avec `BADGE_REHEARSAL=1`).
   hash épinglé). Le badge du haut est vert seulement pour une quote TDX vérifiée, ambre « TEE simulé » sinon ; sa
   fenêtre de détails montre la mesure (compose hash) signée dans chaque message Ledger. `live-views.ts` traduit les
   réponses de l'enclave en vues : niveaux de risque, raisons et statuts sont **ceux de l'enclave**, jamais recalculés.
-- `mock` : enclave fictive en mémoire (`src/server/mock`) sur `infra/seed/acme.json`, **pour le développement de
+- `mock` : enclave fictive en mémoire (`src/server/mock`) sur `infra/seed/coinbase.json`, **pour le développement de
   l'interface uniquement** (sans enclave, mémoire ni LLM). Signatures Ledger et preuves ZK y restent réelles.
 
 Le serveur Next est le **runtime d'agent** de chaque employé : une clé de session par employé (déléguée par

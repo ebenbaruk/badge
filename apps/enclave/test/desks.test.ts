@@ -28,10 +28,12 @@ import {
 } from "./harness";
 
 const PROOF_TIMEOUT_MS = 60_000;
-const MARKET_TASK = { fromDesk: "origination", task: "Industrial sensor-market trends and component-prices" };
+const MARKET_TASK = { fromDesk: "origination", task: "Onchain lending-market trends and stablecoin-rates" };
 
 async function deskIdentity(who: DemoEmployee): Promise<Identity> {
-  return deriveDeskIdentity(await ledgers[who].signMessage({ message: deskIdentityDeriveMessage("Acme") }));
+  return deriveDeskIdentity(
+    await ledgers[who].signMessage({ message: deskIdentityDeriveMessage("Coinbase") }),
+  );
 }
 
 async function joinDesk(h: Harness, who: DemoEmployee, deskName: string, identity: Identity) {
@@ -39,7 +41,7 @@ async function joinDesk(h: Harness, who: DemoEmployee, deskName: string, identit
     as: who,
     body: await signedWire(ledgers[who], "DeskJoin", {
       deskName,
-      company: "Acme",
+      company: "Coinbase",
       identityCommitment: identity.commitment,
       employee: ledgers[who].address,
       nonce: nextNonce(),
@@ -50,7 +52,7 @@ async function joinDesk(h: Harness, who: DemoEmployee, deskName: string, identit
 async function registerComplianceKey(h: Harness) {
   const { publicKey } = await complianceKeyPair();
   const signature = await ledgers.chloe.signMessage({
-    message: complianceKeyRegistrationMessage("Acme", publicKey),
+    message: complianceKeyRegistrationMessage("Coinbase", publicKey),
   });
   return call(h, "POST", "/v1/compliance/key", { as: "chloe", body: { publicKey, signature } });
 }
@@ -109,7 +111,26 @@ describe("desk membership", () => {
     expect(joined.status).toBe(201);
     // No identity is pre-registered: every member joins with their own Ledger.
     expect(joined.json.members).toBe(1);
+    expect(joined.json.joined).toBe(true);
     expect((await joinDesk(h, "bob", "Research", identity)).json.error.code).toBe("ALREADY_EXISTS");
+  });
+
+  it("tells each caller whether they joined a desk, whoever signed the join", async () => {
+    const h = await createHarness();
+    await onboard(h, "alice", "bob");
+    const before = (await call(h, "GET", "/v1/desks/origination", { as: "alice" })).json;
+    expect(before).toMatchObject({ members: 0, joined: false });
+    expect((await joinDesk(h, "alice", "Origination", await deskIdentity("alice"))).status).toBe(201);
+    // A later read (e.g. by the web agent, after a setup script signed the join) still knows Alice is in.
+    expect((await call(h, "GET", "/v1/desks/origination", { as: "alice" })).json).toMatchObject({
+      members: 1,
+      joined: true,
+    });
+    // Another employee reading the same desk is told about themselves only.
+    expect((await call(h, "GET", "/v1/desks/origination", { as: "bob" })).json).toMatchObject({
+      members: 1,
+      joined: false,
+    });
   });
 
   it("refuses desk requests while the source desk has fewer than 3 Ledger-joined members", async () => {
@@ -148,7 +169,7 @@ describe("anonymous desk share", () => {
   it("prepares a DeskShare for Bob under the exchange rule, without naming him to Alice", async () => {
     const created = await call(h, "POST", "/v1/desk-requests", { as: "alice", body: MARKET_TASK });
     expect(created.status).toBe(201);
-    expect(created.json).toMatchObject({ status: "waiting_share", ruleLabel: "Rule 4 - sensor market" });
+    expect(created.json).toMatchObject({ status: "waiting_share", ruleLabel: "Rule 4 - lending market" });
     expect(JSON.stringify(created.json)).not.toMatch(/bob/i);
     const share = await pendingDeskShare(h, "bob");
     expect(share.message).toMatchObject({ recipientDesk: "Origination", sourceDesk: "Research" });
@@ -211,7 +232,9 @@ describe("anonymous desk share", () => {
 
       const delivery = (await call(h, "GET", `/v1/desk-requests/${share.requestId}`, { as: "alice" })).json;
       expect(delivery.status).toBe("delivered");
-      expect(delivery.deliveries[0].excerpt).toContain("European market for connected industrial sensors");
+      expect(delivery.deliveries[0].excerpt).toContain(
+        "onchain lending is consolidating around curated vaults",
+      );
       expect(delivery.deliveries[0].proof.merkleTreeDepth).toBe(16);
       expect(JSON.stringify(delivery)).not.toMatch(/bob|58A57|Durand/i);
       expect((await call(h, "GET", `/v1/desk-requests/${share.requestId}`, { as: "bob" })).status).toBe(404);

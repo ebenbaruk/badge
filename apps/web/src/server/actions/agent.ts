@@ -12,12 +12,12 @@ import { employeeIdSchema, taskTextSchema } from "./schemas";
 const TASK_LABEL_WORDS = 4;
 
 /**
- * Short device label of a task ("Orion brief"): the device shows it as "Task". Derived from the main nouns of
+ * Short device label of a task ("Morpho meeting brief"): the device shows it as "Task". Derived from the main nouns of
  * the request; the enclave folds it to ASCII and caps its length.
  */
 function taskLabelOf(task: string): string {
-  const orion = /orion/i.test(task);
-  if (orion && /brief|meeting/i.test(task)) return "Orion brief";
+  const morpho = /morpho/i.test(task);
+  if (morpho && /brief|meeting/i.test(task)) return "Morpho meeting brief";
   const words = task
     .replace(/[^\p{L}\p{N}\s'-]/gu, " ")
     .split(/\s+/)

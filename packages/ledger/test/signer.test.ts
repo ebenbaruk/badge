@@ -25,9 +25,9 @@ const account: PrivateKeyAccount = privateKeyToAccount(`0x${"42".repeat(32)}`);
 
 const share: ContextShare = {
   recipientName: "Alice (Sales)",
-  excerptLabel: "conditions Orion 2025",
+  excerptLabel: "conditions Morpho 2025",
   excerptLength: 87,
-  taskLabel: "brief Orion",
+  taskLabel: "brief Morpho",
   expiresAt: 1_791_100_800n,
   excerptHash: `0x${"ab".repeat(32)}`,
   enclaveMeasurement: `0x${"cd".repeat(32)}`,
@@ -70,7 +70,7 @@ describe("badgeTypedData", () => {
 
   it("refuses non-ASCII displayed strings", () => {
     expect(() =>
-      assertStringFieldsAscii("ContextShare", { ...share, taskLabel: "Orion brief — café" }),
+      assertStringFieldsAscii("ContextShare", { ...share, taskLabel: "Morpho brief — café" }),
     ).toThrow(NonAsciiFieldError);
     expect(() => assertStringFieldsAscii("ContextShare", share)).not.toThrow();
   });

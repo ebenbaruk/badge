@@ -19,7 +19,7 @@ const EXPIRES_AT = 1_791_100_800n;
 export function sampleMessages(signer: Address): BadgeMessages {
   return {
     EmployeeEnroll: {
-      company: "Acme",
+      company: "Coinbase",
       employeeName: "Alice Martin",
       team: "Sales",
       enclaveMeasurement: MEASUREMENT,
@@ -38,15 +38,15 @@ export function sampleMessages(signer: Address): BadgeMessages {
     },
     ContextShare: {
       recipientName: "Alice (Sales)",
-      excerptLabel: "Orion terms 2025",
+      excerptLabel: "Morpho terms 2025",
       excerptLength: 87,
-      taskLabel: "Orion brief",
+      taskLabel: "Morpho brief",
       expiresAt: EXPIRES_AT,
-      excerptHash: keccak256(toHex("Orion terms 2025")),
+      excerptHash: keccak256(toHex("Morpho terms 2025")),
       enclaveMeasurement: MEASUREMENT,
       recipient: RECIPIENT,
       owner: signer,
-      taskId: keccak256(toHex("task:brief-orion")),
+      taskId: keccak256(toHex("task:brief-morpho")),
       nonce: 3n,
     },
     ContextPolicy: {
@@ -60,7 +60,7 @@ export function sampleMessages(signer: Address): BadgeMessages {
       nonce: 4n,
     },
     ContextRevoke: {
-      targetLabel: "Alice (Sales) - Orion brief",
+      targetLabel: "Alice (Sales) - Morpho brief",
       issuedAt: EXPIRES_AT,
       grantId: keccak256(toHex("grant")),
       recipient: RECIPIENT,
@@ -69,14 +69,14 @@ export function sampleMessages(signer: Address): BadgeMessages {
     },
     DeskJoin: {
       deskName: "Origination",
-      company: "Acme",
+      company: "Coinbase",
       identityCommitment: 1234567890123456789n,
       employee: signer,
       nonce: 6n,
     },
     DeskShare: {
       recipientDesk: "Research",
-      excerptLabel: "Orion timeline",
+      excerptLabel: "Morpho timeline",
       excerptLength: 42,
       ruleLabel: "Rule 4 - sensor market",
       expiresAt: EXPIRES_AT,

@@ -4,8 +4,12 @@ import { z } from "zod";
 import { REPO_ROOT } from "../llm/env-file";
 import { COMPANY_OWNER_ID, MemoryNoteSchema, NoteIdSchema, OwnerIdSchema } from "./types";
 
-/** The demo dataset shipped with the repository (company Acme, employees alice, bob, chloe, david, emma). */
-export const ACME_DATASET_PATH = resolve(REPO_ROOT, "infra/seed/acme.json");
+/**
+ * The demo dataset shipped with the repository: company Coinbase meeting the client Morpho, an illustrative scenario
+ * not affiliated with Coinbase or Morpho; employees alice, bob, chloe, david, emma. Deployment configs and the CVM
+ * compose file point at this path too, so a rename has to change them together.
+ */
+export const SEED_DATASET_PATH = resolve(REPO_ROOT, "infra/seed/coinbase.json");
 
 const AddressSchema = z.string().regex(/^0x[0-9a-fA-F]{40}$/, "not an Ethereum address");
 
@@ -49,7 +53,7 @@ export class SeedDatasetError extends Error {
  * Loads and validates a dataset, including cross-references (note owners, desk members, checked note ids).
  * @throws {z.ZodError | SeedDatasetError} naming the offending entry.
  */
-export function loadSeedDataset(path: string = ACME_DATASET_PATH): SeedDataset {
+export function loadSeedDataset(path: string = SEED_DATASET_PATH): SeedDataset {
   const dataset = SeedDatasetSchema.parse(JSON.parse(readFileSync(path, "utf8")));
   const employeeIds = new Set(dataset.employees.map((e) => e.id));
   const noteIds = new Set<string>();

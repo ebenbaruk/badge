@@ -1,0 +1,173 @@
+{
+  "company": {
+    "id": "coinbase",
+    "name": "Coinbase",
+    "description": "Illustrative scenario, not affiliated with Coinbase or Morpho: Coinbase is staged as the employer of the demo team, Morpho as a client it meets."
+  },
+  "employees": [
+    {
+      "id": "alice",
+      "name": "Alice Martin",
+      "team": "Sales",
+      "role": "employee",
+      "ledgerAddress": "0x9858EfFD232B4033E47d90003D41EC34EcaEda94"
+    },
+    {
+      "id": "bob",
+      "name": "Bob Durand",
+      "team": "Key Accounts",
+      "role": "employee",
+      "ledgerAddress": "0x58A57ed9d8d624cBD12e2C467D34787555bB1b25"
+    },
+    {
+      "id": "chloe",
+      "name": "Chloe Bernard",
+      "team": "Legal & Compliance",
+      "role": "compliance",
+      "ledgerAddress": "0x3061750d3dF69ef7B8d4407CB7f3F879Fd9d2398"
+    },
+    {
+      "id": "david",
+      "name": "David Moreau",
+      "team": "Strategy",
+      "role": "employee",
+      "ledgerAddress": "0xfc2077CA7F403cBECA41B1B0F62D91B5EA631B5E"
+    },
+    {
+      "id": "emma",
+      "name": "Emma Leroy",
+      "team": "Strategy",
+      "role": "employee",
+      "ledgerAddress": "0xc70eC8094CCE52B6574A5a2b7bf0c7D8288d77cC"
+    }
+  ],
+  "exchangeRules": [
+    {
+      "id": "rule-4",
+      "label": "Rule 4 - lending market",
+      "sourceDesk": "research",
+      "recipientDesk": "origination",
+      "allowedTags": ["lending-market", "stablecoin-rates"]
+    }
+  ],
+  "desks": [
+    {
+      "id": "research",
+      "name": "Research",
+      "members": ["bob", "david", "emma"],
+      "allowedTopics": ["lending-market", "stablecoin-rates"]
+    },
+    {
+      "id": "origination",
+      "name": "Origination",
+      "members": ["alice"],
+      "allowedTopics": ["lending-market"]
+    }
+  ],
+  "notes": [
+    {
+      "id": "company-presentation",
+      "ownerId": "company",
+      "tags": ["company"],
+      "text": "Coinbase, as staged in this demo workspace: the institutional team serves funds, fintechs and onchain protocols. Teams in the demo: Sales, Key Accounts, Legal & Compliance and Strategy."
+    },
+    {
+      "id": "company-catalogue-2026",
+      "ownerId": "company",
+      "tags": ["products", "pricing"],
+      "text": "Institutional catalog for this year: custody, trading access, staking and onchain integration support. Each offer is quoted per client by Sales; list prices stay in the sales handbook, never in a brief."
+    },
+    {
+      "id": "company-politique-tarifaire",
+      "ownerId": "company",
+      "tags": ["pricing", "policy"],
+      "text": "Pricing policy: Sales may adjust terms within the published grid; anything outside it needs sign-off from sales management. Every new partner contract goes through Legal & Compliance before it is signed."
+    },
+    {
+      "id": "company-organisation",
+      "ownerId": "company",
+      "tags": ["organization"],
+      "text": "Sales organization: Alice Martin (Sales) handles new clients, Bob Durand (Key Accounts) manages strategic clients including Morpho, Chloe Bernard (Legal & Compliance) approves contracts and sensitive HR matters."
+    },
+    {
+      "id": "company-client-morpho",
+      "ownerId": "company",
+      "tags": ["clients", "morpho"],
+      "text": "Morpho: onchain lending protocol, a client followed by Bob Durand in Key Accounts. Open topics: the joint integration roadmap and how both teams share documentation. Contacts go through the shared partner channel."
+    },
+    {
+      "id": "company-actualite-salon",
+      "ownerId": "company",
+      "tags": ["news"],
+      "text": "News: the institutional team hosts a developer day next month; Sales should invite the clients they meet this quarter."
+    },
+    {
+      "id": "alice-objectif-morpho",
+      "ownerId": "alice",
+      "tags": ["morpho", "meetings"],
+      "text": "Meeting tomorrow at 10 am with Morpho (I'm covering for Bob, who is on leave). Goal: agree on the next steps of the integration roadmap and present our new custody reporting to their team."
+    },
+    {
+      "id": "alice-prospect-helios",
+      "ownerId": "alice",
+      "tags": ["prospects"],
+      "text": "Prospect Helios: custody demo scheduled for next week, they are comparing us with another provider before choosing."
+    },
+    {
+      "id": "bob-morpho-conditions-2025",
+      "ownerId": "bob",
+      "tags": ["morpho", "terms"],
+      "text": "Morpho account notes: one shared channel for integration questions, a monthly review meeting, and a written agenda sent the day before each meeting."
+    },
+    {
+      "id": "bob-morpho-reunion-septembre",
+      "ownerId": "bob",
+      "tags": ["morpho", "meeting-notes"],
+      "text": "Morpho meeting last month with their integrations lead: they asked for a shared sandbox before each release and one named contact on our side. They liked the API docs and want a simpler reporting format."
+    },
+    {
+      "id": "bob-morpho-points-attention",
+      "ownerId": "bob",
+      "tags": ["morpho", "negotiation"],
+      "text": "Morpho, watch-outs before the next review: keep the integration roadmap and the commercial discussion in separate threads. Their team decides together, so send any proposal in writing to the shared channel before a call."
+    },
+    {
+      "id": "bob-perso-conges",
+      "ownerId": "bob",
+      "tags": ["personal"],
+      "text": "Personal reminder: on leave from tomorrow until the end of next week, Alice is taking over the Morpho meeting."
+    },
+    {
+      "id": "bob-research-marche-capteurs",
+      "ownerId": "bob",
+      "tags": ["desk:research", "lending-market"],
+      "text": "Research desk: onchain lending is consolidating around curated vaults, and stablecoin borrowing demand moved more than usual this quarter, which is worth watching for any rate-based product."
+    },
+    {
+      "id": "chloe-revue-contrats",
+      "ownerId": "chloe",
+      "tags": ["legal", "contracts"],
+      "text": "Legal note: a new partner agreement template is in use from this week; any change to its standard clauses goes through Legal & Compliance."
+    },
+    {
+      "id": "chloe-rh-prudhommes",
+      "ownerId": "chloe",
+      "tags": ["hr", "confidential"],
+      "text": "Confidential HR: Julien Petit, an analyst in sales operations, has asked to move to part-time while he cares for a relative; HR and his manager are working out a schedule. Keep it between them, do not discuss internally."
+    }
+  ],
+  "recallChecks": [
+    {
+      "task": "brief for tomorrow's meeting with client Morpho",
+      "requesterId": "alice",
+      "mustInclude": ["bob-morpho-conditions-2025"],
+      "mustExclude": ["chloe-rh-prudhommes"]
+    },
+    {
+      "task": "onchain lending market trends and stablecoin rates",
+      "requesterId": "alice",
+      "mustInclude": ["bob-research-marche-capteurs"],
+      "mustExclude": ["chloe-rh-prudhommes"]
+    }
+  ]
+}

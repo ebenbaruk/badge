@@ -11,9 +11,12 @@ Le contrat de l'API est `docs/enclave-api.md` ; les formes exactes des réponses
 
 ```bash
 infra/dstack-sim.sh start                  # TEE simulé (hors CVM)
-infra/stack.sh up && infra/stack.sh seed   # mémoire Honcho et jeu de données Acme
+infra/stack.sh up && infra/stack.sh seed   # mémoire Honcho et jeu de données Coinbase
 pnpm --filter @badge/enclave start         # ou `dev` (rechargement à chaud) ; écoute sur 127.0.0.1:8787
 ```
+
+Le jeu de données met en scène Coinbase et son client Morpho : scénario illustratif, sans lien avec Coinbase ni
+Morpho.
 
 Au démarrage, l'enclave lit sa mesure auprès de dstack (échec immédiat si l'agent ou le simulateur ne répond pas),
 ouvre sa base SQLite, puis journalise une ligne sans
@@ -22,19 +25,19 @@ de données. `SIGINT` / `SIGTERM` arrêtent proprement le serveur.
 
 ## Configuration
 
-| Variable                                                              | Rôle                                                                          | Défaut                    |
-| --------------------------------------------------------------------- | ----------------------------------------------------------------------------- | ------------------------- |
-| `BADGE_ENCLAVE_PORT`                                                  | port HTTP                                                                     | `8787`                    |
-| `BADGE_ENCLAVE_HOST`                                                  | interface d'écoute (`0.0.0.0` dans le CVM, derrière la passerelle)            | `127.0.0.1`               |
-| `BADGE_DATA_DIR`                                                      | dossier de `enclave.sqlite`                                                   | `infra/.data/enclave`     |
-| `BADGE_SEED_FILE`                                                     | annuaire et notes (jeu de données)                                            | `infra/seed/acme.json`    |
-| `BADGE_REQUIRE_CHANNEL`                                               | `false` autorise le HTTP en clair pour les outils locaux ; refusé dans un CVM | `true`                    |
-| `DSTACK_SIMULATOR_ENDPOINT`                                           | simulateur dstack (ignoré dans un CVM, qui utilise `/var/run/dstack.sock`)    | `http://127.0.0.1:8090`   |
-| `BADGE_LLM_PROFILE`                                                   | `build` ou `phala` (voir « Couche LLM »)                                      | `build`                   |
-| `BADGE_LLM_CHAT_MODEL`                                                | remplace le modèle de chat du profil, sans toucher aux secrets                | modèle du profil          |
-| `BADGE_LLM_GATEWAY_URL`                                               | passerelle de sortie du CVM, remplace l'URL du profil                         | aucune                    |
-| `BADGE_ENV_FILE`                                                      | fichier des secrets LLM (les variables d'environnement l'emportent)           | `../.env` à côté du dépôt |
-| `BADGE_HONCHO_URL`, `BADGE_HONCHO_JWT_FILE`, `BADGE_HONCHO_WORKSPACE` | mémoire Honcho                                                                | pile locale, `acme`       |
+| Variable                                                              | Rôle                                                                          | Défaut                     |
+| --------------------------------------------------------------------- | ----------------------------------------------------------------------------- | -------------------------- |
+| `BADGE_ENCLAVE_PORT`                                                  | port HTTP                                                                     | `8787`                     |
+| `BADGE_ENCLAVE_HOST`                                                  | interface d'écoute (`0.0.0.0` dans le CVM, derrière la passerelle)            | `127.0.0.1`                |
+| `BADGE_DATA_DIR`                                                      | dossier de `enclave.sqlite`                                                   | `infra/.data/enclave`      |
+| `BADGE_SEED_FILE`                                                     | annuaire et notes (jeu de données)                                            | `infra/seed/coinbase.json` |
+| `BADGE_REQUIRE_CHANNEL`                                               | `false` autorise le HTTP en clair pour les outils locaux ; refusé dans un CVM | `true`                     |
+| `DSTACK_SIMULATOR_ENDPOINT`                                           | simulateur dstack (ignoré dans un CVM, qui utilise `/var/run/dstack.sock`)    | `http://127.0.0.1:8090`    |
+| `BADGE_LLM_PROFILE`                                                   | `build` ou `phala` (voir « Couche LLM »)                                      | `build`                    |
+| `BADGE_LLM_CHAT_MODEL`                                                | remplace le modèle de chat du profil, sans toucher aux secrets                | modèle du profil           |
+| `BADGE_LLM_GATEWAY_URL`                                               | passerelle de sortie du CVM, remplace l'URL du profil                         | aucune                     |
+| `BADGE_ENV_FILE`                                                      | fichier des secrets LLM (les variables d'environnement l'emportent)           | `../.env` à côté du dépôt  |
+| `BADGE_HONCHO_URL`, `BADGE_HONCHO_JWT_FILE`, `BADGE_HONCHO_WORKSPACE` | mémoire Honcho                                                                | pile locale, `coinbase`    |
 
 Dans le CVM, `infra/cvm/compose.yml` fixe ces variables et l'image (`Dockerfile`) fixe l'hôte, le port et
 `BADGE_DATA_DIR=/data` : voir `docs/DEPLOY.md`.
@@ -82,7 +85,7 @@ classifieur LLM juge chacun (pertinence, données personnelles) et une porte dé
 - le contexte global et les notes du demandeur n'ont besoin que d'être pertinents ;
 - la note d'un collègue doit être nettement pertinente (au moins 0,7), sans donnée personnelle et sans étiquette
   privée (`perso`, `rh`, `confidentiel`) : sinon elle ne part même pas vers son Ledger. Le rappel de congés de Bob,
-  qui nomme pourtant le rendez-vous Orion, n'est donc jamais proposé pour le brief d'Alice.
+  qui nomme pourtant le rendez-vous Morpho, n'est donc jamais proposé pour le brief d'Alice.
 
 Règles anti-aspiration (`src/policy/rules.ts`, seuils nommés) : longueur de l'extrait, part du contexte du
 propriétaire, nombre de propriétaires par tâche, demandes par propriétaire et par heure. Un agent piégé qui demande

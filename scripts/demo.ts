@@ -65,9 +65,10 @@ const EMPLOYEES = ["alice", "bob", "chloe"] as const satisfies readonly DemoEmpl
 const AGENT_NAME = "Claude Code";
 /** Tag of the seed's private notes (Bob's leave reminder): never proposed for a colleague's task. */
 const PRIVATE_NOTE_TAG = "personal";
-const ORION_TASK = {
-  task: "Prepare the brief for tomorrow's meeting with client Orion",
-  taskLabel: "Orion meeting brief",
+/** The demo company is Coinbase and the client Morpho: an illustrative scenario, not affiliated with either. */
+const MORPHO_TASK = {
+  task: "Prepare the brief for tomorrow's meeting with client Morpho",
+  taskLabel: "Morpho meeting brief",
 };
 /** What a prompt-injected agent sends: the injected instruction, plus an explicit "everything about Bob". */
 const TRAPPED_TASK = {
@@ -77,29 +78,26 @@ const TRAPPED_TASK = {
 };
 const MARKET_REQUEST = {
   fromDesk: "origination",
-  task: "Industrial sensor market trends and component prices",
+  task: "Onchain lending market trends and stablecoin rates",
 };
 const POLICY = {
   granteeTeam: "Sales",
-  contextTag: "orion",
+  contextTag: "morpho",
   purpose: "client briefs",
   maxExcerptLength: 500,
 };
 const POLICY_TTL_SECONDS = 30n * 24n * 3600n;
 /** Facts only Bob's notes contain: one of them in the brief proves his consented context was used. */
-const BOB_ORION_MARKERS = [
-  /\b12\s?%/,
-  /lef[eè]vre/i,
-  /quarterly/i,
-  /\b15\s?%/,
-  /\b4 (new )?warehouses/i,
-  /40\s?k/i,
+const BOB_MORPHO_MARKERS = [
+  /monthly review/i,
+  /\bagenda/i,
+  /sandbox/i,
+  /named contact/i,
+  /separate threads?/i,
+  /in writing/i,
 ];
-/**
- * Chloe's confidential HR note: must never reach a brief. "Villeurbanne" is not a marker: the global company note
- * names the plant there too.
- */
-const CHLOE_HR_MARKERS = [/labou?r court/i, /unfair dismissal/i, /julien petit/i];
+/** Chloe's confidential HR note: must never reach a brief. */
+const CHLOE_HR_MARKERS = [/part-time/i, /cares? for a relative/i, /julien petit/i];
 const BRIEF_PREVIEW_CHARS = 400;
 
 const nowSeconds = () => toUnixSeconds(new Date());
@@ -257,13 +255,13 @@ async function main(): Promise<void> {
       },
     );
 
-    const orion = await narrator.step("Alice's agent asks for a brief for the Orion meeting", async () => {
-      const task = await agents.alice.createTask(ORION_TASK);
+    const morpho = await narrator.step("Alice's agent asks for a brief for the Morpho meeting", async () => {
+      const task = await agents.alice.createTask(MORPHO_TASK);
       describeTask(narrator, task);
       check(task.status === "waiting_consent", `expected a pending consent, got ${task.status}`);
       check(
         task.pending.some((e) => e.ownerId === "bob"),
-        "Bob's Orion notes should need his consent",
+        "Bob's Morpho notes should need his consent",
       );
       check(
         !JSON.stringify(task).includes("12% discount"),
@@ -278,14 +276,14 @@ async function main(): Promise<void> {
     await narrator.step(
       "Each owner reads the request and signs on their Ledger (clear signing)",
       async () => {
-        const owners = [...new Set(orion.pending.map((e) => e.ownerId))] as DemoEmployee[];
+        const owners = [...new Set(morpho.pending.map((e) => e.ownerId))] as DemoEmployee[];
         for (const owner of owners) {
-          const consents = pendingOf(await agents[owner].listConsents(), orion.id);
-          // Bob's leave reminder names the Orion meeting, but it is his private matter: the enclave keeps a
+          const consents = pendingOf(await agents[owner].listConsents(), morpho.id);
+          // Bob's leave reminder names the Morpho meeting, but it is his private matter: the enclave keeps a
           // colleague's personal notes out of a work brief (tag "personal", classifier), so it never reaches his Ledger.
           check(
             !consents.some((consent) => consent.excerpt.tags.includes(PRIVATE_NOTE_TAG)),
-            `a personal note of ${owner} was proposed for the Orion brief`,
+            `a personal note of ${owner} was proposed for the Morpho brief`,
           );
           for (const consent of consents) {
             const { signature, screens } = await ledgers[owner].sign("ContextShare", consent.message);
@@ -300,13 +298,13 @@ async function main(): Promise<void> {
     );
 
     await narrator.step("The brief is drafted in the enclave, from the allowed excerpts only", async () => {
-      const task = await agents.alice.getTask(orion.id);
+      const task = await agents.alice.getTask(morpho.id);
       check(task.status === "ready" && task.brief !== null, `brief not ready (${task.status})`);
       const brief = task.brief;
-      check(/orion/i.test(brief), "the brief does not mention Orion");
+      check(/morpho/i.test(brief), "the brief does not mention Morpho");
       check(
-        BOB_ORION_MARKERS.some((marker) => marker.test(brief)),
-        "the brief uses none of Bob's Orion facts",
+        BOB_MORPHO_MARKERS.some((marker) => marker.test(brief)),
+        "the brief uses none of Bob's Morpho facts",
       );
       check(
         !CHLOE_HR_MARKERS.some((marker) => marker.test(brief)),
@@ -372,22 +370,22 @@ async function main(): Promise<void> {
         const result = await agents.bob.revoke(await signed("bob", "ContextRevoke", prepared));
         check(result.revokedGrants > 0, "nothing was revoked");
         narrator.say(`${result.revokedGrants} consent(s) revoked; Bob's data key was rotated.`);
-        const task = await agents.alice.createTask(ORION_TASK);
+        const task = await agents.alice.createTask(MORPHO_TASK);
         check(
           task.status === "waiting_consent",
-          "after the revocation, Alice's Orion task should wait for Bob",
+          "after the revocation, Alice's Morpho task should wait for Bob",
         );
         check(
           task.pending.some((e) => e.ownerId === "bob"),
           "Bob's notes should need his consent again",
         );
         check(!task.allowed.some((e) => e.ownerId === "bob"), "a revoked grant was reused");
-        narrator.say(`Alice's new Orion task: ${task.pending.length} excerpt(s) waiting for Bob again.`);
+        narrator.say(`Alice's new Morpho task: ${task.pending.length} excerpt(s) waiting for Bob again.`);
       },
     );
 
     await narrator.step(
-      "Bob signs a standing agreement: the Sales team may use his Orion notes for 30 days",
+      "Bob signs a standing agreement: the Sales team may use his Morpho notes for 30 days",
       async () => {
         const policy = await agents.bob.createPolicy(
           await signed("bob", "ContextPolicy", {
@@ -401,7 +399,7 @@ async function main(): Promise<void> {
         narrator.say(
           `Agreement ${policy.id.slice(0, 10)}... active: ${policy.granteeTeam} team, tag "${policy.contextTag}", ${policy.maxExcerptLength} chars max.`,
         );
-        const task = await agents.alice.createTask(ORION_TASK);
+        const task = await agents.alice.createTask(MORPHO_TASK);
         describeTask(narrator, task);
         const viaPolicy = task.allowed.filter((e) => e.via === "policy");
         check(viaPolicy.length > 0, "the standing policy did not allow anything");

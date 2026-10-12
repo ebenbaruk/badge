@@ -25,10 +25,10 @@ describe("cosineSimilarity", () => {
 describe("dedupeHits", () => {
   it("drops the same item found twice and the same text stored twice by one owner", () => {
     const hits = [
-      hit("bob", "a", "Orion 12 %"),
+      hit("bob", "a", "Morpho sandbox"),
       hit("bob", "a"),
-      hit("bob", "b", "  orion   12 % "),
-      hit("alice", "c", "Orion 12 %"),
+      hit("bob", "b", "  morpho   sandbox "),
+      hit("alice", "c", "Morpho sandbox"),
     ];
     expect(dedupeHits(hits).map((h) => `${h.ownerId}/${h.id}`)).toEqual(["bob/a", "alice/c"]);
   });
@@ -36,7 +36,7 @@ describe("dedupeHits", () => {
 
 describe("rankHits", () => {
   const task = [1, 0, 0];
-  const hits = [hit("company", "global"), hit("bob", "orion"), hit("chloe", "rh"), hit("alice", "own")];
+  const hits = [hit("company", "global"), hit("bob", "morpho"), hit("chloe", "rh"), hit("alice", "own")];
   const vectors = [
     [0.8, 0.6, 0], // 0.8
     [0.95, 0.31, 0], // ~0.95
@@ -46,18 +46,18 @@ describe("rankHits", () => {
 
   it("orders by similarity, drops scores under the floor and applies the limit", () => {
     const ranked = rankHits(task, hits, vectors, { requesterId: "alice", limit: 2, minScore: 0.3 });
-    expect(ranked.map((c) => c.source.id)).toEqual(["orion", "global"]);
+    expect(ranked.map((c) => c.source.id)).toEqual(["morpho", "global"]);
     const all = rankHits(task, hits, vectors, { requesterId: "alice", limit: 10, minScore: 0.3 });
-    expect(all.map((c) => c.source.id)).toEqual(["orion", "global", "own"]);
+    expect(all.map((c) => c.source.id)).toEqual(["morpho", "global", "own"]);
   });
 
   it("labels scope and ownership", () => {
-    const [orion, global, own] = rankHits(task, hits, vectors, {
+    const [morpho, global, own] = rankHits(task, hits, vectors, {
       requesterId: "alice",
       limit: 10,
       minScore: 0.3,
     });
-    expect(orion).toMatchObject({ ownerId: "bob", scope: "personal", ownedByRequester: false });
+    expect(morpho).toMatchObject({ ownerId: "bob", scope: "personal", ownedByRequester: false });
     expect(global).toMatchObject({ ownerId: "company", scope: "global", ownedByRequester: false });
     expect(own).toMatchObject({ ownerId: "alice", scope: "personal", ownedByRequester: true });
   });

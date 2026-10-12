@@ -19,7 +19,7 @@ async function register(
   as: "chloe" | "alice" = "chloe",
 ) {
   const signature = await signer.signMessage({
-    message: complianceKeyRegistrationMessage("Acme", publicKey),
+    message: complianceKeyRegistrationMessage("Coinbase", publicKey),
   });
   return call(h, "POST", "/v1/compliance/key", { as, body: { publicKey, signature } });
 }

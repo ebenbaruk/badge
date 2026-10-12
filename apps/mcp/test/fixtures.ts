@@ -1,5 +1,5 @@
 /**
- * Test doubles: a fake BadgeClient (the part the tools use) and demo-shaped enclave responses (Acme dataset).
+ * Test doubles: a fake BadgeClient (the part the tools use) and demo-shaped enclave responses (Coinbase dataset, an illustrative scenario).
  */
 import type { AttestationResult, VerifiedAttestation } from "@badge/attest";
 import type { ConsentRequest, CreateTaskInput, Measurement, Task } from "@badge/client";
@@ -21,7 +21,7 @@ export const SESSION: SessionSummary = {
   expiresAt: EXPIRES_AT,
 };
 
-export const BRIEF = "Durand SA renews its sensor contract in November; Bob advises raising the lead time.";
+export const BRIEF = "Durand SA renews its custody contract next month; Bob advises one named contact.";
 
 /** Alice's task waiting for Bob's Ledger. */
 export function waitingTask(): Task {
@@ -32,8 +32,8 @@ export function waitingTask(): Task {
     allowed: [
       {
         ownerId: "company",
-        ownerName: "Acme",
-        excerptLabel: "Sensor catalog 2026",
+        ownerName: "Coinbase",
+        excerptLabel: "Institutional catalog",
         excerptLength: 900,
         via: "company",
       },
@@ -64,8 +64,8 @@ export function readyTask(): Task {
     allowed: [
       {
         ownerId: "company",
-        ownerName: "Acme",
-        excerptLabel: "Sensor catalog 2026",
+        ownerName: "Coinbase",
+        excerptLabel: "Institutional catalog",
         excerptLength: 900,
         via: "company",
       },
@@ -130,13 +130,17 @@ export function deskShareConsent(): ConsentRequest {
     status: "pending",
     recipientDesk: "Origination",
     sourceDesk: "Research",
-    ruleLabel: "Rule 4 - sensor market",
-    excerpt: { label: "Q4 component prices", length: 300, text: "Component prices rising in Q4." },
+    ruleLabel: "Rule 4 - lending market",
+    excerpt: {
+      label: "Stablecoin rates this quarter",
+      length: 300,
+      text: "Stablecoin borrowing demand moved this quarter.",
+    },
     message: {
       recipientDesk: "Origination",
-      excerptLabel: "Q4 component prices",
+      excerptLabel: "Stablecoin rates this quarter",
       excerptLength: 300,
-      ruleLabel: "Rule 4 - sensor market",
+      ruleLabel: "Rule 4 - lending market",
       expiresAt: EXPIRES_AT,
       excerptHash: `0x${"ef".repeat(32)}`,
       enclaveMeasurement: MEASUREMENT,

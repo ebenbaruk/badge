@@ -144,7 +144,9 @@ simulated`). It also holds the attested channel (X25519 + HKDF + AES-GCM, `repor
     only (`src/server/enclave/alerts.ts`, `src/lib/rule-findings.ts`). The audit chain itself keeps every entry.
   - Device routes are CSRF-guarded. Auto-review only exists with `BADGE_REHEARSAL=1`.
   - Agent runtime state persists in `BADGE_WEB_DATA_DIR`.
-  - "/" is the marketing landing (`src/components/landing`; image slots and prompts in `public/landing/ASSETS.md`).
+  - "/" is the marketing landing (`src/components/landing`). Its example data (one consent request in a Coinbase
+    workspace, built from the real `@badge/consent` descriptors and hashing, labelled as illustrative) lives in
+    `src/components/landing/example.ts`.
     The app lives under `/[employee]/…`, with `/demo` as the entry.
 - **`apps/mcp`**: MCP server for one employee's agent harness. It acts with that employee's AgentSession key over the
   attested channel, and renders third-party text as quoted data. `session` CLI: create the key, sign on Ledger.
@@ -161,12 +163,12 @@ simulated`). It also holds the attested channel (X25519 + HKDF + AES-GCM, `repor
   - **No `Co-Authored-By` trailer**, and no mention of AI assistants or "lab" in commit messages or other tracked
     files. `AGENTS.md` and its `CLAUDE.md` symlink are the only agent-related files tracked, on purpose.
   - The sibling `../lab` repo (research spikes, spec) is private and is never referenced from here.
-- Everything the jury sees is in English: UI and landing copy, Ledger screens, the Acme dataset, LLM outputs, the
+- Everything the jury sees is in English: UI and landing copy, Ledger screens, the Coinbase dataset (illustrative, not affiliated with Coinbase or Morpho), LLM outputs, the
   `pnpm demo` narration and MCP texts (locale `en-US`). Docs (`README.md`, `docs/`) are still in French for now.
   Strings shown on the Ledger are ASCII. Code comments are in English and explain why.
 - Never mention Plastic Labs or Neuromancer in product copy or the pitch.
 - Demo identities use public BIP-39 test mnemonics (in `infra/speculos.sh`); Ledger addresses are in
-  `infra/seed/acme.json`.
+  `infra/seed/coinbase.json`.
 
 ## The demo is a living thing
 
