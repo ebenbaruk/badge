@@ -26,7 +26,7 @@ const SALT: Hex = `0x${"11".repeat(32)}`;
 
 export const MESSAGES: BadgeMessages = {
   EmployeeEnroll: {
-    company: "Acme",
+    company: "Coinbase",
     employeeName: "Alice Martin",
     team: "Sales",
     enclaveMeasurement: MEASUREMENT,
@@ -76,7 +76,7 @@ export const MESSAGES: BadgeMessages = {
   },
   DeskJoin: {
     deskName: "M&A",
-    company: "Acme",
+    company: "Coinbase",
     identityCommitment: 123456789n,
     employee: alice.address,
     nonce: 6n,

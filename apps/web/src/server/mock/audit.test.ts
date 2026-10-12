@@ -10,7 +10,12 @@ describe("audit log", () => {
 
   it("chains entries and verifies the chain", () => {
     const log = new AuditLog();
-    log.append({ type: "task.created", actor: "alice", subject: "t1", data: { taskLabel: "brief Orion" } });
+    log.append({
+      type: "task.created",
+      actor: "alice",
+      subject: "t1",
+      data: { taskLabel: "Morpho meeting brief" },
+    });
     log.append({ type: "consent.approved", actor: "bob", subject: "c1", data: { grantId: "0x01" } });
     const entries = log.entries();
     expect(entries[0]?.prevHash).toBe(GENESIS_HASH);

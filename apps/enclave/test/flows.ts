@@ -66,7 +66,7 @@ export async function enroll(
 ): Promise<ApiResponse> {
   return call(h, "POST", "/v1/enroll", {
     body: await signedWire(ledgers[who], "EmployeeEnroll", {
-      company: "Acme",
+      company: "Coinbase",
       employeeName: toDeviceAscii(NAMES[who].name),
       team: toDeviceAscii(NAMES[who].team),
       enclaveMeasurement: measurement,

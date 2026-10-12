@@ -1,6 +1,5 @@
 import { MessageSquareDashed } from "lucide-react";
 import type { Metadata } from "next";
-import { WorkspaceIntro } from "@/components/agent/workspace-intro";
 import { AgentComposer } from "@/components/agent/agent-composer";
 import { TaskThread } from "@/components/agent/task-thread";
 import { EnclaveUnavailable } from "@/components/enclave-unavailable";
@@ -16,7 +15,6 @@ export default async function AgentPage({ params }: { params: Promise<{ employee
   const tasks = await load(() => enclave().listTasks(employee.id));
   return (
     <div className="mx-auto max-w-5xl">
-      <WorkspaceIntro firstName={employee.firstName} />
       <PageHeader
         title={`${employee.firstName}'s agent`}
         eyebrow="Agent · confidential memory"
@@ -31,7 +29,7 @@ export default async function AgentPage({ params }: { params: Promise<{ employee
           <EnclaveUnavailable failure={tasks} employee={employee.id} />
         ) : tasks.data.length === 0 ? (
           <EmptyState icon={<MessageSquareDashed />} title="No tasks yet">
-            Try &quot;Prepare the brief for tomorrow&apos;s meeting with client Orion&quot;.
+            Try &quot;Prepare the brief for tomorrow&apos;s meeting with client Morpho&quot;.
           </EmptyState>
         ) : (
           tasks.data.map((task) => <TaskThread key={task.id} task={task} requester={employee.id} />)

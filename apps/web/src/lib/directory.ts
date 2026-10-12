@@ -1,6 +1,6 @@
 /**
  * Demo directory as the web app shows it (accented display names). The enclave's directory (seeded from
- * infra/seed/acme.json) is the authority on identities; addresses here must match it and are checked by the mock.
+ * infra/seed/coinbase.json) is the authority on identities; addresses here must match it and are checked by the mock.
  * Client-safe: no server import.
  */
 import type { Address } from "viem";
@@ -27,7 +27,8 @@ export interface Employee {
   initials: string;
 }
 
-export const COMPANY_NAME = "Acme";
+/** Illustrative scenario, not affiliated with Coinbase or Morpho (the client the demo meets). */
+export const COMPANY_NAME = "Coinbase";
 
 export const EMPLOYEES: Readonly<Record<EmployeeId, Employee>> = {
   alice: {

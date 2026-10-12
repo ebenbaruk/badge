@@ -6,16 +6,16 @@ describe("revocationTargetLabel", () => {
     expect(
       revocationTargetLabel({ kind: "recipient", recipientName: "Alice Martin", recipientTeam: "Sales" }),
     ).toBe("Everything I shared with Alice Martin + Sales team agreements");
-    expect(revocationTargetLabel({ kind: "policy", granteeTeam: "Sales", contextTag: "orion" })).toBe(
-      "Sales team agreement - orion",
+    expect(revocationTargetLabel({ kind: "policy", granteeTeam: "Sales", contextTag: "morpho" })).toBe(
+      "Sales team agreement - morpho",
     );
     expect(
       revocationTargetLabel({
         kind: "grant",
         recipientName: "Alice Martin (Sales)",
-        excerptLabel: "Orion: AX-500",
+        excerptLabel: "Morpho: AX-500",
       }),
-    ).toBe("Alice Martin (Sales) - Orion: AX-500");
+    ).toBe("Alice Martin (Sales) - Morpho: AX-500");
   });
 
   it("is device ASCII and bounded whatever the names", () => {

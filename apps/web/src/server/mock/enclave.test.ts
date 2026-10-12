@@ -23,7 +23,7 @@ import { buildDeskGroup, createDeskProof, deriveDeskIdentity, encodeDeskProof } 
 import type { TypedDataDefinition } from "viem";
 import { mnemonicToAccount, type HDAccount } from "viem/accounts";
 import { beforeEach, describe, expect, it } from "vitest";
-import { EMPLOYEES, type EmployeeId } from "@/lib/directory";
+import { COMPANY_NAME, EMPLOYEES, type EmployeeId } from "@/lib/directory";
 import { EnclaveError } from "../errors";
 import { buildAgentSession, buildContextPolicy, buildDeskJoin, buildEmployeeEnroll } from "../messages";
 import { MockEnclave } from "./enclave";
@@ -36,9 +36,9 @@ const TEST_MNEMONICS: Readonly<Record<EmployeeId, string>> = {
 const ACCOUNTS = Object.fromEntries(
   Object.entries(TEST_MNEMONICS).map(([id, mnemonic]) => [id, mnemonicToAccount(mnemonic)]),
 ) as Record<EmployeeId, HDAccount>;
-const ORION_TASK = {
-  task: "Prepare the brief for tomorrow's meeting with client Orion",
-  taskLabel: "Orion brief",
+const MORPHO_TASK = {
+  task: "Prepare the brief for tomorrow's meeting with client Morpho",
+  taskLabel: "Morpho meeting brief",
 };
 const ZK_ARTIFACTS = fileURLToPath(
   new URL("../../../../../infra/zk-artifacts/semaphore-16.zkey", import.meta.url),
@@ -89,7 +89,7 @@ describe("mock enclave demo scenario", () => {
   });
 
   it("waits for Bob's Ledger consent, then drafts the brief with it", async () => {
-    const task = await enclave.createTask("alice", ORION_TASK);
+    const task = await enclave.createTask("alice", MORPHO_TASK);
     expect(task.status).toBe("waiting_consent");
     expect(task.allowed.map((s) => s.allowedBy)).toEqual(expect.arrayContaining(["global", "own"]));
     expect(task.blocked.map((b) => b.kind)).toContain("classifier");
@@ -111,11 +111,11 @@ describe("mock enclave demo scenario", () => {
     const ready = await enclave.getTask("alice", task.id);
     expect(ready.status).toBe("ready");
     expect(ready.allowed.some((s) => s.allowedBy === "consent" && s.owner === "bob")).toBe(true);
-    expect(ready.brief?.recommendation).toContain("AX-500");
+    expect(ready.brief?.recommendation).toContain("written proposal");
     expect(ready.tokenStats?.selectedTokens).toBeLessThan(ready.tokenStats?.allContextTokens ?? 0);
 
     // The same excerpt for the same recipient is reused until revoked.
-    const again = await enclave.createTask("alice", ORION_TASK);
+    const again = await enclave.createTask("alice", MORPHO_TASK);
     expect(again.status).toBe("ready");
     expect(again.allowed.some((s) => s.allowedBy === "grant")).toBe(true);
 
@@ -124,7 +124,7 @@ describe("mock enclave demo scenario", () => {
     const revoke = await enclave.prepareRevocation("bob", { grantId: grant.id });
     expect(revoke.targetLabel).toMatch(/^Alice Martin \(Sales\) - /);
     expect(await enclave.revoke("bob", await sign("bob", "ContextRevoke", revoke))).toEqual({ revoked: 1 });
-    expect((await enclave.createTask("alice", ORION_TASK)).status).toBe("waiting_consent");
+    expect((await enclave.createTask("alice", MORPHO_TASK)).status).toBe("waiting_consent");
   });
 
   it("flags the compromised agent to Bob and the compliance log, and refuses when Bob refuses", async () => {
@@ -171,8 +171,8 @@ describe("mock enclave demo scenario", () => {
       now(),
     );
     await enclave.createPolicy("bob", await sign("bob", "ContextPolicy", policy));
-    const task = await enclave.createTask("alice", ORION_TASK);
-    expect(task.allowed.find((s) => s.allowedBy === "policy")?.label).toBe("Orion 2025 terms");
+    const task = await enclave.createTask("alice", MORPHO_TASK);
+    expect(task.allowed.find((s) => s.allowedBy === "policy")?.label).toBe("Morpho account notes");
     expect((await enclave.listPolicies("bob"))[0]?.uses).toBe(1);
   });
 
@@ -181,17 +181,17 @@ describe("mock enclave demo scenario", () => {
     async () => {
       // Desk shares are sealed to the compliance key: Chloe registers hers first, derived from her "Ledger".
       const { secretKey, publicKey } = complianceKeyFromSignature(
-        await ACCOUNTS.chloe.signMessage({ message: complianceKeyDeriveMessage("Acme") }),
+        await ACCOUNTS.chloe.signMessage({ message: complianceKeyDeriveMessage(COMPANY_NAME) }),
       );
       const publicKeyHex = Buffer.from(publicKey).toString("hex");
       await enclave.registerComplianceKey("chloe", {
         publicKey: publicKeyHex,
         signature: await ACCOUNTS.chloe.signMessage({
-          message: complianceKeyRegistrationMessage("Acme", publicKeyHex),
+          message: complianceKeyRegistrationMessage(COMPANY_NAME, publicKeyHex),
         }),
       });
 
-      const derivation = await ACCOUNTS.bob.signMessage({ message: deskIdentityDeriveMessage("Acme") });
+      const derivation = await ACCOUNTS.bob.signMessage({ message: deskIdentityDeriveMessage(COMPANY_NAME) });
       const identity = deriveDeskIdentity(derivation);
       await enclave.joinDesk(
         "bob",
@@ -201,7 +201,7 @@ describe("mock enclave demo scenario", () => {
       await enclave.createDeskRequest("alice", {
         fromDesk: "origination",
         toDesk: "research",
-        task: "Industrial sensor market trends and component prices",
+        task: "Onchain lending market trends and stablecoin rates",
       });
       const [request] = (await enclave.listDeskRequests("bob")).incoming;
       if (request === undefined) throw new Error("expected a desk request for Bob");

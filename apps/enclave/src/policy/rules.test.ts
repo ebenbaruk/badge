@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { evaluateExtraction, EXTRACTION_THRESHOLDS as T, type ExtractionInput } from "./rules";
 
-/** A normal Orion brief: one owner, one note of ~200 characters out of ~1,000. */
+/** A normal Morpho brief: one owner, one note of ~200 characters out of ~1,000. */
 const NORMAL: ExtractionInput = {
   excerptLength: 200,
   ownerContextLength: 1_000,

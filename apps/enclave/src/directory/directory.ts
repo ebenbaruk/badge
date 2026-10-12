@@ -1,6 +1,6 @@
 /**
  * The company directory: who works here, in which team, with which Ledger address, on which desks, and which
- * desk-to-desk exchange rules exist. It is configuration seeded by the administrator (infra/seed/acme.json), loaded
+ * desk-to-desk exchange rules exist. It is configuration seeded by the administrator (infra/seed/coinbase.json), loaded
  * once at boot and immutable while the enclave runs: identities and memberships are never taken from a request.
  */
 import { readFileSync } from "node:fs";
@@ -9,7 +9,7 @@ import { isDeviceAscii, toDeviceAscii } from "@badge/consent";
 import { getAddress, isAddress, isAddressEqual, type Address } from "viem";
 import { z } from "zod";
 import { EnclaveError } from "../errors";
-import { ACME_DATASET_PATH, loadSeedDataset } from "../memory/seed-dataset";
+import { SEED_DATASET_PATH, loadSeedDataset } from "../memory/seed-dataset";
 import { OwnerIdSchema } from "../memory/types";
 
 export const EMPLOYEE_ROLES = ["employee", "compliance"] as const;
@@ -240,7 +240,7 @@ export class Directory {
  * Loads the directory from the seed dataset. The file is first validated by the memory layer's loader (notes,
  * cross-references), then its directory part is parsed here: the memory schema strips the fields it does not use.
  */
-export function loadDirectory(path: string = ACME_DATASET_PATH): Directory {
+export function loadDirectory(path: string = SEED_DATASET_PATH): Directory {
   loadSeedDataset(path);
   return Directory.fromSeed(JSON.parse(readFileSync(path, "utf8")));
 }

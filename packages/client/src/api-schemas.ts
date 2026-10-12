@@ -232,6 +232,8 @@ export const deskSchema = z.object({
   members: count,
   commitments: z.array(decimal),
   root: decimal.nullable(),
+  /** The caller has registered their own identity in this desk (never says which commitment is theirs). */
+  joined: z.boolean(),
 });
 export type Desk = z.infer<typeof deskSchema>;
 

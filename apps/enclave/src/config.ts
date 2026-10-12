@@ -6,7 +6,7 @@ import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { z } from "zod";
 import { REPO_ROOT } from "./llm/env-file";
-import { ACME_DATASET_PATH } from "./memory/seed-dataset";
+import { SEED_DATASET_PATH } from "./memory/seed-dataset";
 
 export const DEFAULT_ENCLAVE_PORT = 8787;
 /** Loopback by default: the CVM's compose file sets 0.0.0.0 explicitly behind the dstack gateway. */
@@ -22,7 +22,7 @@ const EnvSchema = z.object({
   BADGE_DATA_DIR: z.string().min(1).default(DEFAULT_DATA_DIR),
   BADGE_ENCLAVE_PORT: z.coerce.number().int().min(1).max(65_535).default(DEFAULT_ENCLAVE_PORT),
   BADGE_ENCLAVE_HOST: z.string().min(1).default(DEFAULT_ENCLAVE_HOST),
-  BADGE_SEED_FILE: z.string().min(1).default(ACME_DATASET_PATH),
+  BADGE_SEED_FILE: z.string().min(1).default(SEED_DATASET_PATH),
   DSTACK_SIMULATOR_ENDPOINT: z.url().optional(),
   /** "false" lets local tools call /v1 over plain HTTP; forced to true inside a CVM. */
   BADGE_REQUIRE_CHANNEL: z.enum(["true", "false"]).default("true"),

@@ -17,7 +17,7 @@ import {
   type LlmClient,
 } from "../../src";
 
-const ORION_TASK = "brief for tomorrow's meeting with client Orion";
+const MORPHO_TASK = "brief for tomorrow's meeting with client Morpho";
 const dataset = loadSeedDataset();
 const noteById = (id: string) => {
   const note = dataset.notes.find((n) => n.id === id);
@@ -33,14 +33,14 @@ describe("memory layer on the local stack", () => {
   beforeAll(async () => {
     llm = createLlmClient(loadLlmProfile());
     memory = new HonchoMemory(new HonchoBackend(loadHonchoConfig()), llm);
-    candidates = await memory.findCandidates(ORION_TASK, { requesterId: "alice" });
+    candidates = await memory.findCandidates(MORPHO_TASK, { requesterId: "alice" });
   });
 
-  it("finds Bob's Orion conditions and not Chloe's HR note", () => {
+  it("finds Bob's Morpho account notes and not Chloe's HR note", () => {
     const ids = candidates.map((c) => c.source.id);
-    expect(ids).toContain("bob-orion-conditions-2025");
+    expect(ids).toContain("bob-morpho-conditions-2025");
     expect(ids).not.toContain("chloe-rh-prudhommes");
-    expect(candidates.find((c) => c.source.id === "bob-orion-conditions-2025")).toMatchObject({
+    expect(candidates.find((c) => c.source.id === "bob-morpho-conditions-2025")).toMatchObject({
       ownerId: "bob",
       scope: "personal",
       ownedByRequester: false,
@@ -48,10 +48,10 @@ describe("memory layer on the local stack", () => {
   });
 
   it("classifies Bob's note as relevant business data", async () => {
-    const result = await classifyExcerpt(llm, ORION_TASK, {
+    const result = await classifyExcerpt(llm, MORPHO_TASK, {
       ownerId: "bob",
       scope: "personal",
-      text: noteById("bob-orion-conditions-2025").text,
+      text: noteById("bob-morpho-conditions-2025").text,
     });
     expect(result.relevant).toBe(true);
     expect(result.relevance).toBeGreaterThanOrEqual(0.6);
@@ -59,7 +59,7 @@ describe("memory layer on the local stack", () => {
   });
 
   it("classifies Chloe's HR note as off-topic personal data", async () => {
-    const result = await classifyExcerpt(llm, ORION_TASK, {
+    const result = await classifyExcerpt(llm, MORPHO_TASK, {
       ownerId: "chloe",
       scope: "personal",
       text: noteById("chloe-rh-prudhommes").text,
@@ -70,15 +70,15 @@ describe("memory layer on the local stack", () => {
   });
 
   it("drafts a brief from the allowed excerpts only", async () => {
-    const allowed = ["company-client-orion", "bob-orion-conditions-2025"].map(noteById).map((note) => ({
+    const allowed = ["company-client-morpho", "bob-morpho-conditions-2025"].map(noteById).map((note) => ({
       ownerId: note.ownerId,
       scope: scopeOf(note.ownerId),
       text: note.text,
     }));
-    const brief = await draftBrief(llm, ORION_TASK, allowed);
-    expect(brief).toMatch(/12\s?%/);
-    expect(brief).toMatch(/60/);
+    const brief = await draftBrief(llm, MORPHO_TASK, allowed);
+    expect(brief).toMatch(/monthly/i);
+    expect(brief).toMatch(/agenda/i);
     // Facts from notes that were not released must not appear.
-    expect(brief).not.toMatch(/Lef[eè]vre|Julien|labor court|dismissal/i);
+    expect(brief).not.toMatch(/sandbox|Julien|part-time/i);
   });
 });

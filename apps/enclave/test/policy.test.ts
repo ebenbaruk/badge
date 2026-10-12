@@ -24,17 +24,17 @@ import {
   type Harness,
 } from "./harness";
 
-const ORION_TASK = { task: "brief orion", taskLabel: "Brief Orion" };
+const MORPHO_TASK = { task: "brief morpho", taskLabel: "Brief Morpho" };
 const DAY_MS = 24 * 3600 * 1000;
 
-async function orionTask(h: Harness) {
-  return (await call(h, "POST", "/v1/tasks", { as: "alice", body: ORION_TASK })).json;
+async function morphoTask(h: Harness) {
+  return (await call(h, "POST", "/v1/tasks", { as: "alice", body: MORPHO_TASK })).json;
 }
 
 function policy(h: Harness, overrides: Partial<ContextPolicy> = {}): ContextPolicy {
   return {
     granteeTeam: "Sales",
-    contextTag: "orion",
+    contextTag: "morpho",
     purpose: "Briefs clients",
     maxExcerptLength: 500,
     expiresAt: nowSec(h) + 30n * 24n * 3600n,
@@ -74,7 +74,7 @@ describe("enrollment and sessions", () => {
   it("refuses an enrollment signed by another key", async () => {
     const response = await call(h, "POST", "/v1/enroll", {
       body: await signedWire(ledgers.alice, "EmployeeEnroll", {
-        company: "Acme",
+        company: "Coinbase",
         employeeName: "Bob Durand",
         team: "Key Accounts",
         enclaveMeasurement: MEASUREMENT,
@@ -91,7 +91,7 @@ describe("enrollment and sessions", () => {
     const enrollAs = async (employeeName: string, issuedAt: bigint) =>
       call(h, "POST", "/v1/enroll", {
         body: await signedWire(ledgers.alice, "EmployeeEnroll", {
-          company: "Acme",
+          company: "Coinbase",
           employeeName,
           team: "Sales",
           enclaveMeasurement: MEASUREMENT,
@@ -106,7 +106,7 @@ describe("enrollment and sessions", () => {
 
   it("refuses a replayed enrollment (nonce already used)", async () => {
     const body = await signedWire(ledgers.alice, "EmployeeEnroll", {
-      company: "Acme",
+      company: "Coinbase",
       employeeName: "Alice Martin",
       team: "Sales",
       enclaveMeasurement: MEASUREMENT,
@@ -154,7 +154,7 @@ describe("one-off consents", () => {
   });
 
   it("refuses an approval once the request has expired", async () => {
-    await orionTask(h);
+    await morphoTask(h);
     const [share] = await pendingShares(h, "bob");
     if (!share) throw new Error("no share");
     const signature = await signTyped(ledgers.bob, "ContextShare", share.message);
@@ -170,7 +170,7 @@ describe("one-off consents", () => {
   });
 
   it("refuses a consent whose signed excerpt hash does not match the stored excerpt", async () => {
-    await orionTask(h);
+    await morphoTask(h);
     const [share] = await pendingShares(h, "bob");
     if (!share) throw new Error("no share");
     // A tampered request record: the owner would sign a hash that is not the excerpt about to be released.
@@ -188,7 +188,7 @@ describe("one-off consents", () => {
   });
 
   it("refuses a request decided by someone else than the owner", async () => {
-    await orionTask(h);
+    await morphoTask(h);
     const [share] = await pendingShares(h, "bob");
     if (!share) throw new Error("no share");
     const signature = await signTyped(ledgers.bob, "ContextShare", share.message);
@@ -200,14 +200,14 @@ describe("one-off consents", () => {
   });
 
   it("does not reuse a grant revoked by id, and refuses revoking someone else's grant", async () => {
-    await orionTask(h);
+    await morphoTask(h);
     const [share] = await pendingShares(h, "bob");
     if (!share) throw new Error("no share");
     const signature = await signTyped(ledgers.bob, "ContextShare", share.message);
     const { grantId } = (
       await call(h, "POST", `/v1/consents/${share.id}/approve`, { as: "bob", body: { signature } })
     ).json;
-    expect((await orionTask(h)).allowed.some((e: { via: string }) => e.via === "grant_reused")).toBe(true);
+    expect((await morphoTask(h)).allowed.some((e: { via: string }) => e.via === "grant_reused")).toBe(true);
 
     const foreignPrepare = await call(h, "POST", "/v1/revocations/prepare", {
       as: "alice",
@@ -236,13 +236,13 @@ describe("one-off consents", () => {
       body: await signedWire(ledgers.bob, "ContextRevoke", message),
     });
     expect(revoked.json.revokedGrants).toBe(1);
-    const next = await orionTask(h);
+    const next = await morphoTask(h);
     expect(next.allowed.some((e: { via: string }) => e.via === "grant_reused")).toBe(false);
     expect(next.status).toBe("waiting_consent");
   });
 
   it("never returns a brief drafted from an excerpt revoked while the LLM was drafting", async () => {
-    const task = await orionTask(h);
+    const task = await morphoTask(h);
     for (const share of await pendingShares(h, "bob")) {
       const signature = await signTyped(ledgers.bob, "ContextShare", share.message);
       await call(h, "POST", `/v1/consents/${share.id}/approve`, { as: "bob", body: { signature } });
@@ -255,12 +255,12 @@ describe("one-off consents", () => {
     expect(view.refused.some((e: { reason: string }) => e.reason === "revoked")).toBe(true);
     // The first draft (with Bob's notes) was dropped; the brief returned comes from a second one without them.
     expect(h.llm.briefInputs.length).toBe(drafts + 2);
-    expect(h.llm.briefInputs.at(-2)).toContain("12% discount");
-    expect(h.llm.briefInputs.at(-1)).not.toContain("12% discount");
+    expect(h.llm.briefInputs.at(-2)).toContain("monthly review meeting");
+    expect(h.llm.briefInputs.at(-1)).not.toContain("monthly review meeting");
   });
 
   it("binds the label the owner reads on the device to what is actually revoked", async () => {
-    await orionTask(h);
+    await morphoTask(h);
     const [share] = await pendingShares(h, "bob");
     if (!share) throw new Error("no share");
     const signature = await signTyped(ledgers.bob, "ContextShare", share.message);
@@ -290,7 +290,7 @@ describe("one-off consents", () => {
       expect(response.json.error.code).toBe("INVALID_REQUEST");
     }
     expect(await h.services.keys.currentVersion("bob")).toBe(1);
-    expect((await orionTask(h)).allowed.some((e: { via: string }) => e.via === "grant_reused")).toBe(true);
+    expect((await morphoTask(h)).allowed.some((e: { via: string }) => e.via === "grant_reused")).toBe(true);
   });
 
   it("refuses a revocation of everything without a directory recipient", async () => {
@@ -318,7 +318,7 @@ describe("standing policies", () => {
   });
 
   const policyBases = async () =>
-    (await orionTask(h)).allowed.filter((e: { via: string }) => e.via === "policy").length;
+    (await morphoTask(h)).allowed.filter((e: { via: string }) => e.via === "policy").length;
 
   it("refuses a policy pinned to another enclave, signed by another key, or posted by someone else", async () => {
     expect((await postPolicy(h, policy(h, { enclaveMeasurement: OTHER_MEASUREMENT }))).json.error.code).toBe(
@@ -349,8 +349,8 @@ describe("standing policies", () => {
     expect(await policyBases()).toBe(3);
     // The task-based classification said "no personal data" (as an injected task could make it say); the
     // requester-independent screen of the excerpt alone flags one note: it goes to Bob's Ledger instead.
-    h.llm.screenFlags = (prompt) => prompt.includes("12% discount");
-    const task = await orionTask(h);
+    h.llm.screenFlags = (prompt) => prompt.includes("monthly review meeting");
+    const task = await morphoTask(h);
     expect(task.allowed.filter((e: { via: string }) => e.via === "policy")).toHaveLength(2);
     expect(task.pending.filter((e: { ownerId: string }) => e.ownerId === "bob")).toHaveLength(1);
   });
@@ -365,7 +365,7 @@ describe("standing policies", () => {
     const second = (await postPolicy(h, policy(h))).json;
     expect(await policyBases()).toBe(3);
     const message = await preparedRevoke(h, "bob", { grantId: second.id });
-    expect(message).toMatchObject({ targetLabel: "Sales team agreement - orion", recipient: zeroAddress });
+    expect(message).toMatchObject({ targetLabel: "Sales team agreement - morpho", recipient: zeroAddress });
     const revoke = await call(h, "POST", "/v1/revocations", {
       as: "bob",
       body: await signedWire(ledgers.bob, "ContextRevoke", message),

@@ -9,6 +9,7 @@ import type {
   AuditEntry,
   AuditLog,
   ContextShareConsent,
+  Desk,
   DeskShareConsent,
   Grant,
   Policy,
@@ -20,6 +21,7 @@ import { encodeBadgeMessage } from "@badge/consent";
 import { keccak256, toHex, zeroHash, type Hex } from "viem";
 import { z } from "zod";
 import {
+  COMPANY_NAME,
   DESK_IDS,
   DESK_NAMES,
   EMPLOYEES,
@@ -30,6 +32,7 @@ import {
 } from "@/lib/directory";
 import { reasonForThirdParty } from "@/lib/format";
 import { uniqueFindings } from "@/lib/rule-findings";
+import type { DeskDirectoryEntry, ExchangeRule } from "../desk-directory";
 import { EnclaveError } from "../errors";
 import { groupRuleAlerts } from "./alerts";
 import type {
@@ -42,6 +45,7 @@ import type {
   ConsentRequestView,
   ContextOwner,
   DeskConsentView,
+  DeskView,
   GrantView,
   PolicyView,
   RuleFinding,
@@ -61,6 +65,35 @@ const DEFAULT_BRIEF_TITLE = "Brief";
 /** Unix seconds (enclave JSON) to ISO (views). */
 export const isoFromSeconds = (seconds: number | bigint): string =>
   new Date(Number(seconds) * MS_PER_SECOND).toISOString();
+
+/**
+ * One desk as `viewer` sees it. `joined` is the enclave's answer about the viewer (GET /v1/desks/:desk), never a
+ * guess from an identity this server happens to have cached: a join signed by the demo setup script, or before this
+ * server restarted, still counts, so an enrolled member is not offered "Join" again. `askedAnonymously` is true when
+ * an exchange rule lets another desk ask this desk's members for context: only then does the size of the group (the
+ * anonymity set) matter.
+ */
+export function deskView(
+  entry: DeskDirectoryEntry,
+  desk: Desk,
+  viewer: EmployeeId,
+  rules: readonly ExchangeRule[],
+): DeskView {
+  const memberOf = EMPLOYEES[viewer].desks;
+  const rule = rules.find((r) => r.sourceDesk === entry.id && memberOf.includes(r.recipientDesk));
+  return {
+    id: entry.id,
+    name: desk.name,
+    directoryMembers: entry.directoryMembers,
+    commitments: desk.commitments,
+    root: desk.root,
+    isMember: memberOf.includes(entry.id),
+    joined: desk.joined,
+    askedAnonymously: rules.some((r) => r.sourceDesk === entry.id),
+    allowedTopics: rule?.allowedTags ?? entry.allowedTopics,
+    requestable: rule !== undefined,
+  };
+}
 
 /** Narrows an id the enclave returned to one the web directory knows; anything else is a contract break. */
 export function employeeIdOf(id: string): EmployeeId {
@@ -87,7 +120,7 @@ function ownerOf(id: string): ContextOwner {
 }
 
 const firstNameOf = (owner: ContextOwner): string =>
-  owner === COMPANY_OWNER ? "Acme" : EMPLOYEES[owner].firstName;
+  owner === COMPANY_OWNER ? COMPANY_NAME : EMPLOYEES[owner].firstName;
 
 const ownerNameOf = (ownerId: string): string | null => {
   const owner = ownerOf(ownerId);

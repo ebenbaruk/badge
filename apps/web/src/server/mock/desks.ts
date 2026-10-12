@@ -61,8 +61,8 @@ export const EXCHANGE_RULES = [
     id: "R-01",
     sourceDesk: "research",
     recipientDesk: "origination",
-    allowedTopics: ["sensor-market", "component-prices"],
-    label: "Rule 4 - sensor market",
+    allowedTopics: ["lending-market", "stablecoin-rates"],
+    label: "Rule 4 - lending market",
   },
 ] as const satisfies ReadonlyArray<{
   id: string;
@@ -103,6 +103,7 @@ function deskView(state: MockState, desk: DeskId, viewer: EmployeeId): DeskView 
     root: commitments.length > 0 ? String(deskGroupRoot(commitments)) : null,
     isMember: EMPLOYEES[viewer].desks.includes(desk),
     joined: state.deskJoined.get(viewer)?.has(desk) ?? false,
+    askedAnonymously: EXCHANGE_RULES.some((rule) => rule.sourceDesk === desk),
     allowedTopics: state.seed.desks.find((d) => d.id === desk)?.allowedTopics ?? [],
     requestable: EXCHANGE_RULES.some(
       (rule) => rule.sourceDesk === desk && EMPLOYEES[viewer].desks.includes(rule.recipientDesk),
@@ -216,7 +217,8 @@ export function createDeskRequest(
   const id = randomBytes32();
   const message: DeskShare = {
     recipientDesk: toDeviceAscii(DESK_NAMES[input.fromDesk]),
-    excerptLabel: deviceLabel(note.label),
+    // As the enclave does: the device shows the excerpt's own first words, never a title.
+    excerptLabel: deviceLabel(note.text),
     excerptLength: excerptLength(note.text),
     ruleLabel: deviceLabel(rule.label),
     expiresAt: nowSeconds() + CONSENT_TTL_SECONDS,

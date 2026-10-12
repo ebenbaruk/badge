@@ -68,7 +68,7 @@ describe("compliance key", () => {
   const officer = privateKeyToAccount(`0x${"42".repeat(32)}`);
 
   it("is derived deterministically from the Ledger signature and opens boxes sealed to it", async () => {
-    const message = complianceKeyDeriveMessage("Acme");
+    const message = complianceKeyDeriveMessage("Coinbase");
     const signature = await officer.signMessage({ message });
     const again = await officer.signMessage({ message });
     const key = complianceKeyFromSignature(signature);
@@ -79,7 +79,7 @@ describe("compliance key", () => {
   });
 
   it("depends on the signature (another signer gets another key)", async () => {
-    const message = complianceKeyDeriveMessage("Acme");
+    const message = complianceKeyDeriveMessage("Coinbase");
     const other = privateKeyToAccount(`0x${"43".repeat(32)}`);
     const mine = complianceKeyFromSignature(await officer.signMessage({ message }));
     const theirs = complianceKeyFromSignature(await other.signMessage({ message }));
@@ -89,8 +89,8 @@ describe("compliance key", () => {
   it("validates inputs and keeps Ledger messages ASCII", () => {
     expect(() => complianceKeyFromSignature("0x1234")).toThrow(/65 bytes/);
     expect(() => complianceKeyDeriveMessage("Acmé")).toThrow(/ASCII/);
-    const registration = complianceKeyRegistrationMessage("Acme", `0x${"AB".repeat(32)}`);
+    const registration = complianceKeyRegistrationMessage("Coinbase", `0x${"AB".repeat(32)}`);
     expect(registration).toContain(`Key: ${"ab".repeat(32)}`);
-    expect(() => complianceKeyRegistrationMessage("Acme", "00")).toThrow(/32 bytes/);
+    expect(() => complianceKeyRegistrationMessage("Coinbase", "00")).toThrow(/32 bytes/);
   });
 });

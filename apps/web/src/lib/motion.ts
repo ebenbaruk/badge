@@ -1,6 +1,6 @@
 /** Pure helpers behind the motion components (kept out of React so they are unit-tested). */
 
-/** IntersectionObserver settings of the reference site: reveal slightly before the bottom edge. */
+/** IntersectionObserver settings of the reveal: a block appears once 8% of it is 24px above the viewport's bottom. */
 export const REVEAL_THRESHOLD = 0.08;
 export const REVEAL_ROOT_MARGIN = "0px 0px -24px 0px";
 

@@ -41,11 +41,15 @@ const SeedSchema = z.object({
   ),
 });
 
-/** The company name and the directory entries of `ids`, from infra/seed/acme.json (what the enclave loads). */
+/**
+ * The company name and the directory entries of `ids`, from infra/seed/coinbase.json (the dataset the enclave loads).
+ */
 export function loadPeople<Id extends DemoEmployee>(
   ids: readonly Id[],
 ): { company: string; people: Record<Id, Person> } {
-  const seed = SeedSchema.parse(JSON.parse(readFileSync(join(REPO_ROOT, "infra/seed/acme.json"), "utf8")));
+  const seed = SeedSchema.parse(
+    JSON.parse(readFileSync(join(REPO_ROOT, "infra/seed/coinbase.json"), "utf8")),
+  );
   const people = {} as Record<Id, Person>;
   for (const id of ids) {
     const employee = seed.employees.find((e) => e.id === id);

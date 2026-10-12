@@ -16,7 +16,7 @@ const QUESTIONS = [
   },
   {
     q: "Why a Ledger?",
-    a: "Because its screen is out of reach of the agent, the browser and the server. With clear signing (EIP-712), what the owner reads is exactly what they sign, and the enclave verifies that signature before releasing anything.",
+    a: "Because the agent, the browser and the server cannot change what its screen shows. With clear signing (EIP-712), what the owner reads is exactly what they sign, and the enclave verifies that signature before releasing anything.",
   },
   {
     q: "Will my teams spend all day approving?",
@@ -36,7 +36,7 @@ const QUESTIONS = [
   },
   {
     q: "Does it work with our agents?",
-    a: "Yes. Badge plugs into each employee's harness through a local MCP server. The agent can request a task and follow it, but never approve in the human's place.",
+    a: "Yes. Badge plugs into each employee's harness through a local MCP server with four tools: ask for the context of a task, follow the task, list the requests received, and check the enclave attestation. The agent can request a task and follow it, but never approve in the human's place.",
   },
 ] as const;
 
@@ -61,7 +61,7 @@ export function Faq() {
         </div>
         <div className="lp-faq">
           {QUESTIONS.map(({ q, a }) => (
-            <details key={q} className="border-b border-[#c5c9d2] first:border-t">
+            <details key={q} className="border-b border-[var(--lp-faq-line)] first:border-t">
               <summary className="flex cursor-pointer list-none items-center justify-between gap-6 py-6 text-[16px] [&::-webkit-details-marker]:hidden">
                 {q}
                 <span aria-hidden="true" className="lp-faq-mark font-mono text-[23px] leading-none" />

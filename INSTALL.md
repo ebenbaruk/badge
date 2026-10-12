@@ -7,7 +7,7 @@ Everything in Badge runs on your machine. You don't need a cloud account, a phys
 | Ledgers    | 5 **Speculos** devices (Ledger's official emulator, Flex model) running the real Ethereum app binary |
 | Signatures | Real EIP-712 clear signing and EIP-191 messages, verified by the enclave                             |
 | TEE        | **dstack simulator**: same API as a Phala CVM, with a fixed quote. The UI says "Simulated TEE"       |
-| Memory     | Honcho + Postgres/pgvector in Docker, holding the fictional company Acme (15 notes, 5 employees)     |
+| Memory     | Honcho + Postgres/pgvector in Docker, holding the demo company Coinbase (15 notes, 5 employees)      |
 | LLM        | Any OpenAI-compatible API, reached only through an egress gateway container that holds the key       |
 | ZK         | Real Semaphore v4 Groth16 proofs                                                                     |
 
@@ -40,7 +40,7 @@ scripts/bootstrap.sh
    signing.
 4. Starts the 5 Ledgers (Alice :5001, Bob :5002, Chloé :5003, David :5004, Emma :5005).
 5. Starts the dstack simulator (:8090) and the memory stack (:8000).
-6. Loads the Acme dataset and checks recall.
+6. Loads the Coinbase dataset and checks recall.
 
 The first run takes 10 to 20 minutes because it builds the Honcho image. After that it takes a few seconds and can be
 re-run at any time.
@@ -102,10 +102,11 @@ To stop everything: `pnpm demo:web stop && infra/speculos.sh stop && infra/dstac
 
 ## 4. Web demo walkthrough
 
-Acme is a fictional company:
+The demo company is Coinbase, and its client is Morpho. Illustrative scenario, not affiliated with Coinbase or
+Morpho: every note is invented for the demo.
 
-- **Alice Martin** (Sales) prepares a meeting with the client Orion.
-- **Bob Durand** (Key Accounts) owns the Orion notes in his personal context.
+- **Alice Martin** (Sales) prepares tomorrow's meeting with the client Morpho.
+- **Bob Durand** (Key Accounts) owns the Morpho notes in his personal context.
 - **Chloé Bernard** (Legal & Compliance) audits.
 - **David Moreau** and **Emma Leroy** sit with Bob on the Research desk.
 
@@ -119,7 +120,7 @@ Switch employee with the selector at the top left. The whole run takes about 5 m
 - To refuse, tap **Reject**, then **Yes, reject**.
 
 1. **The right context, found on its own (Alice → Agent).**
-   - Pick the suggestion "Prepare the brief for tomorrow's meeting with client Orion" and click **Send**.
+   - Pick the suggestion "Prepare tomorrow's meeting with Morpho" and click **Send**.
    - The company context and Alice's own notes pass immediately.
    - The callout reads "Badge found relevant context in Bob Durand's memory on its own; Alice never asked for it."
      Bob's 3 excerpts stay sealed in the enclave until he consents, and Alice sees none of their text.
@@ -144,9 +145,9 @@ Switch employee with the selector at the top left. The whole run takes about 5 m
    - The Ledger names the real scope: "Everything I shared with Alice Martin + Sales team agreements".
    - Bob's data key is rotated, and Alice's next request needs his consent again.
 6. **No approval fatigue (Bob → Standing agreements).**
-   - The form is prefilled: Sales team, tag `orion`, "client briefs", 800 characters, 30 days.
+   - The form is prefilled: Sales team, tag `morpho`, "client briefs", 800 characters, 30 days.
    - Click **Sign the agreement on my Ledger**.
-   - Back in **Alice → Agent**, run the Orion brief again. It goes through without asking Bob ("Standing agreement
+   - Back in **Alice → Agent**, run the Morpho brief again. It goes through without asking Bob ("Standing agreement
      from Bob"), and every use is logged.
 7. **Chinese wall, anonymous (desks + ZK).**
    - **Alice → Desks**: click **Ask the Research desk** with the suggested question.

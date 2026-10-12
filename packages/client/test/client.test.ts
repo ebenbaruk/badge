@@ -64,7 +64,7 @@ const task = {
   allowed: [
     {
       ownerId: "company",
-      ownerName: "Acme",
+      ownerName: "Coinbase",
       excerptLabel: "Catalogue 2026",
       excerptLength: 90,
       via: "company",
@@ -235,7 +235,14 @@ describe("responses", () => {
 
   it("encodes path segments and reports network failures", async () => {
     const { calls, fetchFn } = mockFetch({
-      body: { id: "research", name: "Research", members: 3, commitments: ["1", "2", "3"], root: "42" },
+      body: {
+        id: "research",
+        name: "Research",
+        members: 3,
+        commitments: ["1", "2", "3"],
+        root: "42",
+        joined: true,
+      },
     });
     await client(fetchFn).getDesk("research/../x");
     expect(calls[0]?.url).toBe(`${BASE_URL}/v1/desks/research%2F..%2Fx`);

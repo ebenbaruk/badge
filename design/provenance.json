@@ -1,0 +1,250 @@
+{
+  "assets": [
+    {
+      "path": "brand/mark.svg",
+      "kind": "logo",
+      "source": "The project's existing app icon (apps/web/src/app/icon.svg, added in commit a82bb3a on 2026-10-08), kept by the owner and normalised by brand.mjs (SVGO 4.1.0, inlineStyles off).",
+      "license": "Project-owned; no third-party artwork",
+      "ai": "assisted",
+      "tool": "AI coding agent (project history) and brand.mjs",
+      "notes": "Whether an AI agent drew the original icon is not recorded per file; assisted is the conservative entry."
+    },
+    {
+      "path": "brand/wordmark.svg",
+      "kind": "logo",
+      "source": "\"Badge\" outlined from design/fonts/Montserrat-Medium.ttf at 100 units with kerning by brand.mjs wordmark (opentype.js 2.0.0, flipY false); generation record in brand/wordmark.json.",
+      "license": "OFL-1.1 (outlines of an OFL face; the OFL allows logos)",
+      "licenseFile": "brand/OFL.txt",
+      "ai": "none",
+      "tool": "brand.mjs wordmark (opentype.js 2.0.0)"
+    },
+    {
+      "path": "brand/wordmark.json",
+      "kind": "data",
+      "source": "Generation record written by brand.mjs wordmark (text, font file and hash, size, bounding box).",
+      "license": "Project-owned",
+      "ai": "none",
+      "tool": "brand.mjs wordmark"
+    },
+    {
+      "path": "brand/OFL.txt",
+      "kind": "data",
+      "source": "Copy of design/fonts/OFL.txt, the Montserrat licence, kept beside the wordmark outlined from that face.",
+      "license": "OFL-1.1",
+      "ai": "none"
+    },
+    {
+      "path": "design/fonts/Montserrat-Medium.ttf",
+      "kind": "font",
+      "source": "google/fonts ofl/montserrat, static Medium instance (Version 9.000), used by brand.mjs to outline the wordmark.",
+      "license": "OFL-1.1",
+      "licenseFile": "design/fonts/OFL.txt",
+      "ai": "none",
+      "notes": "No Reserved Font Name in its OFL.txt."
+    },
+    {
+      "path": "design/fonts/OFL.txt",
+      "kind": "data",
+      "source": "Montserrat licence from google/fonts ofl/montserrat (Copyright 2024 The Montserrat.Git Project Authors).",
+      "license": "OFL-1.1",
+      "ai": "none"
+    },
+    {
+      "path": "design/fonts/OFL-JetBrainsMono.txt",
+      "kind": "data",
+      "source": "JetBrains Mono licence from google/fonts ofl/jetbrainsmono (Copyright 2020 The JetBrains Mono Project Authors).",
+      "license": "OFL-1.1",
+      "ai": "none"
+    },
+    {
+      "path": "apps/web/public/icon-192.png",
+      "kind": "icon",
+      "source": "Rendered from brand/mark.svg at 192 px by brand.mjs icons with the skill's Chromium.",
+      "license": "Project-owned; no third-party artwork",
+      "ai": "assisted",
+      "tool": "brand.mjs icons",
+      "notes": "Derived from brand/mark.svg, whose entry explains the assisted status."
+    },
+    {
+      "path": "apps/web/public/icon-512.png",
+      "kind": "icon",
+      "source": "Rendered from brand/mark.svg at 512 px by brand.mjs icons with the skill's Chromium.",
+      "license": "Project-owned; no third-party artwork",
+      "ai": "assisted",
+      "tool": "brand.mjs icons",
+      "notes": "Derived from brand/mark.svg, whose entry explains the assisted status."
+    },
+    {
+      "path": "apps/web/public/icon-mask.png",
+      "kind": "icon",
+      "source": "Maskable 512 px icon rendered from brand/mark.svg by brand.mjs icons: mark at 337 px on the brand ground #143c91, ink radius 203.8 px inside the 204.8 px safe zone.",
+      "license": "Project-owned; no third-party artwork",
+      "ai": "assisted",
+      "tool": "brand.mjs icons",
+      "notes": "Derived from brand/mark.svg, whose entry explains the assisted status."
+    },
+    {
+      "path": "apps/web/public/opengraph-image.4e110d9c.png",
+      "kind": "image",
+      "source": "1200x630 OG card rendered by brand.mjs og with the skill's Chromium from brand/mark.svg, the self-hosted Montserrat (apps/web/public/fonts/montserrat-latin.woff2) and the brief's first sentence copied verbatim, the same sentence that opens DESCRIPTION in apps/web/src/app/layout.tsx; its URL, size and alt text are declared there as OG_IMAGE.",
+      "license": "Project-owned; no third-party artwork",
+      "ai": "assisted",
+      "tool": "brand.mjs og",
+      "notes": "The mark on the card is brand/mark.svg, whose entry explains the assisted status; the line is the owner-validated sentence."
+    },
+    {
+      "path": "apps/web/src/app/icon.svg",
+      "kind": "icon",
+      "source": "Generated from brand/mark.svg by brand.mjs icons: optimised with SVGO 4.1.0 (multipass, preset-default with inlineStyles off) and given a prefers-color-scheme dark rule that turns the #143c91 ground to #2455d6 so the tab icon stays visible on a dark tab strip. It differs from brand/mark.svg on purpose.",
+      "notes": "Derived from brand/mark.svg, whose entry explains the assisted status. Served by Next.js as the SVG favicon (image/svg+xml).",
+      "license": "Project-owned; no third-party artwork",
+      "ai": "assisted",
+      "tool": "brand.mjs icons"
+    },
+    {
+      "path": "apps/web/src/app/favicon.ico",
+      "kind": "icon",
+      "source": "Rendered from brand/mark.svg by brand.mjs icons with the skill's Chromium: one 32x32 entry, 32-bit BMP, for browsers that ask for /favicon.ico.",
+      "notes": "Derived from brand/mark.svg, whose entry explains the assisted status.",
+      "license": "Project-owned; no third-party artwork",
+      "ai": "assisted",
+      "tool": "brand.mjs icons"
+    },
+    {
+      "path": "apps/web/src/app/apple-icon.png",
+      "kind": "icon",
+      "source": "Apple touch icon rendered from brand/mark.svg by brand.mjs icons with the skill's Chromium: 180x180, mark at 140 px on the solid brand ground #143c91 (iOS fills transparency with black).",
+      "notes": "Derived from brand/mark.svg, whose entry explains the assisted status.",
+      "license": "Project-owned; no third-party artwork",
+      "ai": "assisted",
+      "tool": "brand.mjs icons"
+    },
+    {
+      "path": "apps/web/src/app/manifest.webmanifest",
+      "kind": "data",
+      "source": "Web app manifest written by brand.mjs icons: the name Badge and the three icons apps/web/public/icon-192.png, icon-512.png and the maskable icon-mask.png.",
+      "license": "Project-owned",
+      "ai": "none",
+      "tool": "brand.mjs icons"
+    },
+    {
+      "path": "apps/web/public/landing/act-attest.webp",
+      "kind": "image",
+      "source": "Illustration generated with an image model for Badge during the hackathon, from the team's own art direction; not a third-party asset.",
+      "license": "same as the repository",
+      "ai": "generated"
+    },
+    {
+      "path": "apps/web/public/landing/act-ledger.webp",
+      "kind": "image",
+      "source": "Illustration generated with an image model for Badge during the hackathon, from the team's own art direction; not a third-party asset.",
+      "license": "same as the repository",
+      "ai": "generated"
+    },
+    {
+      "path": "apps/web/public/landing/act-memory.webp",
+      "kind": "image",
+      "source": "Illustration generated with an image model for Badge during the hackathon, from the team's own art direction; not a third-party asset.",
+      "license": "same as the repository",
+      "ai": "generated"
+    },
+    {
+      "path": "apps/web/public/landing/act-refusal.webp",
+      "kind": "image",
+      "source": "Illustration generated with an image model for Badge during the hackathon, from the team's own art direction; not a third-party asset.",
+      "license": "same as the repository",
+      "ai": "generated"
+    },
+    {
+      "path": "apps/web/public/landing/attestation-report.webp",
+      "kind": "image",
+      "source": "Illustration generated with an image model for Badge during the hackathon, from the team's own art direction; not a third-party asset.",
+      "license": "same as the repository",
+      "ai": "generated"
+    },
+    {
+      "path": "apps/web/public/landing/consent-receipt.webp",
+      "kind": "image",
+      "source": "Illustration generated with an image model for Badge during the hackathon, from the team's own art direction; not a third-party asset.",
+      "license": "same as the repository",
+      "ai": "generated"
+    },
+    {
+      "path": "apps/web/public/landing/memory-hero.webp",
+      "kind": "image",
+      "source": "Illustration generated with an image model for Badge during the hackathon, from the team's own art direction; not a third-party asset.",
+      "license": "same as the repository",
+      "ai": "generated"
+    },
+    {
+      "path": "apps/web/public/landing/persona-alice.webp",
+      "kind": "image",
+      "source": "Illustration generated with an image model for Badge during the hackathon, from the team's own art direction; not a third-party asset.",
+      "license": "same as the repository",
+      "ai": "generated"
+    },
+    {
+      "path": "apps/web/public/landing/persona-chloe.webp",
+      "kind": "image",
+      "source": "Illustration generated with an image model for Badge during the hackathon, from the team's own art direction; not a third-party asset.",
+      "license": "same as the repository",
+      "ai": "generated"
+    },
+    {
+      "path": "apps/web/public/landing/tile-consent.webp",
+      "kind": "image",
+      "source": "Illustration generated with an image model for Badge during the hackathon, from the team's own art direction; not a third-party asset.",
+      "license": "same as the repository",
+      "ai": "generated"
+    },
+    {
+      "path": "apps/web/public/landing/tile-enclave.webp",
+      "kind": "image",
+      "source": "Illustration generated with an image model for Badge during the hackathon, from the team's own art direction; not a third-party asset.",
+      "license": "same as the repository",
+      "ai": "generated"
+    },
+    {
+      "path": "apps/web/public/landing/tile-global.webp",
+      "kind": "image",
+      "source": "Illustration generated with an image model for Badge during the hackathon, from the team's own art direction; not a third-party asset.",
+      "license": "same as the repository",
+      "ai": "generated"
+    },
+    {
+      "path": "apps/web/public/landing/tile-personal.webp",
+      "kind": "image",
+      "source": "Illustration generated with an image model for Badge during the hackathon, from the team's own art direction; not a third-party asset.",
+      "license": "same as the repository",
+      "ai": "generated"
+    },
+    {
+      "path": "design/art/context-memory-light.svg",
+      "kind": "image",
+      "source": "Drawn for Badge on 12 Oct 2026: hand-written SVG (light-theme variant, transparent): isometric memory cube with company and personal context sources. Composition inspired by an owner-supplied reference image that is not reused (no pixels, no tracing).",
+      "license": "same as the repository",
+      "ai": "assisted"
+    },
+    {
+      "path": "apps/web/public/landing/context-memory-light.png",
+      "kind": "image",
+      "source": "Rendered with Chromium (playwright-core) from design/art/context-memory-light.svg at 1000x1000, transparent.",
+      "license": "same as the repository",
+      "ai": "assisted"
+    },
+    {
+      "path": "design/art/context-memory-dark.svg",
+      "kind": "image",
+      "source": "Drawn for Badge on 12 Oct 2026: hand-written SVG (dark-theme variant, transparent): isometric memory cube with company and personal context sources. Composition inspired by an owner-supplied reference image that is not reused (no pixels, no tracing).",
+      "license": "same as the repository",
+      "ai": "assisted"
+    },
+    {
+      "path": "apps/web/public/landing/context-memory-dark.png",
+      "kind": "image",
+      "source": "Rendered with Chromium (playwright-core) from design/art/context-memory-dark.svg at 1000x1000, transparent.",
+      "license": "same as the repository",
+      "ai": "assisted"
+    }
+  ]
+}

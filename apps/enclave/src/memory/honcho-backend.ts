@@ -9,7 +9,7 @@ import type { MemoryHit } from "./ranking";
 import { OwnerIdSchema, type MemoryNote, type OwnerId } from "./types";
 
 export const DEFAULT_HONCHO_URL = "http://127.0.0.1:8000";
-export const DEFAULT_HONCHO_WORKSPACE = "acme";
+export const DEFAULT_HONCHO_WORKSPACE = "coinbase";
 /** Written by infra/stack.sh up (gitignored). */
 export const DEFAULT_HONCHO_JWT_FILE = resolve(REPO_ROOT, "infra/.data/honcho-admin.jwt");
 
@@ -39,7 +39,7 @@ const JwtSchema = z.string().regex(/^[\w-]+\.[\w-]+\.[\w-]+$/, "not a JWT");
 
 /**
  * Loads the Honcho connection from BADGE_HONCHO_URL, BADGE_HONCHO_JWT_FILE and BADGE_HONCHO_WORKSPACE (defaults:
- * local stack, `infra/.data/honcho-admin.jwt`, workspace "acme").
+ * local stack, `infra/.data/honcho-admin.jwt`, workspace "coinbase").
  * @throws {MemoryConfigError} when the admin JWT file is missing or malformed.
  */
 export function loadHonchoConfig(env: NodeJS.ProcessEnv = process.env): HonchoConfig {

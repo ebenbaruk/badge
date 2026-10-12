@@ -190,7 +190,7 @@ services:
     networks: [sealed]
     restart: unless-stopped
 
-  # Ingests the demo dataset (infra/seed/acme.json) and checks recall. Idempotent: on later boots it only re-runs
+  # Ingests the demo dataset (infra/seed/coinbase.json) and checks recall. Idempotent: on later boots it only re-runs
   # the checks (a few LLM calls). It cannot read the deriver logs from inside the CVM (BADGE_SEED_DERIVER_LOGS).
   seed:
     image: ghcr.io/ebenbaruk/badge-enclave@sha256:7803e6ebd9fb278ff7118bae4b9dd08afd6816efc0f55afe17863e3489525725

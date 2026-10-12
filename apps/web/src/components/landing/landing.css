@@ -5,8 +5,10 @@
  * `prefers-reduced-motion: no-preference`, so reduced motion gets the still, final layout.
  */
 
-/* The landing is a light editorial page with dark panels, whatever the app theme: re-pin the light
-   semantic tokens used by shared components (buttons, marquee, pulse dot). */
+/* The landing is a light editorial page with dark panels; under the app's `.dark` class it turns into
+   a night page with the same panels. Every landing colour is a `--lp-*` property set here and
+   redefined in the `.dark .lp` block below, so light mode keeps its exact values. The shared semantic
+   tokens (buttons, marquee, pulse dot, Badge mark) are re-pinned the same way. */
 .lp {
   --background: #f5f7fc;
   --foreground: #111827;
@@ -18,10 +20,250 @@
   --ring: #2455d6;
   --brand: #143c91;
   --brand-foreground: #f5f7fc;
+
+  /* Page, nav and menu dialog. */
+  --lp-ground: #f5f7fc;
+  --lp-text: #111827;
+  --lp-dialog-bg: #eff1f5;
+  --lp-dialog-muted: #595b61;
+  --lp-dialog-line: #cdd0d6;
+  --lp-control-line: #c6c8cc;
+  --lp-control-hover: #dcdfe6;
+  --lp-nav-action-bg: var(--color-graphite);
+  --lp-nav-action-text: var(--color-paper);
+  --lp-nav-action-hover: var(--color-brand-deep);
+  --lp-nav-action-hover-text: var(--color-paper);
+  --lp-faq-line: #c5c9d2;
+
+  /* Hero card and its copy. */
+  --lp-hero-card: #d6ccf4;
+  --lp-hero-card-line: #c9bcea;
+  --lp-hero-muted: #526078;
+  --lp-hero-dot: #7861b6;
+  --lp-hero-title: #1d2331;
+  --lp-hero-accent: #68449b;
+  --lp-hero-cta: #262238;
+  --lp-hero-cta-text: #ffffff;
+  --lp-hero-cta-hover: #564275;
+  --lp-hero-secondary: #353b49;
+  --lp-hero-assurance: #5e4c77;
+  --lp-hero-foundation-line: #dce0e9;
+  --lp-hero-foundation-text: #637087;
+  --lp-hero-foundation-strong: #353b49;
+
+  /* Consent preview: the illustrated request inside the purple hero panel. */
+  --cp-ink: #29263a;
+  --cp-request-bg: #f9f8fc;
+  --cp-request-line: #ddd8e6;
+  --cp-icon-bg: #e9e3f5;
+  --cp-icon: #665082;
+  --cp-small: #746981;
+  --cp-card-bg: #ffffff;
+  --cp-card-line: #d4ccdf;
+  --cp-card-divider: #eeebf3;
+  --cp-owner-bg: #ddcee9;
+  --cp-card-sub: #706a7e;
+  --cp-card-icon: #897c9c;
+  --cp-pill: #76678a;
+  --cp-pill-bg: #f1edf6;
+  --cp-quote-bg: #f7f5fa;
+  --cp-quote: #575063;
+  --cp-scope: #7d7288;
+  --cp-scope-strong: #554762;
+  --cp-sign-line: #ece7f1;
+  --cp-sign-bg: #f5f2fa;
+  --cp-sign-symbol-line: #d4c6e5;
+  --cp-sign-symbol: #71568f;
+  --cp-sign-sub: #6c607d;
+  --cp-result-line: #927da9;
+  --cp-result-bg: #ede6f5;
+  --cp-result: #756883;
+  --cp-signing-bg: #e7ddf5;
+  --cp-done-bg: #f8f6fc;
+  --cp-done: #514065;
+
+  /* Consent story steps. */
+  --lp-step-bg: #f4f6fa;
+  --lp-step-line: #d6d9e1;
+  --lp-step-now-bg: #ffffff;
+  --lp-step-now-line: #768096;
+  --lp-step-now-shadow: #1b22310f;
+  --lp-step-locked-bg: #e8eaf0;
+  --lp-step-mark: #52627a;
+  --lp-step-accent: #2455d6;
+  --lp-step-done-text: #ffffff;
+
+  /* Sans face for the small labels (chips, eyebrows, stamps): only device screens and hashes stay
+     monospace. */
+  --lp-label-font: var(--font-montserrat), "Helvetica Neue", Arial, sans-serif;
+
   color-scheme: light;
-  background: #f5f7fc;
-  color: #111827;
+  background: var(--lp-ground);
+  color: var(--lp-text);
   overflow-x: clip;
+}
+
+/* Dark landing: night ground (a step above the #060010 footer), the app's dark semantic tokens, and
+   the raw palette utilities (`text-ink`, `bg-paper`, `border-line`...) swapped for their night
+   counterparts. The royal-blue and night panels keep their light-on-dark content (re-pinned below),
+   the pastel moment cards and the Ledger device keep their own colours. */
+.dark .lp {
+  --background: #0b0e1a;
+  --foreground: #eceff5;
+  --primary: #5c99ff;
+  --primary-foreground: #081a36;
+  --muted: #171b25;
+  --muted-foreground: #b8bdc8;
+  --border: #ffffff26;
+  --ring: #a7c8ff;
+  --brand: #5c99ff;
+  --brand-foreground: #081a36;
+
+  --color-paper: #0b0e1a;
+  --color-ink: #eceff5;
+  --color-ink-soft: #dfe3ec;
+  --color-ink-muted: #a9b4c7;
+  --color-ink-muted-2: #b8bdc8;
+  --color-ink-muted-3: #a3a9b5;
+  --color-line: #2a3146;
+
+  --lp-ground: #0b0e1a;
+  --lp-text: #eceff5;
+  --lp-dialog-bg: #141927;
+  --lp-dialog-muted: #b8bdc8;
+  --lp-dialog-line: #2a3146;
+  --lp-control-line: #3a4258;
+  --lp-control-hover: #222a3c;
+  --lp-nav-action-bg: #eceff5;
+  --lp-nav-action-text: #0b0e1a;
+  --lp-nav-action-hover: #5c99ff;
+  --lp-nav-action-hover-text: #081a36;
+  --lp-faq-line: #2a3146;
+
+  --lp-hero-card: #1a1530;
+  --lp-hero-card-line: #2e2650;
+  --lp-hero-muted: #b9bfd0;
+  --lp-hero-dot: #a993e6;
+  --lp-hero-title: #f1eefa;
+  --lp-hero-accent: #c4a8f2;
+  --lp-hero-cta: #efe9fb;
+  --lp-hero-cta-text: #1d1830;
+  --lp-hero-cta-hover: #d6c6f4;
+  --lp-hero-secondary: #dcd8e6;
+  --lp-hero-assurance: #c7b6e3;
+  --lp-hero-foundation-line: #252b3d;
+  --lp-hero-foundation-text: #a3abbd;
+  --lp-hero-foundation-strong: #d5d9e3;
+
+  --cp-ink: #f0eaf8;
+  --cp-request-bg: #2b2140;
+  --cp-request-line: #4a3b60;
+  --cp-icon-bg: #3d2f55;
+  --cp-icon: #d6c4f0;
+  --cp-small: #bcaecf;
+  --cp-card-bg: #261c37;
+  --cp-card-line: #4d3d66;
+  --cp-card-divider: #3a2e4f;
+  --cp-owner-bg: #4a3966;
+  --cp-card-sub: #b9adc9;
+  --cp-card-icon: #a597ba;
+  --cp-pill: #d3c6e6;
+  --cp-pill-bg: #3a2e4f;
+  --cp-quote-bg: #31264a;
+  --cp-quote: #ddd4ea;
+  --cp-scope: #b8acc9;
+  --cp-scope-strong: #ece4f6;
+  --cp-sign-line: #3a2e4f;
+  --cp-sign-bg: #2e2445;
+  --cp-sign-symbol-line: #6a5788;
+  --cp-sign-symbol: #d3c0ee;
+  --cp-sign-sub: #bcaecf;
+  --cp-result-line: #8a75a6;
+  --cp-result-bg: #2e2445;
+  --cp-result: #cbbfdc;
+  --cp-signing-bg: #3b2d59;
+  --cp-done-bg: #33284c;
+  --cp-done: #f1e9fb;
+
+  --lp-step-bg: #121626;
+  --lp-step-line: #252c40;
+  --lp-step-now-bg: #19203a;
+  --lp-step-now-line: #5b6788;
+  --lp-step-now-shadow: #00000059;
+  --lp-step-locked-bg: #0f1220;
+  --lp-step-mark: #9ba7bc;
+  --lp-step-accent: #8fb8ff;
+  --lp-step-done-text: #081a36;
+
+  color-scheme: dark;
+}
+
+/* Royal-blue and night panels hold light text and light persona cards in both themes. */
+.dark .lp :is(.bg-brand-deep, .bg-night, .bg-night-2) {
+  --color-paper: #f5f7fc;
+  --color-ink: #111827;
+  --color-ink-muted-3: #62656c;
+  --brand: #143c91;
+  --brand-foreground: #f5f7fc;
+}
+
+/* On the night ground, the night footer and the ZK card need an edge to stay separate surfaces. */
+.dark .lp .lp-footer {
+  border-top: 1px solid #ffffff17;
+}
+.dark .lp .bg-night-2 {
+  box-shadow: inset 0 0 0 1px #ffffff14;
+}
+
+/* The floating glass nav: a light hairline on paper, a faint one at night. */
+.dark .lp nav.glass {
+  border-color: #ffffff1f;
+  box-shadow: 0 6px 28px #00000066;
+}
+.dark .lp .lp-nav-dialog {
+  border: 1px solid #ffffff1a;
+}
+.dark .lp .lp-nav-dialog::backdrop {
+  background: #00000073;
+}
+
+/* The Ledger stays a light-screened physical device; at night its dark body gets a rim light so its
+   silhouette does not sink into the ground. */
+.dark .lp .lp-flex {
+  box-shadow:
+    inset 0 1px 0 #ffffff33,
+    inset 0 -2px 6px #00000066,
+    0 0 0 1px #ffffff1c,
+    25px 35px 50px #00000080;
+}
+
+/* ---------- Small labels: sans, sentence case, as written in the source ---------- */
+
+/* `mono-chip` and `mono-label` are machine text in the app; on the landing they are editorial labels
+   (step chips, card counters, stamps, eyebrows). Unlayered, so this wins over the utility layer. */
+.lp :is(.mono-chip, .mono-label) {
+  font-family: var(--lp-label-font);
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+/* Theme switch in the nav pill: same footprint as the menu button beside the mark. */
+.lp-theme-toggle {
+  transition: background-color 0.3s var(--ease-out-soft);
+}
+.lp-theme-toggle:hover {
+  background: var(--lp-control-hover);
+}
+.lp-nav-action {
+  background: var(--lp-nav-action-bg);
+  color: var(--lp-nav-action-text);
+}
+.lp-nav-action:hover {
+  background: var(--lp-nav-action-hover);
+  color: var(--lp-nav-action-hover-text);
 }
 
 /* Lenis animates the scroll itself: the native smooth behaviour would fight it frame by frame. */
@@ -65,8 +307,8 @@ html.lenis.lenis-smooth {
   gap: clamp(30px, 4vw, 70px);
   padding: clamp(28px, 4vw, 64px);
   border-radius: 32px;
-  background: #d6ccf4;
-  border: 1px solid #c9bcea;
+  background: var(--lp-hero-card);
+  border: 1px solid var(--lp-hero-card-line);
 }
 .lp-hero-copy {
   padding-block: 18px;
@@ -76,31 +318,31 @@ html.lenis.lenis-smooth {
   gap: 9px;
   align-items: center;
   font-size: 11px;
-  color: #526078;
+  color: var(--lp-hero-muted);
   margin-bottom: 27px;
 }
 .lp-hero-eyebrow > span {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #7861b6;
+  background: var(--lp-hero-dot);
 }
 .lp-hero-copy h1 {
   font-size: clamp(52px, 5.6vw, 88px);
   line-height: 0.99;
   letter-spacing: -0.075em;
   font-weight: 500;
-  color: #1d2331;
+  color: var(--lp-hero-title);
 }
 .lp-hero-copy h1 > span {
-  color: #68449b;
+  color: var(--lp-hero-accent);
 }
 .lp-hero-description {
   max-width: 380px;
   margin-top: 28px;
   font-size: 15px;
   line-height: 1.75;
-  color: #526078;
+  color: var(--lp-hero-muted);
 }
 .lp-hero-actions {
   display: flex;
@@ -121,18 +363,18 @@ html.lenis.lenis-smooth {
 .lp-primary-action {
   padding: 0 23px;
   border-radius: 100px;
-  background: #262238;
-  color: white;
+  background: var(--lp-hero-cta);
+  color: var(--lp-hero-cta-text);
   transition:
     background 0.25s,
     translate 0.25s;
 }
 .lp-primary-action:hover {
-  background: #564275;
+  background: var(--lp-hero-cta-hover);
   translate: 0 -2px;
 }
 .lp-secondary-action {
-  color: #353b49;
+  color: var(--lp-hero-secondary);
 }
 .lp-secondary-action:hover {
   text-decoration: underline;
@@ -142,7 +384,7 @@ html.lenis.lenis-smooth {
   align-items: center;
   gap: 8px;
   font-size: 10px;
-  color: #5e4c77;
+  color: var(--lp-hero-assurance);
   margin-top: 20px;
 }
 .lp-hero-foundation {
@@ -151,16 +393,16 @@ html.lenis.lenis-smooth {
   flex-wrap: wrap;
   gap: 20px;
   padding: 28px 0;
-  border-top: 1px solid #dce0e9;
+  border-top: 1px solid var(--lp-hero-foundation-line);
   margin: 28px 24px 0;
-  color: #637087;
+  color: var(--lp-hero-foundation-text);
   font-size: 11px;
 }
 .lp-hero-foundation > div {
   display: flex;
   flex-wrap: wrap;
   gap: 28px;
-  color: #353b49;
+  color: var(--lp-hero-foundation-strong);
 }
 .consent-preview {
   position: relative;
@@ -171,7 +413,7 @@ html.lenis.lenis-smooth {
   border: 1px solid #634a7e;
   border-radius: 25px;
   padding: 24px;
-  color: #29263a;
+  color: var(--cp-ink);
   box-shadow:
     0 22px 40px -20px #36204866,
     inset 0 1px 0 #ffffff18;
@@ -182,29 +424,36 @@ html.lenis.lenis-smooth {
   justify-content: space-between;
   align-items: center;
   gap: 10px;
-  font-family: var(--font-mono);
-  font-size: 8px;
-  letter-spacing: 0.04em;
+  font-family: var(--lp-label-font);
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.3;
   color: #d3c0e6;
 }
 .consent-example {
-  padding: 5px 8px;
-  border-radius: 5px;
+  padding: 5px 9px;
+  border-radius: 6px;
   background: #59426f;
   color: #f3eafa;
-  letter-spacing: 0;
 }
 .consent-scene {
   padding: 18px 6px 22px;
+}
+.consent-disclaimer {
+  margin-top: 14px;
+  font-family: var(--lp-label-font);
+  font-size: 11px;
+  color: #b9a6cf;
+  text-align: center;
 }
 .consent-request {
   display: flex;
   align-items: center;
   gap: 12px;
-  border: 1px solid #ddd8e6;
+  border: 1px solid var(--cp-request-line);
   border-radius: 13px;
   padding: 15px;
-  background: #f9f8fc;
+  background: var(--cp-request-bg);
   margin-inline: 15px;
 }
 .consent-agent-icon {
@@ -213,13 +462,13 @@ html.lenis.lenis-smooth {
   width: 39px;
   height: 39px;
   flex-shrink: 0;
-  background: #e9e3f5;
-  color: #665082;
+  background: var(--cp-icon-bg);
+  color: var(--cp-icon);
   border-radius: 11px;
 }
 .consent-small-label {
   font-size: 9px;
-  color: #746981;
+  color: var(--cp-small);
 }
 .consent-request p {
   font-size: 11px;
@@ -247,8 +496,8 @@ html.lenis.lenis-smooth {
   background: currentColor;
 }
 .consent-card {
-  border: 1px solid #d4ccdf;
-  background: #fff;
+  border: 1px solid var(--cp-card-line);
+  background: var(--cp-card-bg);
   border-radius: 18px;
   box-shadow: 0 15px 35px -20px #58467260;
   overflow: hidden;
@@ -261,7 +510,7 @@ html.lenis.lenis-smooth {
   align-items: center;
   gap: 10px;
   padding: 17px 19px;
-  border-bottom: 1px solid #eeebf3;
+  border-bottom: 1px solid var(--cp-card-divider);
 }
 .consent-owner {
   display: grid;
@@ -269,7 +518,7 @@ html.lenis.lenis-smooth {
   border-radius: 50%;
   width: 33px;
   height: 33px;
-  background: #ddcee9;
+  background: var(--cp-owner-bg);
   font-size: 12px;
 }
 .consent-card-top strong {
@@ -280,12 +529,12 @@ html.lenis.lenis-smooth {
 .consent-card-top div > span {
   display: block;
   font-size: 9px;
-  color: #706a7e;
+  color: var(--cp-card-sub);
   margin-top: 2px;
 }
 .consent-card-top > svg {
   margin-left: auto;
-  color: #897c9c;
+  color: var(--cp-card-icon);
 }
 .consent-card-content {
   padding: 20px;
@@ -303,19 +552,19 @@ html.lenis.lenis-smooth {
 .consent-card-heading > span {
   white-space: nowrap;
   font-size: 8px;
-  color: #76678a;
-  background: #f1edf6;
+  color: var(--cp-pill);
+  background: var(--cp-pill-bg);
   padding: 4px 7px;
   border-radius: 5px;
 }
 .consent-card blockquote {
   border-left: 2px solid #b5a0d0;
-  background: #f7f5fa;
+  background: var(--cp-quote-bg);
   padding: 13px 14px;
   font-size: 12px;
   line-height: 1.7;
   margin-top: 16px;
-  color: #575063;
+  color: var(--cp-quote);
   border-radius: 0 7px 7px 0;
 }
 .consent-scope {
@@ -324,11 +573,11 @@ html.lenis.lenis-smooth {
   flex-wrap: wrap;
   gap: 10px;
   margin-top: 16px;
-  color: #7d7288;
+  color: var(--cp-scope);
   font-size: 9px;
 }
 .consent-scope strong {
-  color: #554762;
+  color: var(--cp-scope-strong);
   font-weight: 500;
 }
 .consent-signature {
@@ -337,8 +586,8 @@ html.lenis.lenis-smooth {
   align-items: center;
   gap: 12px;
   padding: 16px 19px;
-  border-top: 1px solid #ece7f1;
-  background: #f5f2fa;
+  border-top: 1px solid var(--cp-sign-line);
+  background: var(--cp-sign-bg);
   transition: background 0.4s;
 }
 .consent-signature-symbol {
@@ -347,9 +596,9 @@ html.lenis.lenis-smooth {
   width: 35px;
   height: 35px;
   flex-shrink: 0;
-  border: 1px solid #d4c6e5;
+  border: 1px solid var(--cp-sign-symbol-line);
   border-radius: 50%;
-  color: #71568f;
+  color: var(--cp-sign-symbol);
 }
 .consent-signature strong,
 .consent-result strong {
@@ -362,7 +611,7 @@ html.lenis.lenis-smooth {
   display: block;
   margin-top: 3px;
   font-size: 9px;
-  color: #6c607d;
+  color: var(--cp-sign-sub);
 }
 .consent-result {
   display: flex;
@@ -370,10 +619,10 @@ html.lenis.lenis-smooth {
   gap: 12px;
   padding: 14px 16px;
   margin-inline: 15px;
-  border: 1px dashed #927da9;
-  background: #ede6f5;
+  border: 1px dashed var(--cp-result-line);
+  background: var(--cp-result-bg);
   border-radius: 12px;
-  color: #756883;
+  color: var(--cp-result);
   transition:
     background 0.4s,
     border-color 0.4s;
@@ -418,8 +667,9 @@ html.lenis.lenis-smooth {
   border-radius: 50%;
   border: 1px solid #c7bdd5;
   flex-shrink: 0;
-  font-family: var(--font-mono);
+  font-family: var(--lp-label-font);
   font-size: 8px;
+  font-weight: 600;
 }
 .consent-steps button[aria-pressed="true"] {
   color: #ffffff;
@@ -440,7 +690,7 @@ html.lenis.lenis-smooth {
   flex-shrink: 0;
 }
 .consent-preview[data-step="1"] .consent-signature {
-  background: #e7ddf5;
+  background: var(--cp-signing-bg);
 }
 .consent-preview[data-step="1"] .consent-card {
   border-color: #a38bc1;
@@ -449,10 +699,10 @@ html.lenis.lenis-smooth {
     0 15px 35px -20px #58467260;
 }
 .consent-preview[data-step="2"] .consent-result {
-  background: #f8f6fc;
+  background: var(--cp-done-bg);
   border-style: solid;
   border-color: #b4a1cd;
-  color: #514065;
+  color: var(--cp-done);
 }
 .consent-preview[data-step="2"] .consent-signature-symbol {
   background: #6c548c;
@@ -605,8 +855,9 @@ html.lenis.lenis-smooth {
   color: #f6efff;
 }
 .consent-design-heading div > span {
-  font-size: 8px;
-  letter-spacing: 0.12em;
+  font-family: var(--lp-label-font);
+  font-size: 12.5px;
+  font-weight: 600;
   color: #d3c0e6;
 }
 .consent-design-heading p {
@@ -714,7 +965,7 @@ html.lenis.lenis-smooth {
 }
 
 .lp-close:hover {
-  background: #dcdfe6;
+  background: var(--lp-control-hover);
   rotate: 90deg;
 }
 
@@ -722,9 +973,9 @@ html.lenis.lenis-smooth {
 
 .lp-flow-step {
   padding: 26px;
-  border: 1px solid #d6d9e1;
+  border: 1px solid var(--lp-step-line);
   border-radius: 16px;
-  background: #f4f6fa;
+  background: var(--lp-step-bg);
   transition:
     background-color 0.5s var(--ease-out-soft),
     border-color 0.5s var(--ease-out-soft),
@@ -732,13 +983,13 @@ html.lenis.lenis-smooth {
 }
 
 .lp-flow-step[data-state="now"] {
-  border-color: #768096;
-  background: #ffffff;
-  box-shadow: 0 18px 40px #1b22310f;
+  border-color: var(--lp-step-now-line);
+  background: var(--lp-step-now-bg);
+  box-shadow: 0 18px 40px var(--lp-step-now-shadow);
 }
 
 .lp-flow-step[data-state="locked"] {
-  background: #e8eaf0;
+  background: var(--lp-step-locked-bg);
   opacity: 0.72;
 }
 
@@ -747,31 +998,31 @@ html.lenis.lenis-smooth {
   width: 26px;
   height: 26px;
   place-items: center;
-  border: 1.5px solid #52627a;
+  border: 1.5px solid var(--lp-step-mark);
   border-radius: 50%;
-  font-family: var(--font-mono);
-  font-size: 12px;
+  font-family: var(--lp-label-font);
+  font-size: 12.5px;
   font-weight: 600;
-  color: #52627a;
+  color: var(--lp-step-mark);
 }
 
 .lp-flow-step[data-state="now"] .lp-flow-num {
-  border-color: #2455d6;
-  color: #2455d6;
+  border-color: var(--lp-step-accent);
+  color: var(--lp-step-accent);
 }
 
 .lp-flow-step[data-state="done"] .lp-flow-num {
-  border-color: #2455d6;
-  background: #2455d6;
-  color: #ffffff;
+  border-color: var(--lp-step-accent);
+  background: var(--lp-step-accent);
+  color: var(--lp-step-done-text);
 }
 
 .lp-flow-chip {
-  color: #52627a;
+  color: var(--lp-step-mark);
 }
 
 .lp-flow-step[data-state="now"] .lp-flow-chip {
-  color: #2455d6;
+  color: var(--lp-step-accent);
 }
 
 /* ---------- Moments (tall art cards) ---------- */
@@ -828,7 +1079,7 @@ html.lenis.lenis-smooth {
   }
 }
 
-/* Machine stamp that lands on a card ("REFUSE · ASPIRATION MASSIVE"). */
+/* Stamp that lands on a card ("Rejected · bulk extraction"), set in the sans label face. */
 .lp-card-stamp {
   display: inline-block;
   padding: 12px 16px;
@@ -854,10 +1105,10 @@ html.lenis.lenis-smooth {
 }
 
 .lp-seal b {
-  font-family: var(--font-mono);
+  font-family: var(--lp-label-font);
   font-size: 26px;
   font-weight: 600;
-  letter-spacing: 0.04em;
+  letter-spacing: -0.02em;
 }
 
 .lp-seal small {
@@ -957,7 +1208,7 @@ html.lenis.lenis-smooth {
   border-radius: 50%;
   background: linear-gradient(145deg, #4c5a7a, #273452);
   box-shadow: inset 0 1px 0 #ffffff30;
-  transform: rotate(calc(var(--k) * 51.43deg)) translateY(-560%);
+  transform: rotate(calc(var(--k) * 120deg)) translateY(-560%);
 }
 
 .lp-zk-member:first-child {

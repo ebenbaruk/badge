@@ -21,7 +21,7 @@ function runtime(): PersistedRuntime {
           expiresAt: 1_791_420_818,
         },
       },
-      tasks: [{ id: TASK_ID, task: "Orion brief", trapped: false }],
+      tasks: [{ id: TASK_ID, task: "Morpho meeting brief", trapped: false }],
       deskRequests: [],
     },
     // The consent history is optional (files written before it existed) and holds labels only.
@@ -32,7 +32,7 @@ function runtime(): PersistedRuntime {
         {
           id: "consent-1",
           requester: "alice",
-          excerptLabel: "Orion meeting of September 22",
+          excerptLabel: "Morpho meeting last month with their integrations lead...",
           flagged: false,
           status: "approved",
           createdAt: "2026-10-07T10:00:00.000Z",

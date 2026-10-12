@@ -15,7 +15,7 @@ import {
   type ContextShare,
 } from "@badge/consent";
 import type { Hex } from "viem";
-import { EMPLOYEES, type EmployeeId } from "@/lib/directory";
+import { COMPANY_NAME, EMPLOYEES, type EmployeeId } from "@/lib/directory";
 import { estimateTokens, plural, possessive } from "@/lib/format";
 import { EnclaveError } from "../errors";
 import { deviceLabel, deviceName, newNonce } from "../messages";
@@ -49,7 +49,7 @@ const HOUR_MS = 3_600_000;
 const EXCERPT_SEPARATOR = "\n\n";
 
 function ownerName(owner: ContextOwner): string {
-  return owner === "company" ? "Acme" : EMPLOYEES[owner].name;
+  return owner === "company" ? COMPANY_NAME : EMPLOYEES[owner].name;
 }
 
 function sourceFromNotes(
@@ -213,7 +213,8 @@ function requestForeignExcerpt(state: MockState, task: TaskRecord, request: Fore
   const requester = EMPLOYEES[task.requester];
   const message: ContextShare = {
     recipientName: deviceName(requester),
-    excerptLabel: deviceLabel(label),
+    // As the enclave does: the device shows the excerpt's own first words (or "Full context of ..."), never a title.
+    excerptLabel: deviceLabel(request.fullContextRequest ? label : source.text),
     excerptLength: source.length,
     taskLabel: task.taskLabel,
     expiresAt: nowSeconds() + CONSENT_TTL_SECONDS,

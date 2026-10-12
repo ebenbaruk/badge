@@ -13,7 +13,7 @@ const READING_LINE = 0.55;
 const STEPS: readonly { title: string; body: string; chip: string; phase: FlexPhase }[] = [
   {
     title: "The agent asks",
-    body: "Alice asks her agent for the Orion meeting brief. The agent queries Badge with a session key delegated by her Ledger: it grants the right to ask, never the right to decide.",
+    body: "Alice asks her agent for the Morpho meeting brief. The agent queries Badge with a session key delegated by her Ledger: it grants the right to ask, never the right to decide.",
     chip: "Agent · session key",
     phase: "idle",
   },
@@ -25,7 +25,7 @@ const STEPS: readonly { title: string; body: string; chip: string; phase: FlexPh
   },
   {
     title: "Bob signs on his Ledger",
-    body: "His device shows exactly what he is granting: to whom, which excerpt, its length, for which task, until when, the text's fingerprint and the enclave measurement. Hold to sign: done.",
+    body: "His device shows what he is granting: to whom, the start of the excerpt and its length, for which task, until when, the text's fingerprint and the enclave measurement. Hold to sign: done.",
     chip: "Ledger · clear signing",
     phase: "review",
   },
@@ -89,17 +89,20 @@ export function ConsentStory() {
             <p aria-live="polite" className="mono-label text-ink-muted lg:mt-8 lg:text-center">
               {active + 1} / {STEPS.length} · {STEPS[active]?.title}
             </p>
+            <p className="mono-label hidden text-ink-muted-3 lg:mt-2 lg:block lg:text-center">
+              Illustrative example
+            </p>
           </div>
         </div>
 
-        <ol className="grid gap-6 lg:gap-0">
+        <ol className="grid gap-6 lg:max-w-[640px] lg:gap-0">
           {STEPS.map((step, index) => (
             <li
               key={step.title}
               ref={(element) => {
                 stepRefs.current[index] = element;
               }}
-              className="lg:flex lg:min-h-[78svh] lg:items-center"
+              className="lg:flex lg:min-h-[42svh] lg:items-center"
             >
               <article data-state={stateOf(index)} className="lp-flow-step w-full">
                 <div className="flex items-center gap-3">

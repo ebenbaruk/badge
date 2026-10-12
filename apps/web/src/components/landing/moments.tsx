@@ -24,19 +24,6 @@ interface Moment {
 
 const MOMENTS: readonly Moment[] = [
   {
-    id: "screen",
-    tag: "Clear signing",
-    title: "A screen the agent can't fake.",
-    body: "What Bob reads is computed by his Ledger from the signed message. Not the agent, not the browser, not the server: nobody else controls that screen.",
-    cursor: "Sign",
-    watermark: "Ledger",
-    tone: "bg-fog text-fog-ink",
-    art: {
-      slot: "act-ledger",
-      alt: "A stylized signing device with a screen and a check mark.",
-    },
-  },
-  {
     id: "refusal",
     tag: "Compromised agent",
     title: "Compromised agent? Denied.",
@@ -54,21 +41,11 @@ const MOMENTS: readonly Moment[] = [
     id: "standing",
     tag: "Standing agreements",
     title: "Signed once. Logged every time.",
-    body: '"My Sales team can use my client notes for client briefs, for 30 days." Fewer approvals, no lost trail: every use lands in the hash-chained log.',
+    body: '"My Sales team can use my client notes for client briefs, for 30 days." Every use lands in the hash-chained log, and one signed revocation stops it all.',
     cursor: "Delegate",
     watermark: "Consent",
     tone: "bg-lavender text-lavender-ink",
     art: { slot: "act-memory", alt: "Three stacked lavender memory rings." },
-  },
-  {
-    id: "revocation",
-    tag: "Revocation",
-    title: "One move, and it all stops.",
-    body: "A signed revocation cuts off one agreement, or everything shared with a colleague. The enclave rejects every later use and writes it to the log.",
-    cursor: "Revoke",
-    watermark: "Stop",
-    tone: "bg-peach text-peach-ink",
-    art: { slot: "act-attest", alt: "A sealed cube circled by an orbit." },
   },
   {
     id: "desks",
@@ -82,7 +59,7 @@ const MOMENTS: readonly Moment[] = [
   },
 ];
 
-/** The five moments of the demo, as tall pastel cards that shrink and drift as they scroll by. */
+/** Three moments of the demo, as tall pastel cards that shrink and drift as they scroll by. */
 export function Moments() {
   return (
     <section id="moments" aria-labelledby="moments-title" className={`${SECTION_X} pb-[100px] md:pb-[140px]`}>
@@ -91,7 +68,7 @@ export function Moments() {
           as="h2"
           id="moments-title"
           className="max-w-[14em] text-heading-lg"
-          text="Five moments where trust is won or lost."
+          text="Three moments where trust is won or lost."
         />
         <TextLink href={DEMO_ROUTE}>See them in the demo</TextLink>
       </div>
@@ -112,7 +89,7 @@ function MomentCard({ moment, index }: { moment: Moment; index: number }) {
       as="article"
       pointer
       aria-labelledby={`moment-${moment.id}`}
-      className={`lp-moment relative isolate flex h-[min(650px,90svh)] flex-col overflow-hidden rounded-xl p-5 md:h-[min(880px,95svh)] md:p-7 ${moment.tone}`}
+      className={`lp-moment relative isolate flex h-[min(560px,80svh)] flex-col overflow-hidden rounded-xl p-5 md:h-[min(620px,70svh)] md:p-7 ${moment.tone}`}
     >
       <div className="relative z-10 grid grid-cols-[1fr_auto_1fr] items-center gap-3 text-meta">
         <span className="mono-label">
@@ -121,7 +98,7 @@ function MomentCard({ moment, index }: { moment: Moment; index: number }) {
         <span className="lp-glass-tag rounded-pill border border-[#fff5] bg-[#ffffff65] px-[11px] py-[6px] text-[10px] md:px-[18px] md:py-[9px] md:text-[13px]">
           {moment.tag}
         </span>
-        <span className="justify-self-end">{index === 4 ? "Desk mode" : "Demo"}</span>
+        <span className="justify-self-end">{moment.id === "desks" ? "Desk mode" : "Demo"}</span>
       </div>
 
       <span
@@ -178,9 +155,9 @@ function CaseCursor({ children }: { children: ReactNode }) {
 
 /** Desk members as dots orbiting a proof: one of them signed, nobody can tell which. */
 function ZkSculpture() {
-  const members = Array.from({ length: 7 }, (_, i) => i);
+  const members = Array.from({ length: 3 }, (_, i) => i);
   return (
-    <div role="img" aria-label="Seven desk members orbiting a zero-knowledge proof." className="lp-zk">
+    <div role="img" aria-label="Three desk members orbiting a zero-knowledge proof." className="lp-zk">
       <div className="lp-zk-orbit">
         {members.map((i) => (
           <span key={i} className="lp-zk-member" style={{ "--k": i } as React.CSSProperties} />
@@ -188,7 +165,7 @@ function ZkSculpture() {
       </div>
       <div className="lp-zk-core">
         <span className="mono-chip text-signal">ZK proof</span>
-        <span className="mt-2 font-mono text-[11px] opacity-70">1 of 7 · anonymous</span>
+        <span className="mt-2 text-[12px] opacity-70">1 of 3 · anonymous</span>
       </div>
     </div>
   );

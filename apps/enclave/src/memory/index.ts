@@ -28,7 +28,7 @@ export {
   type MemoryBackend,
 } from "./honcho-memory";
 export {
-  ACME_DATASET_PATH,
+  SEED_DATASET_PATH,
   loadSeedDataset,
   SeedDatasetError,
   SeedDatasetSchema,

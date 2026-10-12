@@ -37,7 +37,25 @@ die() { printf '%s  xx %s%s\n' "$RED" "$*" "$RESET" >&2; exit 1; }
 
 pid_file() { echo "$RUN_DIR/$1.pid"; }
 log_file() { echo "$RUN_DIR/$1.log"; }
-listener_pid() { lsof -tiTCP:"$1" -sTCP:LISTEN 2>/dev/null | head -n 1 || true; }
+# PID listening on TCP port $1, empty when none is found. lsof misses Next's IPv6 wildcard listener (*:3000) on some
+# Linux setups (WSL among them), so ss, which reads the kernel socket table for both families, is asked next.
+listener_pid() {
+  local pid
+  pid="$(lsof -tiTCP:"$1" -sTCP:LISTEN 2>/dev/null | head -n 1 || true)"
+  if [ -z "$pid" ] && command -v ss >/dev/null 2>&1; then
+    pid="$(ss -Hltnp "sport = :$1" 2>/dev/null | grep -o 'pid=[0-9]*' | head -n 1 | cut -d= -f2 || true)"
+  fi
+  echo "$pid"
+}
+
+# Whether something accepts connections on port $1, even when its PID cannot be read (e.g. another user's process):
+# a listening socket in ss, or failing that any HTTP answer from curl (a 404 counts, a refused connection does not).
+port_listening() {
+  [ -n "$(listener_pid "$1")" ] && return 0
+  if command -v ss >/dev/null 2>&1 && [ -n "$(ss -Hltn "sport = :$1" 2>/dev/null)" ]; then return 0; fi
+  command -v curl >/dev/null 2>&1 && curl -s -o /dev/null --max-time 2 "http://localhost:$1/" && return 0
+  return 1
+}
 
 # A service is ours when its recorded process group still holds the port: never kill what this script did not start.
 owned_pid() {
@@ -55,13 +73,14 @@ stop_service() {
   if pid="$(owned_pid "$service" "$port")"; then
     kill -- "-$pid" 2>/dev/null || kill "$pid" 2>/dev/null || true
     local waited=0
-    while [ -n "$(listener_pid "$port")" ] && [ "$waited" -lt 15 ]; do sleep 1; waited=$((waited + 1)); done
+    while port_listening "$port" && [ "$waited" -lt 15 ]; do sleep 1; waited=$((waited + 1)); done
     ok "$service stopped"
   fi
   rm -f "$(pid_file "$service")"
   local other
   other="$(listener_pid "$port")"
   [ -z "$other" ] || die "port $port is used by another process (PID $other: $(ps -o comm= -p "$other")). Stop it, then retry."
+  ! port_listening "$port" || die "port $port is used by another process (PID not readable). Stop it, then retry."
 }
 
 # Runs a command in its own process group (so stop kills the whole pnpm/node tree), logging to RUN_DIR.
@@ -75,7 +94,7 @@ start_service() {
 
 wait_for_port() {
   local service="$1" port="$2" waited=0
-  until [ -n "$(listener_pid "$port")" ]; do
+  until port_listening "$port"; do
     kill -0 "$(cat "$(pid_file "$service")")" 2>/dev/null || {
       tail -n 30 "$(log_file "$service")" >&2
       die "$service exited during startup (log: $(log_file "$service"))"
@@ -110,8 +129,8 @@ cmd_status() {
   local service port pid
   for service in enclave web; do
     port=$([ "$service" = enclave ] && echo "$ENCLAVE_PORT" || echo "$WEB_PORT")
-    if pid="$(owned_pid "$service" "$port")" && [ -n "$(listener_pid "$port")" ]; then ok "$service on :$port (PID $pid)"
-    elif [ -n "$(listener_pid "$port")" ]; then warn "$service: :$port is held by a process not started by this script"
+    if pid="$(owned_pid "$service" "$port")" && port_listening "$port"; then ok "$service on :$port (PID $pid)"
+    elif port_listening "$port"; then warn "$service: :$port is held by a process not started by this script"
     else warn "$service not running"; fi
   done
   if [ -f "$WEB_DATA_DIR/agent-runtime.json" ]; then

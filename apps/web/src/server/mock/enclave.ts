@@ -1,6 +1,6 @@
 /**
  * In-memory enclave for the demo (BADGE_ENCLAVE_MODE=mock). It enforces the same rules as the contract
- * (signatures, intrinsic checks, nonces, rules, ZK proofs) on scripted data from infra/seed/acme.json, so every
+ * (signatures, intrinsic checks, nonces, rules, ZK proofs) on scripted data from infra/seed/coinbase.json, so every
  * device signature and proof made through the UI is real even though the enclave is not.
  */
 import type { ContextRevoke, SignedMessage } from "@badge/consent";

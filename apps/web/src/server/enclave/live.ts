@@ -25,13 +25,14 @@ import type { LiveEnclaveConfig } from "../config";
 import { DESK_DIRECTORY, EXCHANGE_RULES } from "../desk-directory";
 import { AgentStore, type PersistedRuntime } from "../agent-store";
 import { AgentSessionMissingError, EnclaveError } from "../errors";
-import { agentSessionKey, cachedDeskIdentity } from "../keys";
+import { agentSessionKey } from "../keys";
 import {
   attestationView,
   auditView,
   consentView,
   deskConsentView,
   deskIdOf,
+  deskView,
   employeeIdOf,
   grantViews,
   isoFromSeconds,
@@ -295,25 +296,10 @@ export class LiveEnclave implements EnclaveApi {
   // ---- Desks ----
 
   async listDesks(viewer: EmployeeId): Promise<DeskView[]> {
-    const identity = cachedDeskIdentity(viewer);
-    const memberOf = EMPLOYEES[viewer].desks;
     const views: DeskView[] = [];
     for (const entry of DESK_DIRECTORY) {
       const desk = await this.call(viewer, (client) => client.getDesk(entry.id));
-      const rule = EXCHANGE_RULES.find(
-        (r) => r.sourceDesk === entry.id && memberOf.includes(r.recipientDesk),
-      );
-      views.push({
-        id: entry.id,
-        name: desk.name,
-        directoryMembers: entry.directoryMembers,
-        commitments: desk.commitments,
-        root: desk.root,
-        isMember: memberOf.includes(entry.id),
-        joined: identity !== undefined && desk.commitments.includes(identity.commitment.toString()),
-        allowedTopics: rule?.allowedTags ?? entry.allowedTopics,
-        requestable: rule !== undefined,
-      });
+      views.push(deskView(entry, desk, viewer, EXCHANGE_RULES));
     }
     return views;
   }

@@ -22,7 +22,7 @@ import { IN_MEMORY_DATABASE, openDatabase } from "../src/db";
 import { NullifierRepository } from "../src/desks";
 import { ContextInventory, Directory, type InventoryNote } from "../src/directory";
 import type { ChatMessage, LlmClient } from "../src/llm/client";
-import { ACME_DATASET_PATH, loadSeedDataset } from "../src/memory/seed-dataset";
+import { SEED_DATASET_PATH, loadSeedDataset } from "../src/memory/seed-dataset";
 import {
   scopeOf,
   type CandidateExcerpt,
@@ -102,7 +102,7 @@ export class FakeLlm implements LlmClient {
     const during = this.duringDraft;
     this.duringDraft = undefined;
     during?.();
-    return "Brief Orion\n- point [1]";
+    return "Brief Morpho\n- point [1]";
   }
 
   /**
@@ -150,7 +150,7 @@ export class FakeDstack implements DstackAgent {
 
 /** The demo directory with test Ledger addresses. */
 export function testDirectory(): Directory {
-  const raw = JSON.parse(readFileSync(ACME_DATASET_PATH, "utf8")) as {
+  const raw = JSON.parse(readFileSync(SEED_DATASET_PATH, "utf8")) as {
     employees: Array<{ id: string; ledgerAddress: string | null }>;
   };
   for (const employee of raw.employees) {
@@ -200,7 +200,7 @@ export async function createHarness(
 
 /** Chloe's compliance key pair, derived from her (test) Ledger exactly like the real one. */
 export async function complianceKeyPair(): Promise<{ secretKey: Uint8Array; publicKey: string }> {
-  const signature = await ledgers.chloe.signMessage({ message: complianceKeyDeriveMessage("Acme") });
+  const signature = await ledgers.chloe.signMessage({ message: complianceKeyDeriveMessage("Coinbase") });
   const { secretKey, publicKey } = complianceKeyFromSignature(signature);
   return { secretKey, publicKey: Buffer.from(publicKey).toString("hex") };
 }

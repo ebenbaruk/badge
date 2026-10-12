@@ -1,10 +1,10 @@
 /**
- * Desks and exchange rules of the directory, read from the same dataset the enclave loads (infra/seed/acme.json).
+ * Desks and exchange rules of the directory, read from the same dataset the enclave loads (infra/seed/coinbase.json).
  * The directory is configuration, not context: it says who belongs to which desk and which desk may ask what of
  * which other desk. The enclave enforces the rules; the web app only needs them to lay out the desks screen.
  */
 import { z } from "zod";
-import acme from "../../../../infra/seed/acme.json";
+import seedDataset from "../../../../infra/seed/coinbase.json";
 import { DESK_IDS, type DeskId } from "@/lib/directory";
 
 const deskIdSchema = z.enum(DESK_IDS);
@@ -44,7 +44,7 @@ export interface ExchangeRule {
   allowedTags: string[];
 }
 
-const directory = directorySchema.parse(acme);
+const directory = directorySchema.parse(seedDataset);
 
 export const DESK_DIRECTORY: readonly DeskDirectoryEntry[] = directory.desks.map((desk) => ({
   id: desk.id,
