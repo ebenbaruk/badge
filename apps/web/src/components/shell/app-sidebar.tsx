@@ -137,6 +137,9 @@ export function AppSidebar({
             Every share starts with your consent.
           </p>
         </div>
+        <p className="-mt-3 mb-5 px-3 text-[10.5px] leading-snug text-muted-foreground/80">
+          Illustrative scenario, not affiliated with Coinbase or Morpho
+        </p>
         <div className="flex flex-col gap-1 border-t pt-4">
           <NavLink employee={employee} item={SETUP_ITEM} attention={setupPending} />
         </div>

@@ -15,8 +15,8 @@ const DURATIONS = [7, 30, 90] as const;
 const DEFAULT_DURATION_DAYS = 30;
 const DEFAULT_MAX_LENGTH = 800;
 const DEFAULT_PURPOSE = "client briefs";
-/** The tag of the example above the form ("my Orion notes"), preselected when the owner has it. */
-const PREFERRED_CONTEXT_TAG = "orion";
+/** The tag of the example above the form ("my Morpho notes"), preselected when the owner has it. */
+const PREFERRED_CONTEXT_TAG = "morpho";
 
 /**
  * Standing agreement form: "my Sales team may use my client notes for briefs, 30 days". Signed once on the

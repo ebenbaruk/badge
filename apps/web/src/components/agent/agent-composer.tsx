@@ -9,16 +9,16 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import type { EmployeeId } from "@/lib/directory";
+import { COMPANY_NAME, type EmployeeId } from "@/lib/directory";
 import { cn } from "@/lib/utils";
 import { startTask } from "@/server/actions/agent";
 
 const SUGGESTIONS: Readonly<Record<EmployeeId, readonly string[]>> = {
   alice: [
-    "Prepare the brief for tomorrow's meeting with client Orion",
-    "Where do we stand with prospect Helios Froid?",
+    "Prepare the brief for tomorrow's meeting with client Morpho",
+    "Where do we stand with prospect Helios?",
   ],
-  bob: ["Summarize our current pricing terms", "What's new at Acme?"],
+  bob: ["Summarize our current pricing terms", `What's new at ${COMPANY_NAME}?`],
   chloe: ["Which master agreement template is current?", "Summarize the pricing policy"],
 };
 

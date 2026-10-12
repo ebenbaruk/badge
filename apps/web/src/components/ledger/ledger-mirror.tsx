@@ -188,7 +188,9 @@ export function LedgerMirror({
   return (
     <div className="flex flex-col items-center gap-3">
       <div className="flex w-full items-center justify-between gap-3">
-        <span className="min-w-0 truncate mono-label text-[10px] text-muted-foreground">{deviceLabel}</span>
+        <span className="min-w-0 mono-label text-[10px] leading-snug text-muted-foreground">
+          {deviceLabel}
+        </span>
         <span
           className={cn(
             "inline-flex shrink-0 items-center gap-1.5 rounded-pill border px-2 py-1 mono-chip transition-colors duration-300",

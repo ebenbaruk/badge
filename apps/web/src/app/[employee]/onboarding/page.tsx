@@ -8,6 +8,7 @@ import { EnclaveUnavailable } from "@/components/enclave-unavailable";
 import { LedgerActionButton } from "@/components/ledger/sign-buttons";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
+import { COMPANY_NAME } from "@/lib/directory";
 import { formatDateTime, formatRelative } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { registerComplianceKey } from "@/server/actions/compliance";
@@ -125,7 +126,7 @@ export default async function OnboardingPage({ params }: { params: Promise<{ emp
           title="Link my Ledger to my identity"
           description={
             <>
-              The Ledger signs &quot;Join Badge&quot;: company Acme, identity{" "}
+              The Ledger signs &quot;Join Badge&quot;: company {COMPANY_NAME}, identity{" "}
               <span className="font-mono text-foreground">{deviceName(employee)}</span>, enclave measurement.
             </>
           }

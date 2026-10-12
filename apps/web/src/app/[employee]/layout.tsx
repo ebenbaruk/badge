@@ -36,7 +36,6 @@ export default async function EmployeeLayout({
     (!enrollment.data.enrolled ||
       enrollment.data.session === undefined ||
       (employee.role === "compliance" && enrollment.data.complianceKey === undefined));
-  const speculosPort = new URL(serverConfig().speculosUrls[employee.id]).port;
 
   return (
     <LedgerActivityProvider>
@@ -74,7 +73,7 @@ export default async function EmployeeLayout({
         </div>
         <LedgerPanel
           employee={employee.id}
-          deviceLabel={`${employee.firstName}'s Ledger · Speculos :${speculosPort}`}
+          deviceLabel={`${employee.firstName}'s Ledger · Speculos`}
           rehearsal={serverConfig().rehearsal}
         />
       </div>

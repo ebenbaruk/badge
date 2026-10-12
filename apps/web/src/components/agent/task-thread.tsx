@@ -6,7 +6,7 @@ import { ProvenanceBadge } from "@/components/provenance";
 import { RiskFindings } from "@/components/risk-findings";
 import { PulseDot } from "@/components/motion/pulse-dot";
 import { Button } from "@/components/ui/button";
-import { EMPLOYEES, type EmployeeId } from "@/lib/directory";
+import { COMPANY_NAME, EMPLOYEES, type EmployeeId } from "@/lib/directory";
 import { formatLength, formatTime, reasonForThirdParty } from "@/lib/format";
 import { uniqueFindings } from "@/lib/rule-findings";
 import { cn } from "@/lib/utils";
@@ -32,7 +32,7 @@ const BLOCKED_KIND_LABEL: Record<BlockedExcerptView["kind"], string> = {
 };
 
 function ownerLabel(owner: ContextOwner): string {
-  return owner === "company" ? "Acme (company)" : EMPLOYEES[owner].name;
+  return owner === "company" ? `${COMPANY_NAME} (company)` : EMPLOYEES[owner].name;
 }
 
 /**
