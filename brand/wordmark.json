@@ -1,0 +1,49 @@
+{
+  "tool": "brand.mjs wordmark",
+  "version": 1,
+  "at": "2026-10-12T13:45:15Z",
+  "text": "Badge",
+  "font": {
+    "file": "design/fonts/Montserrat-Medium.ttf",
+    "sha256": "dae47428bb041f9716604e0e07b5b0c8585b3bdd8183362f75c69fe7bb3cfaf4",
+    "family": "Montserrat",
+    "subfamily": "Medium",
+    "fullName": "Montserrat Medium",
+    "weightClass": 500,
+    "version": "Version 9.000; ttfautohint (v1.8.4.7-5d5b)",
+    "designer": "Julieta Ulanovsky",
+    "manufacturer": "Julieta Ulanovsky",
+    "license": "This Font Software is licensed under the SIL Open Font License, Version 1.1. This license is available with a FAQ at: https://openfontlicense.org",
+    "licenseURL": "https://openfontlicense.org",
+    "variable": [],
+    "licence": {
+      "file": "design/fonts/OFL.txt",
+      "kind": "OFL-1.1",
+      "reservedFontNames": [],
+      "nameTable": "OFL-1.1"
+    }
+  },
+  "size": 100,
+  "kerning": true,
+  "tracking": 0,
+  "variation": null,
+  "fill": "currentColor",
+  "decimalPlaces": 2,
+  "flipY": false,
+  "layout": "opentype getPath",
+  "opentype": "2.0.0",
+  "bbox": {
+    "x1": 10.5,
+    "y1": -74.2,
+    "x2": 329.7,
+    "y2": 20
+  },
+  "viewBox": [
+    6,
+    -79,
+    328,
+    103
+  ],
+  "bytes": 1596,
+  "warnings": []
+}
