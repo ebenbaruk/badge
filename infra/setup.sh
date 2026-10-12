@@ -4,8 +4,17 @@
 #
 # Every artifact is pinned (image digest, release version, commit) and checked against its SHA-256: a fresh machine
 # gets exactly what the demo was tested with, and a corrupted or tampered download is deleted instead of used.
+#
+# --zk-only fetches the Semaphore artifacts alone, without Docker: that is all `pnpm test` needs (used by CI).
 set -euo pipefail
 cd "$(dirname "$0")"
+
+ZK_ONLY=0
+case "${1:-}" in
+  --zk-only) ZK_ONLY=1 ;;
+  "") ;;
+  *) echo "usage: infra/setup.sh [--zk-only]" >&2; exit 2 ;;
+esac
 
 # shellcheck source=speculos-image.sh
 . ./speculos-image.sh
@@ -42,15 +51,25 @@ fetch() {
   fi
 }
 
+fetch_zk_artifacts() {
+  fetch "https://snark-artifacts.pse.dev/semaphore/${SEMAPHORE_ARTIFACTS_VERSION}/semaphore-${SEMAPHORE_DEPTH}.wasm" \
+    "zk-artifacts/semaphore-${SEMAPHORE_DEPTH}.wasm" "$SEMAPHORE_WASM_SHA256"
+  fetch "https://snark-artifacts.pse.dev/semaphore/${SEMAPHORE_ARTIFACTS_VERSION}/semaphore-${SEMAPHORE_DEPTH}.zkey" \
+    "zk-artifacts/semaphore-${SEMAPHORE_DEPTH}.zkey" "$SEMAPHORE_ZKEY_SHA256"
+}
+
+if [ "$ZK_ONLY" = 1 ]; then
+  fetch_zk_artifacts
+  echo "OK: $(ls -1 zk-artifacts/semaphore-* | tr '\n' ' ')(checksums verified)"
+  exit 0
+fi
+
 docker info >/dev/null 2>&1 || { echo "Docker is not running (macOS: open -a Docker)" >&2; exit 1; }
 docker image inspect "$SPECULOS_IMAGE" >/dev/null 2>&1 || docker pull -q "$SPECULOS_IMAGE" >/dev/null
 
 fetch "https://github.com/LedgerHQ/app-ethereum/releases/download/${ETH_RELEASE_VERSION}/app-${ETH_RELEASE_VERSION}-flex.elf" \
   "apps/app-${ETH_RELEASE_VERSION}-flex.elf" "$ETH_RELEASE_SHA256"
-fetch "https://snark-artifacts.pse.dev/semaphore/${SEMAPHORE_ARTIFACTS_VERSION}/semaphore-${SEMAPHORE_DEPTH}.wasm" \
-  "zk-artifacts/semaphore-${SEMAPHORE_DEPTH}.wasm" "$SEMAPHORE_WASM_SHA256"
-fetch "https://snark-artifacts.pse.dev/semaphore/${SEMAPHORE_ARTIFACTS_VERSION}/semaphore-${SEMAPHORE_DEPTH}.zkey" \
-  "zk-artifacts/semaphore-${SEMAPHORE_DEPTH}.zkey" "$SEMAPHORE_ZKEY_SHA256"
+fetch_zk_artifacts
 # Public TEST CAL key of app-ethereum: signs our EIP-712 filters, accepted by Speculos only (never a real device).
 fetch "$CAL_TEST_KEY_URL" "keys/cal-test.pem" "$CAL_TEST_KEY_SHA256"
 

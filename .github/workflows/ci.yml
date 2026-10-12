@@ -1,0 +1,56 @@
+# The repository's default gate: what `pnpm typecheck`, `pnpm lint` and `pnpm test` check locally, plus the web
+# production build. The live suites (Speculos, dstack simulator, real memory and LLM) stay outside it by design: they
+# need running infrastructure or a paid model key.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Typecheck, lint and tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # The Semaphore circuit files are not committed: setup.sh downloads them and checks their pinned SHA-256.
+      - uses: actions/cache@v4
+        with:
+          path: |
+            infra/zk-artifacts/semaphore-16.wasm
+            infra/zk-artifacts/semaphore-16.zkey
+          key: zk-artifacts-${{ hashFiles('infra/setup.sh') }}
+      - run: bash infra/setup.sh --zk-only
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test
+
+  web-build:
+    name: Web production build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @badge/web build
