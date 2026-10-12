@@ -1,5 +1,7 @@
 # Badge
 
+[![CI](https://github.com/ebenbaruk/badge/actions/workflows/ci.yml/badge.svg)](https://github.com/ebenbaruk/badge/actions/workflows/ci.yml)
+
 **Your agents know more. You decide what.**
 
 Badge is a company memory for AI agents, and it turns each employee's Ledger into their company badge. Your agent gets the context it needs. If that's a colleague's notes, the colleague approves first, on their Ledger.
