@@ -72,8 +72,8 @@ export function Hero() {
           </h1>
           <p className="lp-hero-description">
             Badge is a company memory for AI agents, and it turns each employee&apos;s Ledger into their
-            company badge. It finds the context a task needs, and a colleague&apos;s notes leave only once
-            that colleague signs.
+            company badge. Your agent gets the context it needs. If that&apos;s a colleague&apos;s notes, the
+            colleague approves first, on their Ledger.
           </p>
           <div className="lp-hero-actions">
             <Link href={DEMO_ROUTE} className="lp-primary-action">
