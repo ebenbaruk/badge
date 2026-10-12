@@ -4,27 +4,21 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useInView } from "@/components/motion/use-in-view";
 import { useReducedMotion } from "@/components/motion/use-reduced-motion";
 import { cn } from "@/lib/utils";
+import { CONTEXT_SHARE } from "./example";
 
 /**
- * Example `ContextShare` as Bob's Ledger Flex shows it: the labels are the real ASCII labels of the
- * EIP-712 display descriptor (`@badge/consent`), the values are an illustrative brief request.
+ * Bob's `ContextShare` as his Ledger Flex shows it: the seven fields of the real clear-signing descriptor
+ * (`@badge/consent`), in its order, paged two by two. Values come from the tested illustrative example.
  */
-const CONTEXT_SHARE_INTENT = "Share an excerpt";
-const CONTEXT_SHARE_PAGES: readonly (readonly (readonly [label: string, value: string])[])[] = [
-  [
-    ["Share with", "Alice Martin (Sales)"],
-    ["Excerpt", "Orion meeting notes"],
-  ],
-  [
-    ["Length (chars)", "412"],
-    ["Task", "Orion meeting brief"],
-  ],
-  [
-    ["Expires", "2026-10-16 18:00 UTC"],
-    ["Fingerprint", "0x3a9f...c21e"],
-  ],
-  [["Enclave", "0x9f2b...77d4"]],
-];
+const CONTEXT_SHARE_INTENT = CONTEXT_SHARE.intent;
+const FIELDS_PER_PAGE = 2;
+const CONTEXT_SHARE_PAGES: readonly (readonly (readonly [label: string, value: string])[])[] = Array.from(
+  { length: Math.ceil(CONTEXT_SHARE.rows.length / FIELDS_PER_PAGE) },
+  (_, page) =>
+    CONTEXT_SHARE.rows
+      .slice(page * FIELDS_PER_PAGE, (page + 1) * FIELDS_PER_PAGE)
+      .map((row) => [row.label, row.value] as const),
+);
 
 /** Duration the real Flex asks the owner to keep pressing "Hold to sign". */
 const HOLD_TO_SIGN_MS = 3000;
@@ -152,7 +146,7 @@ function ScreenContent({ screen }: { screen: Screen }) {
         <div className="lp-flex-page items-center justify-center text-center">
           <ShieldGlyph />
           <p className="lp-flex-title mt-[6cqw]">Badge</p>
-          <p className="lp-flex-label mt-[1.5cqw]">Acme · Bob Durand</p>
+          <p className="lp-flex-label mt-[1.5cqw]">Coinbase · Bob Durand</p>
           <p className="lp-flex-foot justify-center">Ready</p>
         </div>
       );
