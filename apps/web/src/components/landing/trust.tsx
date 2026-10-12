@@ -1,7 +1,7 @@
 import { Reveal } from "@/components/motion/reveal";
 import { RevealText } from "@/components/motion/reveal-text";
 import { Stagger } from "@/components/motion/stagger";
-import { PlaceholderImage } from "./placeholder-image";
+import { EXAMPLE_MEASUREMENT, shortHash } from "./example";
 import { GITHUB_URL, SECTION_X, TextLink } from "./primitives";
 
 const PILLARS = [
@@ -23,27 +23,11 @@ const PILLARS = [
   {
     chip: "Confidential AI",
     title: "A confidential LLM",
-    body: "Only the excerpts a task needs go to Phala Confidential AI, running in a GPU TEE. Never a colleague's full context.",
+    body: "Only the excerpts a task needs go to Phala's confidential AI service, the only address the enclave can reach.",
   },
 ] as const;
 
-const PROOFS = [
-  {
-    slot: "consent-receipt",
-    alt: "Signed consent receipt: a paper card with a blue stamp.",
-    title: "The consent receipt",
-    caption:
-      "An EIP-712 message signed on the Ledger, verified by the enclave before the excerpt is released.",
-  },
-  {
-    slot: "attestation-report",
-    alt: "Attestation report: a glass tablet and orbit rings.",
-    title: "The attestation report",
-    caption: "Intel TDX quote, compose hash and pinned measurements, replayed by every client.",
-  },
-] as const;
-
-/** Trust architecture on a royal-blue panel: four guarantees, the attestation seal and the proofs. */
+/** Trust architecture on a royal-blue panel: four guarantees and the attestation seal. */
 export function Trust() {
   return (
     <section id="trust" aria-labelledby="trust-title" className={`${SECTION_X} pb-[100px] md:pb-[140px]`}>
@@ -62,6 +46,9 @@ export function Trust() {
               for trust: it proves it. The code that handles context is measured and attested by Intel, and
               that measurement appears on every Ledger at signing time.
             </Reveal>
+            <TextLink href={`${GITHUB_URL}/blob/main/README.md`} className="mt-8 text-paper">
+              Read the README
+            </TextLink>
           </div>
           <AttestationSeal />
         </div>
@@ -78,29 +65,6 @@ export function Trust() {
             </div>
           ))}
         </Stagger>
-
-        <div className="mt-20 grid gap-10 md:grid-cols-[1fr_2.4fr] md:gap-[60px]">
-          <p className="text-[12px] text-[#a7c8ff] md:text-[14px]">Example</p>
-          <div>
-            <RevealText as="h3" className="text-heading-md" text="Every consent leaves proof." />
-            <div className="mt-10 grid gap-6 sm:grid-cols-2">
-              {PROOFS.map((proof) => (
-                <Reveal as="figure" key={proof.slot}>
-                  <div className="overflow-hidden rounded-lg ring-1 ring-[#ffffff26]">
-                    <PlaceholderImage slot={proof.slot} alt={proof.alt} />
-                  </div>
-                  <figcaption className="mt-4">
-                    <strong className="block text-[15px] font-semibold">{proof.title}</strong>
-                    <span className="mt-1 block text-[13px] text-[#c4cee2]">{proof.caption}</span>
-                  </figcaption>
-                </Reveal>
-              ))}
-            </div>
-            <TextLink href={`${GITHUB_URL}/blob/main/docs/ARCHITECTURE.md`} className="mt-10 text-paper">
-              Read the architecture
-            </TextLink>
-          </div>
-        </div>
       </div>
     </section>
   );
@@ -118,9 +82,9 @@ function AttestationSeal() {
       <span className="lp-orbit lp-orbit-c" />
       <Reveal y={0} className="lp-stamp-host">
         <span className="lp-seal">
-          <b>ATTESTED</b>
+          <b>Attested</b>
           <small>Intel TDX</small>
-          <code>0x9f2b...77d4</code>
+          <code>{shortHash(EXAMPLE_MEASUREMENT)}</code>
         </span>
       </Reveal>
     </div>

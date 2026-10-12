@@ -49,7 +49,7 @@ describe("tools", () => {
       expect(api.calls).toEqual(["createTask", `getTask:${TASK_ID}`]);
       expect(text).toContain(`${CONTEXT_FENCE_OPEN}\n${BRIEF}\n${CONTEXT_FENCE_CLOSE}`);
       expect(text).toContain('Bob Durand: "Durand meeting notes" (one-time consent signed');
-      expect(text).toContain('Acme: "Sensor catalog 2026" (company context');
+      expect(text).toContain('Coinbase: "Institutional catalog" (company context');
       expect(text).toContain("180 of 5400");
     });
 
@@ -157,7 +157,7 @@ describe("tools", () => {
       expect(lines[1]).toContain('Alice Martin (Sales) requests "Durand meeting notes"');
       expect(lines[1]).toContain("the task asks for almost all of your context");
       expect(lines[2]).toContain("Anonymous share to desk Origination");
-      expect(lines[2]).toContain("Rule 4 - sensor market");
+      expect(lines[2]).toContain("Rule 4 - lending market");
       expect(text).toContain("is signed on your Ledger");
     });
 

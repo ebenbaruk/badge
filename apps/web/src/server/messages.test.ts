@@ -20,7 +20,7 @@ describe("device messages", () => {
   });
 
   it("truncates labels to the device limit and keeps them canonical", () => {
-    const label = deviceLabel(`Orion meeting with Chloé ${"very ".repeat(20)}long`);
+    const label = deviceLabel(`Morpho meeting with Chloé ${"very ".repeat(20)}long`);
     expect(label.length).toBeLessThanOrEqual(MAX_DEVICE_LABEL_LENGTH);
     expect(isDeviceAscii(label)).toBe(true);
     expect(deviceLabel("   ")).toBe("excerpt");
@@ -36,7 +36,7 @@ describe("device messages", () => {
       EMPLOYEES.bob,
       {
         granteeTeam: "Legal & Compliance",
-        contextTag: "orion",
+        contextTag: "morpho",
         purpose: "contract review",
         maxExcerptLength: 500,
         durationDays: 30,

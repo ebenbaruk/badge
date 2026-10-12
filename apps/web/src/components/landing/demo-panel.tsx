@@ -52,8 +52,8 @@ export function DemoPanel() {
         <p className="text-meta text-ink-muted-2">The demo</p>
         <RevealText as="h2" id="demo-title" className="mt-4 text-display-xl" text="Try Badge." />
         <Reveal as="p" delay={100} className="mx-auto mt-6 max-w-[34em] text-[17px] text-ink-muted-2">
-          Three Acme employees, three Ledger Flex devices (Speculos), one enclave. Pick a role and follow the
-          flow end to end.
+          Five Coinbase employees share one enclave, each with an emulated Ledger Flex (Speculos). You play
+          three of them: pick a role and follow the flow end to end.
         </Reveal>
       </div>
 
@@ -104,7 +104,7 @@ export function DemoPanel() {
                 key={step}
                 className="flex items-center gap-3 rounded-lg border border-[#ffffff26] px-4 py-4 text-[14px]"
               >
-                <span className="grid size-[26px] shrink-0 place-items-center rounded-full border-[1.5px] border-[#a7c8ff] font-mono text-[12px] font-semibold text-[#a7c8ff]">
+                <span className="grid size-[26px] shrink-0 place-items-center rounded-full border-[1.5px] border-[#a7c8ff] text-[12.5px] font-semibold text-[#a7c8ff]">
                   {index + 1}
                 </span>
                 {step}

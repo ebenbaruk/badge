@@ -52,8 +52,3 @@ export async function deskIdentity(employee: EmployeeId): Promise<Identity> {
   store.deskIdentities.set(employee, identity);
   return identity;
 }
-
-/** Cached identity only (never prompts the device). */
-export function cachedDeskIdentity(employee: EmployeeId): Identity | undefined {
-  return store.deskIdentities.get(employee);
-}

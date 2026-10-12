@@ -9,7 +9,7 @@
 # TEST seeds only: public BIP-39 test-vector mnemonics, never hold funds. Account 0 (m/44'/60'/0'/0/0) addresses:
 #   alice 0x9858EfFD232B4033E47d90003D41EC34EcaEda94   bob   0x58A57ed9d8d624cBD12e2C467D34787555bB1b25
 #   chloe 0x3061750d3dF69ef7B8d4407CB7f3F879Fd9d2398   david 0xfc2077CA7F403cBECA41B1B0F62D91B5EA631B5E
-#   emma  0xc70eC8094CCE52B6574A5a2b7bf0c7D8288d77cC   (infra/seed/acme.json must list the same addresses)
+#   emma  0xc70eC8094CCE52B6574A5a2b7bf0c7D8288d77cC   (infra/seed/coinbase.json must list the same addresses)
 set -euo pipefail
 cd "$(dirname "$0")"
 # shellcheck source=speculos-image.sh

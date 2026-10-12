@@ -26,7 +26,7 @@ import { employeeFromParams, load } from "@/server/load";
 
 export const metadata: Metadata = { title: "Desks" };
 
-/** Semaphore considers groups of 1 or 2 not anonymous. */
+/** Semaphore considers groups of 1 or 2 not anonymous; it only matters for a desk asked anonymously. */
 const MIN_ANONYMITY_SET = 3;
 
 function DeskCard({ desk, employee }: { desk: DeskView; employee: Employee }) {
@@ -55,9 +55,11 @@ function DeskCard({ desk, employee }: { desk: DeskView; employee: Employee }) {
             <dd className="mt-1 flex flex-wrap items-center gap-x-1.5 font-medium whitespace-nowrap">
               <Users className="size-3.5 text-muted-foreground" />
               {desk.commitments.length} / {desk.directoryMembers} members
-              <span className={cn("text-[11px] font-normal", anonymous ? "text-success" : "text-warning")}>
-                {anonymous ? "anonymity guaranteed" : `group too small (${MIN_ANONYMITY_SET} minimum)`}
-              </span>
+              {desk.askedAnonymously && (
+                <span className={cn("text-[11px] font-normal", anonymous ? "text-success" : "text-warning")}>
+                  {anonymous ? "anonymity set reached" : `group too small (${MIN_ANONYMITY_SET} minimum)`}
+                </span>
+              )}
             </dd>
           </div>
           <div>

@@ -52,7 +52,7 @@ export function createBadgeMcpServer(deps: ToolDeps): McpServer {
           .max(MAX_TASK_LABEL_CHARS)
           .describe(
             "Short label shown on the context owners' Ledger (ASCII, about 40 characters), " +
-              'e.g. "Brief for Orion meeting".',
+              'e.g. "Morpho meeting brief".',
           ),
       },
       annotations: { readOnlyHint: false, idempotentHint: false, openWorldHint: false },

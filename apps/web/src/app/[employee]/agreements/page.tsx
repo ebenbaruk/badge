@@ -34,7 +34,7 @@ export default async function AgreementsPage({ params }: { params: Promise<{ emp
         <CardHeader>
           <CardTitle className="text-[22px] tracking-[-0.045em]">New agreement</CardTitle>
           <CardDescription>
-            Example: &quot;the Sales team can use my Orion notes for client briefs, for 30 days&quot;.
+            Example: &quot;the Sales team can use my Morpho notes for client briefs, for 30 days&quot;.
           </CardDescription>
         </CardHeader>
         <CardContent>

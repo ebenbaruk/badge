@@ -1,10 +1,10 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { ACME_DATASET_PATH } from "../memory/seed-dataset";
+import { SEED_DATASET_PATH } from "../memory/seed-dataset";
 import { Directory, DirectoryError, loadDirectory } from "./directory";
 import { ContextInventory } from "./inventory";
 
-const raw = () => JSON.parse(readFileSync(ACME_DATASET_PATH, "utf8")) as Record<string, unknown>;
+const raw = () => JSON.parse(readFileSync(SEED_DATASET_PATH, "utf8")) as Record<string, unknown>;
 
 describe("demo directory", () => {
   const directory = loadDirectory();
@@ -33,10 +33,10 @@ describe("demo directory", () => {
     expect(directory.rulesForRecipient("origination")).toEqual([
       {
         id: "rule-4",
-        label: "Rule 4 - sensor market",
+        label: "Rule 4 - lending market",
         sourceDesk: "research",
         recipientDesk: "origination",
-        allowedTags: ["sensor-market", "component-prices"],
+        allowedTags: ["lending-market", "stablecoin-rates"],
       },
     ]);
   });

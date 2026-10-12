@@ -1,0 +1,64 @@
+[
+  {
+    "path": "/",
+    "name": "landing",
+    "first": true,
+    "features": [
+      "FR-001",
+      "FR-002",
+      "FR-003",
+      "FR-004",
+      "FR-005",
+      "FR-006",
+      "FR-007",
+      "FR-008",
+      "FR-009",
+      "FR-010",
+      "FR-011",
+      "FR-012",
+      "FR-013",
+      "FR-014",
+      "FR-015"
+    ]
+  },
+  {
+    "path": "/demo",
+    "name": "demo picker",
+    "features": []
+  },
+  {
+    "path": "/alice/onboarding",
+    "name": "Alice, onboarding",
+    "features": ["FR-001", "FR-011"]
+  },
+  {
+    "path": "/alice/agent",
+    "name": "Alice, agent",
+    "features": ["FR-002", "FR-005", "FR-006", "FR-011"]
+  },
+  {
+    "path": "/bob/consents",
+    "name": "Bob, consent requests",
+    "features": ["FR-003", "FR-004", "FR-006", "FR-011"]
+  },
+  {
+    "path": "/bob/agreements",
+    "name": "Bob, standing agreements",
+    "features": ["FR-007", "FR-011"]
+  },
+  {
+    "path": "/bob/access",
+    "name": "Bob, access and revocation",
+    "features": ["FR-008", "FR-011"]
+  },
+  {
+    "path": "/alice/desks",
+    "name": "Alice, desks",
+    "features": ["FR-009", "FR-011"]
+  },
+  {
+    "path": "/chloe/compliance",
+    "name": "Chloé, compliance",
+    "features": ["FR-010", "FR-011"]
+  }
+]

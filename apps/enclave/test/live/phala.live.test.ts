@@ -26,27 +26,31 @@ describe.runIf(enabled)("phala profile", () => {
         { role: "system", content: "Extract the deal terms. Answer in the JSON schema." },
         {
           role: "user",
-          content: "Orion 2025 terms: 12% discount if volume > 40k units, payment at 60 days.",
+          content: "Helios terms: 12% discount if volume > 40k units, payment at 60 days.",
         },
       ],
       { name: "deal_terms", maxOutputTokens: 100 },
     );
-    expect(result).toEqual({ client: expect.stringMatching(/orion/i), discountPercent: 12, paymentDays: 60 });
+    expect(result).toEqual({
+      client: expect.stringMatching(/helios/i),
+      discountPercent: 12,
+      paymentDays: 60,
+    });
   });
 
-  it("embeds in 384 dimensions and ranks the Orion note above the HR note", async () => {
+  it("embeds in 384 dimensions and ranks the Morpho note above the HR note", async () => {
     const notes = loadSeedDataset().notes;
     const text = (id: string) => notes.find((n) => n.id === id)?.text ?? "";
-    const [task, orion, hr] = await llm.embed([
-      "brief for tomorrow's meeting with client Orion",
-      text("bob-orion-conditions-2025"),
+    const [task, morpho, hr] = await llm.embed([
+      "brief for tomorrow's meeting with client Morpho",
+      text("bob-morpho-conditions-2025"),
       text("chloe-rh-prudhommes"),
     ]);
-    if (!task || !orion || !hr) throw new Error("missing vectors");
+    if (!task || !morpho || !hr) throw new Error("missing vectors");
     expect(task).toHaveLength(EMBEDDING_DIMENSIONS);
-    const orionScore = cosineSimilarity(task, orion);
+    const morphoScore = cosineSimilarity(task, morpho);
     const hrScore = cosineSimilarity(task, hr);
-    console.info(`phala MiniLM similarity: orion ${orionScore.toFixed(3)}, hr ${hrScore.toFixed(3)}`);
-    expect(orionScore).toBeGreaterThan(hrScore);
+    console.info(`phala MiniLM similarity: morpho ${morphoScore.toFixed(3)}, hr ${hrScore.toFixed(3)}`);
+    expect(morphoScore).toBeGreaterThan(hrScore);
   });
 });

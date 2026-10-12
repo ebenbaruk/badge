@@ -2,7 +2,7 @@
 # Local memory stack (Postgres + Honcho API + deriver + egress gateway).
 #   ./stack.sh build          clone Honcho v3.2.2, fetch tiktoken encodings, build the images
 #   ./stack.sh up             build if needed, start the stack, mint the admin JWT for the enclave
-#   ./stack.sh seed           ingest infra/seed/acme.json and verify recall (idempotent)
+#   ./stack.sh seed           ingest infra/seed/coinbase.json and verify recall (idempotent)
 #   ./stack.sh logs [svc]     follow logs (api, deriver, gateway, database)
 #   ./stack.sh status         containers and the indexed profile
 #   ./stack.sh down           stop (data kept)

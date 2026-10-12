@@ -7,10 +7,11 @@
 
 ## Actors
 
-- **Directory** (seeded by the administrator from `infra/seed/acme.json`, loaded at boot, immutable while running):
-  employees `{id, name, team, role: employee | compliance, address, desks[]}` of the company "Acme".
-  Alice (Ventes, desk Origination), Bob (Grands comptes, desk Research), Chloe (Juridique & conformite, compliance),
-  David and Emma (Strategie, desk Research). Ledger addresses (Speculos test mnemonics, `infra/speculos.sh`): alice
+- **Directory** (seeded by the administrator from `infra/seed/coinbase.json`, loaded at boot, immutable while running):
+  employees `{id, name, team, role: employee | compliance, address, desks[]}` of the company "Coinbase" (illustrative
+  scenario, not affiliated with Coinbase or Morpho).
+  Alice (Sales, desk Origination), Bob (Key Accounts, desk Research), Chloe (Legal & Compliance, compliance),
+  David and Emma (Strategy, desk Research). Ledger addresses (Speculos test mnemonics, `infra/speculos.sh`): alice
   `0x9858EfFD232B4033E47d90003D41EC34EcaEda94`, bob `0x58A57ed9d8d624cBD12e2C467D34787555bB1b25`, chloe
   `0x3061750d3dF69ef7B8d4407CB7f3F879Fd9d2398`, david `0xfc2077CA7F403cBECA41B1B0F62D91B5EA631B5E`, emma
   `0xc70eC8094CCE52B6574A5a2b7bf0c7D8288d77cC`. Every desk member joins with their own Ledger (`DeskJoin`): no desk
@@ -18,7 +19,7 @@
   (Semaphore warns that groups of 1-2 are not anonymous). `pnpm demo` joins David and Emma; before the web demo,
   `pnpm desks:seed` does.
   Exchange rules `{id, label (device ASCII, shown on the Ledger), sourceDesk, recipientDesk, allowedTags[]}`; demo:
-  `rule-4` "Regle 4 - marche capteurs", research -> origination, tags `marche-capteurs`, `prix-composants`.
+  `rule-4` "Rule 4 - lending market", research -> origination, tags `lending-market`, `stablecoin-rates`.
 - **Employees** sign EIP-712 messages on their Ledger (`packages/consent`, clear signing) and two EIP-191 personal
   messages (desk identity, compliance key).
 - **Agents** act with an agent session key (secp256k1, software), delegated once by an `AgentSession` signed on the
@@ -143,8 +144,9 @@ grant_reused | policy`), `pending[]` (with `consentId` and `risk {level, reasons
 createdAt, status: active | revoked | expired, uses}`; `GET /v1/policies` lists the caller's policies.
 8. **Desks** (API ids `research`, `origination`; names in signed messages "Research", "Origination"):
    - `POST /v1/desks/join` (signed `DeskJoin` by the caller's Ledger; the caller is a member of the desk in the
-     directory) -> `201 Desk {id, name, members, commitments[] (decimal, registration order), root | null}`;
-     `GET /v1/desks/:desk` -> `Desk` (what a member needs to build a proof).
+     directory) -> `201 Desk {id, name, members, commitments[] (decimal, registration order), root | null, joined}`;
+     `GET /v1/desks/:desk` -> `Desk` (what a member needs to build a proof; `joined` says whether the caller registered
+     an identity in this desk, never which commitment is theirs).
    - `POST /v1/desk-requests {fromDesk, task, ruleId?}` (requester is a member of `fromDesk`): refused with
      `ANONYMITY_SET_TOO_SMALL` while the source desk has fewer than 3 Ledger-joined members. The exchange rule whose
      recipient is `fromDesk` (`ruleId` needed only if several apply) selects, per member of the source desk who joined
@@ -167,10 +169,10 @@ message}` in `GET /v1/consents`, then `POST /v1/desk-requests/:id/approve {signa
      hash, never naming the owner. The requester verifies each delivery itself: `hashExcerpt(excerpt) ===
 excerptHash`, and the proof (`checkDeskProof`) against the request's `sourceRoot`, never the desk's current root.
 9. **Compliance** (role `compliance` only):
-   - Key: Chloe signs (EIP-191, Ledger) `complianceKeyDeriveMessage("Acme")`; X25519 secret = keccak256(signature),
+   - Key: Chloe signs (EIP-191, Ledger) `complianceKeyDeriveMessage("Coinbase")`; X25519 secret = keccak256(signature),
      never sent (Ledger signatures are deterministic: the same Ledger re-derives the same key). Registration:
      `POST /v1/compliance/key {publicKey (hex), signature}` where `signature` is her EIP-191 signature of
-     `complianceKeyRegistrationMessage("Acme", publicKey)` (all three in `packages/attest`) ->
+     `complianceKeyRegistrationMessage("Coinbase", publicKey)` (all three in `packages/attest`) ->
      `201 {keyId, employeeId, publicKey, registeredAt}`. Registering the current key again is a no-op; a replaced key
      can never become current again (`STALE`). `GET /v1/compliance/key -> {key: ComplianceKey | null}` tells her
      client whether a registration is still needed (no Ledger review when the enclave already holds the key).

@@ -15,7 +15,7 @@ export function registerDeskRoutes(app: Hono<BadgeEnv>, services: EnclaveService
     c.json(await services.desks.join(c.get("caller"), await jsonBody(c)), 201),
   );
 
-  app.get("/v1/desks/:desk", (c) => c.json(services.desks.getDesk(c.req.param("desk"))));
+  app.get("/v1/desks/:desk", (c) => c.json(services.desks.getDesk(c.get("caller"), c.req.param("desk"))));
 
   app.post("/v1/desk-requests", async (c) => {
     const input = await parseBody(c, CreateDeskRequestSchema);

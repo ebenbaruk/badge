@@ -1,3 +1,4 @@
+import { COMPANY_NAME } from "@/lib/directory";
 import { cn } from "@/lib/utils";
 
 /** Badge mark: a shield-shaped badge with a key slot, drawn inline so it follows the theme colours. */
@@ -18,10 +19,12 @@ export function BadgeMark({ className }: { className?: string }) {
 export function BrandLockup() {
   return (
     <div className="flex items-center gap-2.5">
-      <BadgeMark />
+      <BadgeMark className="shrink-0" />
       <div className="leading-none">
         <div className="text-[15px] font-semibold tracking-tight">Badge</div>
-        <div className="mt-0.5 text-[11px] text-muted-foreground">Acme · confidential memory</div>
+        <div className="mt-0.5 text-[11px] whitespace-nowrap text-muted-foreground">
+          {COMPANY_NAME} · confidential memory
+        </div>
       </div>
     </div>
   );

@@ -3,16 +3,16 @@ import { findCandidates, isExcludedPersonalData, tokenize } from "./retrieval";
 import { loadSeed } from "./seed";
 
 const { notes } = loadSeed();
-const ORION_TASK = "Prepare the brief for tomorrow's meeting with client Orion";
+const MORPHO_TASK = "Prepare the brief for tomorrow's meeting with client Morpho";
 
 describe("mock retrieval", () => {
   it("tokenizes without accents, stopwords or plural s", () => {
-    expect([...tokenize("Prépare the sensors for Orión")]).toEqual(["sensor", "orion"]);
+    expect([...tokenize("Prépare the vaults for Mórpho")]).toEqual(["vault", "morpho"]);
   });
 
   it("recalls the notes of the seed recall check and never the HR file", () => {
-    const ids = findCandidates(ORION_TASK, notes).map((c) => c.note.id);
-    expect(ids).toEqual(expect.arrayContaining(["bob-orion-conditions-2025", "alice-objectif-orion"]));
+    const ids = findCandidates(MORPHO_TASK, notes).map((c) => c.note.id);
+    expect(ids).toEqual(expect.arrayContaining(["bob-morpho-conditions-2025", "alice-objectif-morpho"]));
     expect(ids).not.toContain("chloe-rh-prudhommes");
   });
 

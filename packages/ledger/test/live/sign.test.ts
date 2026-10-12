@@ -67,12 +67,12 @@ describe(`clear signing on ${SPECULOS_URL}`, () => {
   });
 
   it("signs the desk identity derivation message (EIP-191) deterministically", async () => {
-    const text = deskIdentityDeriveMessage("Acme");
+    const text = deskIdentityDeriveMessage("Coinbase");
     const first = capturingApprover("DeskIdentityDerive");
     const signature = await signer.signPersonalMessage(text, { onProgress: first.onProgress });
     const { spaced } = flatten(await first.done());
     expect(spaced).toContain("Badge - anonymous desk identity");
-    expect(spaced).toContain("Acme");
+    expect(spaced).toContain("Coinbase");
     expect(await recoverMessageAddress({ message: text, signature })).toBe(address);
 
     // RFC 6979: the same Ledger always re-derives the same desk identity.

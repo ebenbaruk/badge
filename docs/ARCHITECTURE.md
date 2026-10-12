@@ -76,10 +76,11 @@ TLS se termine à la passerelle Phala : c'est ce canal, pas TLS, qui garantit la
 Dans chaque requête, la clé de session signe `méthode, chemin, horodatage, sha256(corps)` (EIP-191), avec contrôle
 d'horloge (60 s) et cache anti-rejeu.
 
-## 2. Flux : brief Orion avec accord ponctuel
+## 2. Flux : brief Morpho avec accord ponctuel
 
-Alice (Ventes) demande à son agent le brief de son rendez-vous avec le client Orion. Une partie du contexte utile est
-dans les notes de Bob (Grands comptes).
+Alice (Ventes) demande à son agent le brief de son rendez-vous avec le client Morpho. Une partie du contexte utile est
+dans les notes de Bob (Grands comptes). L'entreprise de la démo est Coinbase : scénario illustratif, sans lien avec
+Coinbase ni Morpho.
 
 ```mermaid
 sequenceDiagram
@@ -92,13 +93,13 @@ sequenceDiagram
   participant AB as Application de Bob
   actor Bob as Ledger de Bob
 
-  Alice->>AA: « Prépare le brief Orion »
+  Alice->>AA: « Prépare le brief Morpho »
   AA->>E: ouvre le canal, vérifie la quote et la mesure
   AA->>E: POST /v1/tasks (signé par la clé de session)
   E->>M: candidats sur le contexte global et celui de chaque employé
   E->>LLM: classe chaque candidat (pertinence, données personnelles)
   E->>E: porte déterministe + règles anti-aspiration
-  Note over E: global et notes d'Alice : autorisés<br/>note privée de Bob (« perso ») : jamais proposée<br/>notes Orion de Bob : ContextShare préparé
+  Note over E: global et notes d'Alice : autorisés<br/>note privée de Bob (« perso ») : jamais proposée<br/>notes Morpho de Bob : ContextShare préparé
   E-->>AA: waiting_consent, « Contexte personnel de Bob Durand » (aucun texte)
   AB->>E: GET /v1/consents
   E-->>AB: extrait, risque, message ContextShare exact
@@ -123,7 +124,7 @@ Variantes du même flux :
   compris (« Tout ce que j'ai partage avec Alice Martin + accords equipe Ventes ») ; Bob le signe. L'enclave fait
   tourner la clé de données de Bob, puis enregistre la révocation ; un brief en cache qui utilisait
   l'extrait est rédigé à nouveau sans lui, et la tâche suivante redemande son accord.
-- **Accord permanent** : Bob signe une fois `ContextPolicy` (« l'équipe Ventes peut utiliser mes notes `orion` pour
+- **Accord permanent** : Bob signe une fois `ContextPolicy` (« l'équipe Ventes peut utiliser mes notes `morpho` pour
   des briefs clients, 500 caractères max, 30 jours »). Les demandes suivantes qui entrent dans ce cadre passent sans
   le solliciter, chaque usage est compté et journalisé (`policy.used`). Une demande signalée par les règles n'est
   jamais couverte par un accord permanent, et chaque libération est de nouveau contrôlée (données personnelles) sur

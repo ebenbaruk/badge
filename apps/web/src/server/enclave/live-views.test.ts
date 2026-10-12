@@ -1,10 +1,12 @@
 import type { AttestationResult } from "@badge/attest";
 import type { AuditLog, Task } from "@badge/client";
 import { describe, expect, it } from "vitest";
+import { DESK_DIRECTORY, EXCHANGE_RULES } from "../desk-directory";
 import {
   attestationView,
   auditView,
   deskIdOf,
+  deskView,
   parseBrief,
   ruleSteps,
   taskView,
@@ -13,7 +15,7 @@ import {
 
 const TASK_ID = `0x${"ab".repeat(32)}` as const;
 const CREATED_AT = 1_791_100_800;
-const RECORD: TaskRecord = { id: TASK_ID, requester: "alice", task: "Orion brief", trapped: false };
+const RECORD: TaskRecord = { id: TASK_ID, requester: "alice", task: "Morpho meeting brief", trapped: false };
 
 const warn = {
   level: "warn" as const,
@@ -25,7 +27,7 @@ const warn = {
 function task(overrides: Partial<Task>): Task {
   return {
     id: TASK_ID,
-    taskLabel: "Orion meeting brief",
+    taskLabel: "Morpho meeting brief",
     status: "ready",
     allowed: [],
     pending: [],
@@ -41,13 +43,13 @@ function task(overrides: Partial<Task>): Task {
 describe("parseBrief", () => {
   it("links [n] citations to the numbered sources and keeps the title", () => {
     const brief = parseBrief(
-      "**Brief: Orion meeting**\n- Client since 2021 [1]\n- 12% discount in 2025 [2, 3]\n- Off topic [9]",
+      "**Brief: Morpho meeting**\n- Followed by Key Accounts [1]\n- Monthly review meeting [2, 3]\n- Off topic [9]",
       ["1", "2", "3"],
     );
-    expect(brief.title).toBe("Brief: Orion meeting");
+    expect(brief.title).toBe("Brief: Morpho meeting");
     expect(brief.bullets).toEqual([
-      { text: "Client since 2021", sourceIds: ["1"] },
-      { text: "12% discount in 2025", sourceIds: ["2", "3"] },
+      { text: "Followed by Key Accounts", sourceIds: ["1"] },
+      { text: "Monthly review meeting", sourceIds: ["2", "3"] },
       { text: "Off topic", sourceIds: [] },
     ]);
   });
@@ -110,14 +112,14 @@ describe("taskView", () => {
         allowed: [
           {
             ownerId: "company",
-            ownerName: "Acme",
-            excerptLabel: "Orion client profile",
+            ownerName: "Coinbase",
+            excerptLabel: "Morpho: onchain lending protocol, a client followed by Bob...",
             excerptLength: 200,
             via: "company",
           },
           { ownerId: "bob", ownerName: "Bob", excerptLabel: "Terms", excerptLength: 300, via: "policy" },
         ],
-        brief: "Orion brief\n- 12% discount [2]",
+        brief: "Morpho brief\n- monthly review meeting [2]",
         tokenStats: { selectedTokens: 120, allContextTokens: 1200 },
       }),
       RECORD,
@@ -231,6 +233,39 @@ describe("auditView", () => {
     expect(anonymous.sealed[0]?.revealed?.employee).toBeUndefined();
     expect(anonymous.chain).toEqual({ ok: true, length: 3, headHash: "h3" });
     expect(auditView(log, new Map([[2, "bob"]])).sealed[0]?.revealed?.employee).toBe("bob");
+  });
+});
+
+describe("deskView", () => {
+  const origination = DESK_DIRECTORY.find((d) => d.id === "origination");
+  const research = DESK_DIRECTORY.find((d) => d.id === "research");
+  if (origination === undefined || research === undefined) throw new Error("seed desks missing");
+  const aliceDesk = {
+    id: "origination",
+    name: "Origination",
+    members: 1,
+    commitments: ["123"],
+    root: "123",
+    joined: true,
+  };
+
+  it("trusts the enclave on membership: Alice, joined by the setup script, is not offered Join again", () => {
+    // Issue 3: this server never derived Alice's identity (prepare-demo signed her DeskJoin), so the old check
+    // against the cached identity said "not joined" and the page offered "Join Origination".
+    const view = deskView(origination, aliceDesk, "alice", EXCHANGE_RULES);
+    expect(view).toMatchObject({ id: "origination", isMember: true, joined: true, requestable: false });
+    expect(deskView(origination, { ...aliceDesk, joined: false }, "alice", EXCHANGE_RULES).joined).toBe(
+      false,
+    );
+  });
+
+  it("asks for an anonymity set only on a desk other desks may ask", () => {
+    // Origination only receives under the exchange rule: one member is not a "group too small".
+    expect(deskView(origination, aliceDesk, "alice", EXCHANGE_RULES).askedAnonymously).toBe(false);
+    const researchDesk = { ...aliceDesk, id: "research", name: "Research", members: 3, joined: false };
+    const seenByAlice = deskView(research, researchDesk, "alice", EXCHANGE_RULES);
+    expect(seenByAlice).toMatchObject({ askedAnonymously: true, isMember: false, requestable: true });
+    expect(seenByAlice.allowedTopics).toEqual(["lending-market", "stablecoin-rates"]);
   });
 });
 

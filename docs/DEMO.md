@@ -17,9 +17,9 @@ scripts/bootstrap.sh
 
 Le script vérifie les prérequis (Docker, Node 24, pnpm 11, fichier de secrets), installe le dépôt, récupère les
 artefacts, démarre les cinq Speculos (Alice :5001, Bob :5002, Chloé :5003, David :5004, Emma :5005), le simulateur
-dstack (:8090), la mémoire (:8000) et charge le jeu de démonstration de l'entreprise fictive Acme. David Moreau et
-Emma Leroy sont des membres du desk Research à part entière, chacun avec son Ledger ; toutes les graines sont des
-vecteurs de test BIP-39 publics, listés dans `infra/speculos.sh`. Il peut être relancé à volonté : ce qui tourne
+dstack (:8090), la mémoire (:8000) et charge le jeu de démonstration : l'entreprise Coinbase et son client Morpho
+(scénario illustratif, sans lien avec Coinbase ni Morpho). David Moreau et Emma Leroy sont des membres du desk
+Research à part entière, chacun avec son Ledger ; toutes les graines sont des vecteurs de test BIP-39 publics, listés dans `infra/speculos.sh`. Il peut être relancé à volonté : ce qui tourne
 déjà n'est pas touché. `--skip-seed` saute le chargement (quelques centimes d'appels LLM).
 
 ## Démo en ligne de commande
@@ -35,7 +35,7 @@ attesté, puis déroule et vérifie 18 étapes :
 2. inscription d'Alice, Bob et Chloé, chacun signant son identité sur son Ledger ;
 3. délégation d'une clé de session à l'agent de chacun ;
 4. David et Emma rejoignent le desk Research, chacun avec son Ledger ;
-5. brief Orion demandé par l'agent d'Alice : contexte global et notes d'Alice autorisés, notes de Bob en attente ;
+5. brief Morpho demandé par l'agent d'Alice : contexte global et notes d'Alice autorisés, notes de Bob en attente ;
 6. Bob lit la demande et signe en clair sur son Ledger ;
 7. le brief est rédigé dans l'enclave avec ses notes, sans la note RH confidentielle de Chloé, et le compteur montre
    les jetons économisés ;
@@ -44,7 +44,7 @@ attesté, puis déroule et vérifie 18 étapes :
 10. Bob révoque tout ce qu'il a partagé avec Alice : l'enclave prépare le message, le Ledger en nomme la vraie portée
     (« Tout ce que j'ai partage avec Alice Martin + accords equipe Ventes ») ; la demande suivante attend de nouveau
     son accord ;
-11. Bob signe un accord permanent (équipe Ventes, notes `orion`, 30 jours) ; la demande suivante passe sans lui ;
+11. Bob signe un accord permanent (équipe Ventes, notes `morpho`, 30 jours) ; la demande suivante passe sans lui ;
 12. Chloé enregistre sa clé de conformité, dérivée de son Ledger ;
 13. Bob rejoint anonymement le desk Research, qui compte alors trois membres inscrits ;
 14. Alice (Origination) demande un fait de marché au desk Research ; l'enclave fige la racine du desk source ;
@@ -105,10 +105,10 @@ anonyme de Bob la re-dérive sur son Ledger (un message de plus), sans le faire 
 
 ### Parcours devant le jury
 
-1. **Alice → Agent.** Choisir la suggestion « Prépare-moi le brief du rendez-vous de demain avec le client Orion »,
+1. **Alice → Agent.** Choisir la suggestion « Prepare tomorrow's meeting with Morpho »,
    Envoyer. Le fil montre les étapes dans l'enclave : contexte global et notes d'Alice autorisés, « Contexte personnel
    de Bob Durand » en attente de son accord, sans aucun texte (« En attente de Bob Durand · 3 extraits »).
-2. **Bob → Demandes d'accord.** Une demande par extrait (trois pour le brief Orion) : l'extrait (Bob voit son propre
+2. **Bob → Demandes d'accord.** Une demande par extrait (trois pour le brief Morpho) : l'extrait (Bob voit son propre
    texte), le risque, et l'aperçu exact de l'écran du Ledger. « Approuver sur mon Ledger » : le miroir s'anime. Faire
    défiler les champs (Partager avec, Extrait, Longueur, Tâche, Expire le, Empreinte, Enclave) en les lisant, puis
    appui long sur « Hold to sign ». Même geste pour les deux autres extraits ; ils passent dans l'« Historique ».
@@ -123,8 +123,8 @@ anonyme de Bob la re-dérive sur son Ledger (un message de plus), sans le faire 
 5. **Bob → Accès et révocation.** « Tout révoquer pour Alice », signer sur le Ledger, qui nomme la portée réelle
    (« Tout ce que j'ai partage avec Alice Martin + accords equipe Ventes » : la révocation couvre aussi les accords
    permanents de son équipe). Message : la clé des données de Bob a été renouvelée ; une nouvelle demande d'Alice redemandera son accord.
-6. **Bob → Accords permanents.** Le formulaire est prérempli : équipe « Ventes », étiquette `orion`, usage « briefs
-   clients », 800 car., 30 jours ; « Signer l'accord sur mon Ledger ». **Alice → Agent** : relancer le brief Orion, il passe sans solliciter
+6. **Bob → Accords permanents.** Le formulaire est prérempli : équipe « Ventes », étiquette `morpho`, usage « briefs
+   clients », 800 car., 30 jours ; « Signer l'accord sur mon Ledger ». **Alice → Agent** : relancer le brief Morpho, il passe sans solliciter
    Bob (« Accord permanent »), et l'usage s'affiche dans la liste de Bob.
 7. **Alice → Desks.** « Demander à un autre desk » avec la suggestion « Tendances du marché des capteurs industriels
    et prix des composants ». **Bob → Desks** : la demande de partage sous « Regle 4 - marche capteurs » ; « Partager

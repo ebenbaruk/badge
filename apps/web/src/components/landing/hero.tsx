@@ -71,8 +71,9 @@ export function Hero() {
             </span>
           </h1>
           <p className="lp-hero-description">
-            The right context for every task: your company&apos;s knowledge, always within reach. Your
-            personal context, shared only with your consent.
+            Badge is a company memory for AI agents, and it turns each employee&apos;s Ledger into their
+            company badge. It finds the context a task needs, and a colleague&apos;s notes leave only once
+            that colleague signs.
           </p>
           <div className="lp-hero-actions">
             <Link href={DEMO_ROUTE} className="lp-primary-action">
@@ -94,12 +95,12 @@ export function Hero() {
           data-paused={paused || reducedMotion}
         >
           <div className="consent-preview-header">
-            <span>ONE EXCERPT, NOT YOUR WHOLE MEMORY.</span>
+            <span>One excerpt, not your whole memory.</span>
             <span className="consent-example">Illustrative example</span>
           </div>
           <div className="consent-design-heading">
             <div>
-              <span>THE POWER TO SAY YES.</span>
+              <span>The power to say yes.</span>
               <p>You hold the key.</p>
             </div>
             <div className="consent-design-mark" aria-hidden="true">
@@ -113,7 +114,7 @@ export function Hero() {
               </span>
               <div>
                 <span className="consent-small-label">Alice’s agent</span>
-                <p>Prepare my meeting with Orion.</p>
+                <p>Prepare tomorrow&apos;s meeting with Morpho.</p>
               </div>
               <span className="consent-request-dot" />
             </div>
@@ -136,7 +137,8 @@ export function Hero() {
                   <span>01 excerpt</span>
                 </div>
                 <blockquote>
-                  “Orion wants to roll the solution out to its sales team as early as November.”
+                  “Their team prefers a written agenda before any call. Their risk lead asks about custody
+                  reporting first.”
                 </blockquote>
                 <div className="consent-scope">
                   <span>
@@ -144,7 +146,7 @@ export function Hero() {
                   </span>
                   <ArrowRight size={13} />
                   <span>
-                    For <strong>the Orion brief</strong>
+                    For <strong>the Morpho brief</strong>
                   </span>
                 </div>
               </div>
@@ -223,6 +225,7 @@ export function Hero() {
               </button>
             )}
           </div>
+          <p className="consent-disclaimer">Illustrative scenario, not affiliated with Coinbase or Morpho</p>
         </div>
       </div>
       <div className="lp-hero-foundation">

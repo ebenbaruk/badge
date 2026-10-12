@@ -7,8 +7,8 @@ import { ScrollScene } from "./scroll-scene";
 
 const FOOTER_LINKS = [
   { href: GITHUB_URL, label: "GitHub" },
-  { href: `${GITHUB_URL}/blob/main/docs/ARCHITECTURE.md`, label: "Architecture" },
-  { href: `${GITHUB_URL}/blob/main/docs/DEMO.md`, label: "Demo walkthrough" },
+  { href: `${GITHUB_URL}/blob/main/README.md`, label: "README" },
+  { href: `${GITHUB_URL}/blob/main/INSTALL.md`, label: "Run the demo" },
 ] as const;
 
 /** Night footer: invitation, giant drifting wordmark and the hackathon credits. */

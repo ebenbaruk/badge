@@ -15,7 +15,7 @@ mesure que les clients épinglent et que chaque accord signé sur le Ledger port
 | `api`          | `ghcr.io/ebenbaruk/badge-honcho@sha256:…`  | `sealed`         | API Honcho 3.2.2 (auth JWT obligatoire).                                    |
 | `deriver`      | `ghcr.io/ebenbaruk/badge-honcho@sha256:…`  | `sealed`         | Dérivation de la mémoire (LLM via la passerelle).                           |
 | `enclave`      | `ghcr.io/ebenbaruk/badge-enclave@sha256:…` | `sealed`         | API Badge (port 8787), socket dstack monté, données dans le volume `/data`. |
-| `seed`         | `ghcr.io/ebenbaruk/badge-enclave@sha256:…` | `sealed`         | Tâche unique : ingère `infra/seed/acme.json` et vérifie le rappel.          |
+| `seed`         | `ghcr.io/ebenbaruk/badge-enclave@sha256:…` | `sealed`         | Tâche unique : ingère `infra/seed/coinbase.json` et vérifie le rappel.      |
 | `gateway`      | `ghcr.io/ebenbaruk/badge-gateway@sha256:…` | `sealed`, egress | Seule sortie (2 routes LLM, clé injectée) et seule entrée (8787 → enclave). |
 
 - **Réseau scellé** : `sealed` est un réseau Docker interne (pas de route ni de DNS externe). Seule la passerelle
