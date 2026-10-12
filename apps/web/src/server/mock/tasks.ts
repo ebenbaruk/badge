@@ -1,5 +1,5 @@
 /**
- * Mock of the enclave's task pipeline (docs/enclave-api.md, flows 3 to 5): retrieval, classification, policy
+ * Mock of the enclave's task pipeline (apps/enclave/src/tasks/service.ts): retrieval, classification, policy
  * engine (global / own / grant / standing agreement / consent), mass-extraction rules, consents and the brief.
  */
 import {

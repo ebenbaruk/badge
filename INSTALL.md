@@ -11,8 +11,8 @@ Everything in Badge runs on your machine. You don't need a cloud account, a phys
 | LLM        | Any OpenAI-compatible API, reached only through an egress gateway container that holds the key       |
 | ZK         | Real Semaphore v4 Groth16 proofs                                                                     |
 
-The same code also runs in a real Intel TDX CVM on Phala Cloud ([`docs/DEPLOY.md`](docs/DEPLOY.md)). That setup is
-optional and costs money, so the steps below never start it.
+The same services are also packaged for an Intel TDX CVM on Phala Cloud (`infra/cvm/`, `infra/phala-up.sh`); a first
+deployment ran there on 7 Oct. That setup is optional and costs money, so the steps below never start it.
 
 ## 1. Requirements
 

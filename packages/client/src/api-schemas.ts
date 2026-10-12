@@ -1,5 +1,5 @@
 /**
- * Response shapes of the enclave API (docs/enclave-api.md, "Wire shapes"). The SDK validates every response with
+ * Response shapes of the enclave API. The SDK validates every response with
  * these schemas and the enclave types its handlers with the inferred types, so a drift between both ends fails
  * loudly in tests rather than silently in the UI. Signed Badge messages inside responses are decoded with the strict
  * `@badge/consent` wire schemas (bigints restored), ready to be shown and signed on the Ledger.

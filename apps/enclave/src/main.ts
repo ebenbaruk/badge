@@ -1,6 +1,6 @@
 /**
  * Process entry of the enclave service (`pnpm --filter @badge/enclave start`). Configuration comes from the
- * environment (src/config.ts, src/llm/profile.ts, src/memory/honcho-backend.ts); see apps/enclave/README.md.
+ * environment (src/config.ts, src/llm/profile.ts, src/memory/honcho-backend.ts); the variable names are in .env.example.
  */
 import { startEnclaveServer } from "./server";
 

@@ -1,5 +1,5 @@
 /**
- * Typed client of the enclave API (docs/enclave-api.md), shared by the web app, the MCP server and the demo script.
+ * Typed client of the enclave API, shared by the web app, the MCP server and the demo script.
  */
 import type { AttestationMode, AttestationResult, VerifiedAttestation } from "@badge/attest";
 import {

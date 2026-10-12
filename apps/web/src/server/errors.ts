@@ -168,7 +168,7 @@ function enclaveFailure(error: BadgeApiError): Extract<ActionResult, { ok: false
   }
 }
 
-/** Plain-English explanations of the enclave refusals a user can run into (docs/enclave-api.md, "Errors"). */
+/** Plain-English explanations of the enclave refusals a user can run into (codes in apps/enclave/src/api/errors.ts). */
 const ENCLAVE_REFUSALS: Readonly<Record<string, string>> = {
   NOT_ENROLLED: "Pair your Ledger first (Setup).",
   COMPLIANCE_KEY_MISSING:

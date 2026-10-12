@@ -1,5 +1,5 @@
 /**
- * The enclave's HTTP API (Hono), exactly as described in docs/enclave-api.md. Every dependency is injected, so the
+ * The enclave's HTTP API (Hono), with the wire shapes of packages/client/src/api-schemas.ts. Every dependency is injected, so the
  * whole API runs in-process in tests (app.request) and behind the attested channel in production (the channel
  * dispatches decrypted requests to this same app).
  *

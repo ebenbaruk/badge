@@ -8,7 +8,7 @@ import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { BadgeApiError } from "./errors";
 
 const HOUR_SECONDS = 3600n;
-/** The enclave refuses sessions longer than 12 h (docs/enclave-api.md): the key sits on a laptop. */
+/** The enclave refuses sessions longer than 12 h (SESSION_MAX_TTL_SECONDS in apps/enclave/src/policy/engine.ts): the key sits on a laptop. */
 export const ENCLAVE_MAX_SESSION_TTL_SECONDS = 12n * HOUR_SECONDS;
 /** Default delegation: a working day, comfortably under the cap even with some clock drift. */
 export const DEFAULT_AGENT_SESSION_TTL_SECONDS = 8n * HOUR_SECONDS;

@@ -1,5 +1,5 @@
 /**
- * The web app's view of the enclave API (docs/enclave-api.md). Every method acts "as" one employee: in live mode
+ * The web app's view of the enclave API (apps/enclave/src/api/routes). Every method acts "as" one employee: in live mode
  * the call is authenticated with that employee's agent session key; in mock mode the id is trusted.
  *
  * View types are plain JSON (ISO dates, decimal strings for bigints, wire-format messages) so they cross the
