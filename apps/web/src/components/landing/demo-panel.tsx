@@ -111,9 +111,7 @@ export function DemoPanel() {
             ))}
           </ol>
 
-          <DemoLink
-            className="mt-3 flex min-h-14 w-full items-center justify-between rounded-pill bg-signal px-6 py-[18px] text-[15px] font-semibold text-on-signal transition-colors duration-300 hover:bg-signal-hover"
-          >
+          <DemoLink className="mt-3 flex min-h-14 w-full items-center justify-between rounded-pill bg-signal px-6 py-[18px] text-[15px] font-semibold text-on-signal transition-colors duration-300 hover:bg-signal-hover">
             <RollingText>{SHOWCASE ? "Watch the demo" : "Open the demo"}</RollingText>
             <NudgeArrow className="text-[22px] leading-none" />
           </DemoLink>

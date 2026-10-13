@@ -23,9 +23,7 @@ export function SiteFooter() {
           className="text-[clamp(30px,4vw,60px)] leading-[1.08] tracking-[-0.06em]"
           text="Context flows. Consent stays with its owner."
         />
-        <DemoLink
-          className="inline-flex items-center gap-4 justify-self-start text-[clamp(18px,2.5vw,36px)] tracking-[-0.04em] text-signal md:justify-self-end"
-        >
+        <DemoLink className="inline-flex items-center gap-4 justify-self-start text-[clamp(18px,2.5vw,36px)] tracking-[-0.04em] text-signal md:justify-self-end">
           <RollingText>{SHOWCASE ? "Watch the demo" : "Open the demo"}</RollingText>
           <NudgeArrow />
         </DemoLink>
