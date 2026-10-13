@@ -99,7 +99,7 @@ x-enclave-env: &enclave-env
 
 services:
   secrets-init:
-    image: ghcr.io/ebenbaruk/badge-honcho@sha256:0edda2d2c216727979402620df0e4e8786027fff9d67aa93af00518d641b8c87
+    image: ghcr.io/ebenbaruk/badge-honcho@sha256:bf48a38acb8c28fc62056fdcb62f8ea5d9c5dbe971dcdafcc238155e077b56ed
     # Root only to create the shared secrets volume; the script exits once the files exist.
     user: "0"
     entrypoint: ["sh", "/app/docker/badge-secrets-init.sh"]
@@ -132,7 +132,7 @@ services:
     restart: unless-stopped
 
   api:
-    image: ghcr.io/ebenbaruk/badge-honcho@sha256:0edda2d2c216727979402620df0e4e8786027fff9d67aa93af00518d641b8c87
+    image: ghcr.io/ebenbaruk/badge-honcho@sha256:bf48a38acb8c28fc62056fdcb62f8ea5d9c5dbe971dcdafcc238155e077b56ed
     entrypoint: ["sh", "/app/docker/badge-entrypoint.sh"]
     environment: *honcho-env
     volumes:
@@ -155,7 +155,7 @@ services:
     restart: unless-stopped
 
   deriver:
-    image: ghcr.io/ebenbaruk/badge-honcho@sha256:0edda2d2c216727979402620df0e4e8786027fff9d67aa93af00518d641b8c87
+    image: ghcr.io/ebenbaruk/badge-honcho@sha256:bf48a38acb8c28fc62056fdcb62f8ea5d9c5dbe971dcdafcc238155e077b56ed
     entrypoint: ["sh", "/app/docker/badge-deriver-entrypoint.sh"]
     environment: *honcho-env
     volumes:
@@ -166,7 +166,7 @@ services:
     restart: unless-stopped
 
   enclave:
-    image: ghcr.io/ebenbaruk/badge-enclave@sha256:7803e6ebd9fb278ff7118bae4b9dd08afd6816efc0f55afe17863e3489525725
+    image: ghcr.io/ebenbaruk/badge-enclave@sha256:0cdaef1c9dae63eeae59bb8d04c105bebedb4b9e7434c1fea89a50fad5daf984
     environment: *enclave-env
     volumes:
       # dstack guest agent: quotes, KMS-derived keys, the compose hash (the enclave's measurement).
@@ -193,7 +193,7 @@ services:
   # Ingests the demo dataset (infra/seed/coinbase.json) and checks recall. Idempotent: on later boots it only re-runs
   # the checks (a few LLM calls). It cannot read the deriver logs from inside the CVM (BADGE_SEED_DERIVER_LOGS).
   seed:
-    image: ghcr.io/ebenbaruk/badge-enclave@sha256:7803e6ebd9fb278ff7118bae4b9dd08afd6816efc0f55afe17863e3489525725
+    image: ghcr.io/ebenbaruk/badge-enclave@sha256:0cdaef1c9dae63eeae59bb8d04c105bebedb4b9e7434c1fea89a50fad5daf984
     working_dir: /app/apps/enclave
     command: ["node", "--import", "tsx", "../../infra/seed/seed.ts"]
     environment:
@@ -209,7 +209,7 @@ services:
     restart: "no"
 
   gateway:
-    image: ghcr.io/ebenbaruk/badge-gateway@sha256:a93e7cace1384d410caebd37b7d134abcd8688c6536d6f2fa6cb4c84eb95c86e
+    image: ghcr.io/ebenbaruk/badge-gateway@sha256:62f03eb03bb90abb09f4742996154329a319b78fc3888b75cc94b81aa056b87d
     environment:
       # The upstream itself is pinned in the gateway image (15-badge-upstream.envsh): only the key is a secret.
       BADGE_UPSTREAM_BASE_URL: https://inference.phala.com/v1
