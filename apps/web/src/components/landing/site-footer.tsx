@@ -1,8 +1,7 @@
-import Link from "next/link";
 import { BadgeMark } from "@/components/brand";
 import { NudgeArrow, RollingText } from "@/components/motion/rolling-text";
 import { RevealText } from "@/components/motion/reveal-text";
-import { DEMO_ROUTE, GITHUB_URL } from "./primitives";
+import { DemoLink, GITHUB_URL, SHOWCASE } from "./primitives";
 import { ScrollScene } from "./scroll-scene";
 
 const FOOTER_LINKS = [
@@ -24,13 +23,12 @@ export function SiteFooter() {
           className="text-[clamp(30px,4vw,60px)] leading-[1.08] tracking-[-0.06em]"
           text="Context flows. Consent stays with its owner."
         />
-        <Link
-          href={DEMO_ROUTE}
+        <DemoLink
           className="inline-flex items-center gap-4 justify-self-start text-[clamp(18px,2.5vw,36px)] tracking-[-0.04em] text-signal md:justify-self-end"
         >
-          <RollingText>Open the demo</RollingText>
+          <RollingText>{SHOWCASE ? "Watch the demo" : "Open the demo"}</RollingText>
           <NudgeArrow />
-        </Link>
+        </DemoLink>
       </div>
 
       <div

@@ -8,6 +8,39 @@ import { cn } from "@/lib/utils";
 export const GITHUB_URL = "https://github.com/ebenbaruk/badge";
 /** Where every "Open the demo" call to action leads. */
 export const DEMO_ROUTE: Route = "/demo";
+/** The submission video (unlisted), where demo links lead on the hosted showcase. */
+export const DEMO_VIDEO_URL = "https://youtu.be/OVdxuhtCuYE";
+/**
+ * Hosted showcase build (NEXT_PUBLIC_BADGE_SHOWCASE=1, e.g. on Vercel): the landing only. The demo needs the five
+ * emulated Ledgers and the enclave, so its links lead to the video instead, and next.config.ts sends the app routes
+ * back to the landing.
+ */
+export const SHOWCASE = process.env.NEXT_PUBLIC_BADGE_SHOWCASE === "1";
+
+/** A call to action towards the demo: the app when it runs locally, the video on the hosted showcase. */
+export function DemoLink({
+  children,
+  className,
+  route = DEMO_ROUTE,
+}: {
+  children: ReactNode;
+  className: string;
+  route?: Route;
+}) {
+  if (SHOWCASE) {
+    return (
+      <a href={DEMO_VIDEO_URL} target="_blank" rel="noreferrer" className={className}>
+        {children}
+        <span className="sr-only"> (video, opens in a new tab)</span>
+      </a>
+    );
+  }
+  return (
+    <Link href={route} className={className}>
+      {children}
+    </Link>
+  );
+}
 
 /** Small left-hand label of the editorial `1fr 2.4fr` layout. */
 export function Aside({ children, className }: { children: ReactNode; className?: string }) {

@@ -1,12 +1,11 @@
 "use client";
 
 import { Moon, Sun } from "lucide-react";
-import Link from "next/link";
 import { useTheme } from "next-themes";
 import { useRef, useSyncExternalStore } from "react";
 import { BadgeMark } from "@/components/brand";
 import { NudgeArrow, RollingText, SpinPlus } from "@/components/motion/rolling-text";
-import { DEMO_ROUTE, GITHUB_URL } from "./primitives";
+import { DemoLink, GITHUB_URL, SHOWCASE } from "./primitives";
 
 const MENU_LINKS = [
   { href: "#how-it-works", label: "How it works" },
@@ -43,13 +42,12 @@ export function NavPill() {
         </a>
         <div className="flex items-center gap-1 justify-self-end">
           <ThemeSwitch />
-          <Link
-            href={DEMO_ROUTE}
+          <DemoLink
             className="lp-nav-action inline-flex items-center gap-2 rounded-pill px-[11px] py-[9px] text-[11px] font-semibold transition-colors duration-300 md:px-[15px] md:py-[10px] md:text-[12px]"
           >
             <RollingText>Demo</RollingText>
             <NudgeArrow />
-          </Link>
+          </DemoLink>
         </div>
       </nav>
 
@@ -92,13 +90,12 @@ export function NavPill() {
           ))}
         </ul>
         <div className="mt-6 flex flex-wrap items-center gap-3">
-          <Link
-            href={DEMO_ROUTE}
+          <DemoLink
             className="lp-nav-action inline-flex min-h-12 items-center gap-6 rounded-pill px-6 text-[14px] font-semibold transition-colors duration-300"
           >
-            <RollingText>Open the demo</RollingText>
+            <RollingText>{SHOWCASE ? "Watch the demo" : "Open the demo"}</RollingText>
             <NudgeArrow />
-          </Link>
+          </DemoLink>
           <a
             href={GITHUB_URL}
             target="_blank"

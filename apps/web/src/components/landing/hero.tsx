@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import {
   ArrowDown,
   ArrowUpRight,
@@ -15,7 +14,7 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useReducedMotion } from "@/components/motion/use-reduced-motion";
-import { DEMO_ROUTE } from "./primitives";
+import { DemoLink, SHOWCASE } from "./primitives";
 
 const STEPS = ["The agent asks", "You consent", "The excerpt is shared"] as const;
 
@@ -76,9 +75,9 @@ export function Hero() {
             colleague approves first, on their Ledger.
           </p>
           <div className="lp-hero-actions">
-            <Link href={DEMO_ROUTE} className="lp-primary-action">
-              Try Badge <ArrowUpRight size={19} />
-            </Link>
+            <DemoLink className="lp-primary-action">
+              {SHOWCASE ? "Watch the demo" : "Try Badge"} <ArrowUpRight size={19} />
+            </DemoLink>
             <a href="#how-it-works" className="lp-secondary-action">
               See how it works <ArrowDown size={15} />
             </a>

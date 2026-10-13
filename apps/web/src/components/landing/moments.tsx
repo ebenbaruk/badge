@@ -3,7 +3,7 @@ import { NudgeArrow } from "@/components/motion/rolling-text";
 import { Reveal } from "@/components/motion/reveal";
 import { RevealText } from "@/components/motion/reveal-text";
 import { type LandingImageSlot, PlaceholderImage } from "./placeholder-image";
-import { DEMO_ROUTE, SECTION_X, TextLink } from "./primitives";
+import { DEMO_ROUTE, DEMO_VIDEO_URL, SECTION_X, SHOWCASE, TextLink } from "./primitives";
 import { ScrollScene } from "./scroll-scene";
 
 interface Moment {
@@ -70,7 +70,9 @@ export function Moments() {
           className="max-w-[14em] text-heading-lg"
           text="Three moments where trust is won or lost."
         />
-        <TextLink href={DEMO_ROUTE}>See them in the demo</TextLink>
+        <TextLink href={SHOWCASE ? DEMO_VIDEO_URL : DEMO_ROUTE}>
+          {SHOWCASE ? "See them in the demo video" : "See them in the demo"}
+        </TextLink>
       </div>
       <ol className="mt-12 grid gap-6 md:mt-16">
         {MOMENTS.map((moment, index) => (

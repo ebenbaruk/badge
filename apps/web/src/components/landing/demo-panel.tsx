@@ -1,12 +1,11 @@
 import type { Route } from "next";
-import Link from "next/link";
 import { NudgeArrow, RollingText } from "@/components/motion/rolling-text";
 import { PulseDot } from "@/components/motion/pulse-dot";
 import { Reveal } from "@/components/motion/reveal";
 import { RevealText } from "@/components/motion/reveal-text";
 import { EMPLOYEES } from "@/lib/directory";
 import { type LandingImageSlot, PlaceholderImage } from "./placeholder-image";
-import { DEMO_ROUTE, SECTION_X } from "./primitives";
+import { DemoLink, SECTION_X, SHOWCASE } from "./primitives";
 import { ScrollScene } from "./scroll-scene";
 
 const PERSONAS: readonly {
@@ -73,8 +72,8 @@ export function DemoPanel() {
           <ul className="mt-6 grid gap-3 md:grid-cols-3">
             {PERSONAS.map(({ employee, slot, role, href }) => (
               <li key={employee.id}>
-                <Link
-                  href={href}
+                <DemoLink
+                  route={href}
                   className="group flex h-full items-center gap-4 rounded-lg bg-paper p-3 text-ink transition-transform duration-500 ease-out-soft hover:-translate-y-[5px] md:flex-col md:items-stretch md:p-4"
                 >
                   <div className="w-[72px] shrink-0 overflow-hidden rounded-md md:w-full">
@@ -93,7 +92,7 @@ export function DemoPanel() {
                       {role} <NudgeArrow />
                     </p>
                   </div>
-                </Link>
+                </DemoLink>
               </li>
             ))}
           </ul>
@@ -112,13 +111,12 @@ export function DemoPanel() {
             ))}
           </ol>
 
-          <Link
-            href={DEMO_ROUTE}
+          <DemoLink
             className="mt-3 flex min-h-14 w-full items-center justify-between rounded-pill bg-signal px-6 py-[18px] text-[15px] font-semibold text-on-signal transition-colors duration-300 hover:bg-signal-hover"
           >
-            <RollingText>Open the demo</RollingText>
+            <RollingText>{SHOWCASE ? "Watch the demo" : "Open the demo"}</RollingText>
             <NudgeArrow className="text-[22px] leading-none" />
-          </Link>
+          </DemoLink>
         </div>
       </ScrollScene>
     </section>
